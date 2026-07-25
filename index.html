@@ -135,6 +135,45 @@
   .file-label{display:inline-block; padding:9px 18px; border:1px dashed var(--navy); border-radius:6px; font-size:13px; font-weight:600; color:var(--navy); cursor:pointer;}
   .file-label:hover{background:#fff;}
 
+  /* ===== WHATSAPP / EVENTS / GALLERY / RESULTS / QUOTES ===== */
+  .btn.whatsapp{background:#25D366; color:#fff;}
+  .btn.whatsapp:hover{background:#1FB855;}
+  .event-card{border:1px solid var(--rule); border-radius:8px; padding:14px 16px; margin-bottom:10px; background:#fff;}
+  .event-card .tag{display:inline-block; font-size:9.5px; letter-spacing:0.8px; text-transform:uppercase; padding:2px 8px; border-radius:10px; font-family:'JetBrains Mono',monospace; font-weight:700; margin-bottom:6px;}
+  .event-card .tag.Education{background:var(--green-dim); color:var(--green);}
+  .event-card .tag.Vacation{background:var(--maroon-dim); color:var(--maroon);}
+  .event-card h4{font-size:14px; margin:2px 0 4px;}
+  .event-card .d{font-size:11px; color:var(--muted); font-family:'JetBrains Mono',monospace;}
+  .event-card p{font-size:12.5px; margin:8px 0 10px; color:var(--ink);}
+  .event-card .actions{display:flex; gap:8px;}
+
+  .gallery-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:14px; margin-top:6px;}
+  .gallery-item{border:1px solid var(--rule); border-radius:8px; overflow:hidden; background:#fff;}
+  .gallery-item img{width:100%; height:130px; object-fit:cover; display:block;}
+  .gallery-item .cap{padding:8px 10px;}
+  .gallery-item .cap b{font-size:12px; display:block;}
+  .gallery-item .cap .d{font-size:10px; color:var(--muted); font-family:'JetBrains Mono',monospace; margin:2px 0 8px;}
+  .gallery-item .cap .actions{display:flex; gap:6px;}
+
+  .subject-row{display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:8px; align-items:end; margin-bottom:8px;}
+  .subject-row input{width:100%; padding:8px 9px; border:1px solid var(--rule); border-radius:6px; font-size:12.5px; background:#fff;}
+  .result-card{border:2px solid var(--navy); border-radius:8px; padding:22px 24px;}
+  .result-head{text-align:center; border-bottom:2px dashed var(--rule); padding-bottom:14px; margin-bottom:14px;}
+  .result-head h3{font-size:16px; color:var(--navy);}
+  .result-head .s{font-size:10.5px; color:var(--gold); letter-spacing:1.2px; text-transform:uppercase; margin-top:6px; font-family:'JetBrains Mono',monospace; font-weight:700;}
+  .result-table{width:100%; border-collapse:collapse; margin:10px 0;}
+  .result-table th, .result-table td{border:1px solid var(--rule); padding:7px 9px; font-size:12px;}
+  .result-summary{display:flex; justify-content:space-between; font-size:13px; font-weight:700; padding-top:10px; border-top:2px solid var(--navy); margin-top:6px; color:var(--navy);}
+
+  .quote-card{background:linear-gradient(135deg,var(--navy),var(--navy-light)); color:#fff; border-radius:10px; padding:22px 24px; text-align:center; font-family:'Lora',serif; font-style:italic; font-size:15px; line-height:1.6; margin-bottom:18px;}
+  .quote-card .by{display:block; margin-top:10px; font-style:normal; font-size:11px; color:var(--gold); font-family:'JetBrains Mono',monospace;}
+  .time-slots{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-bottom:14px;}
+  .reminder-banner{display:none; align-items:center; justify-content:space-between; gap:14px; background:var(--gold); color:var(--navy); border-radius:8px; padding:12px 16px; margin-bottom:18px; font-size:13px; font-weight:600; flex-wrap:wrap;}
+  .reminder-banner.show{display:flex;}
+  .quote-log-item{font-size:12px; padding:7px 0; border-bottom:1px solid var(--rule); color:var(--muted);}
+  .toggle-row{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .toggle-row input[type=checkbox]{width:18px; height:18px;}
+
   /* ===== PRINT MODAL (2 copies on A4) ===== */
   #printModal{display:none; position:fixed; inset:0; background:rgba(22,35,63,0.6); align-items:flex-start; justify-content:center; z-index:50; padding:30px 20px; overflow-y:auto;}
   .print-wrap{background:#fff; width:100%; max-width:480px; border-radius:8px; padding:18px;}
@@ -267,6 +306,10 @@
         <li><button data-view="fees" onclick="showView('fees')">💰 Fees &amp; Challan</button></li>
         <li><button data-view="attendance" onclick="showView('attendance')">📅 Attendance</button></li>
         <li><button data-view="notices" onclick="showView('notices')">📢 Notice Board</button></li>
+        <li><button data-view="events" onclick="showView('events')">🎉 Events &amp; Vacations</button></li>
+        <li><button data-view="gallery" onclick="showView('gallery')">🖼️ Photo Gallery</button></li>
+        <li><button data-view="results" onclick="showView('results')">📝 Results / Exam Reports</button></li>
+        <li><button data-view="quotes" onclick="showView('quotes')">🤖 WhatsApp Awareness</button></li>
         <li><button data-view="reports" onclick="showView('reports')">📈 Reports</button></li>
         <li class="admin-only"><button data-view="settings" onclick="showView('settings')">⚙️ Settings &amp; Backup</button></li>
         <li class="admin-only"><button data-view="loginlog" onclick="showView('loginlog')">🕒 Login Activity</button></li>
@@ -417,6 +460,120 @@
           </div>
         </div>
 
+        <!-- EVENTS & VACATIONS -->
+        <div class="view" id="view-events">
+          <div class="panel">
+            <h3>Add Education Event / Vacation</h3>
+            <div class="form-grid">
+              <div class="field"><label>Title</label><input id="evtTitle" type="text" placeholder="e.g. Annual Sports Day"></div>
+              <div class="field"><label>Type</label>
+                <select id="evtType">
+                  <option value="Education">Education Event</option>
+                  <option value="Vacation">Vacation / Holiday</option>
+                </select>
+              </div>
+              <div class="field"><label>Start Date</label><input id="evtDate" type="date"></div>
+              <div class="field"><label>End Date (optional)</label><input id="evtEndDate" type="date"></div>
+              <div class="field" style="grid-column:1/-1;"><label>Description</label><input id="evtDesc" type="text" placeholder="Details for parents / staff"></div>
+            </div>
+            <button class="btn green" onclick="addEvent()">+ Add Event</button>
+            <p class="hint">Sindh Education &amp; Literacy Department ki official calendar ke mutabiq apni school ki vacations/events yahan add karein.</p>
+          </div>
+          <div class="panel">
+            <h3>All Events &amp; Vacations</h3>
+            <div id="eventList"></div>
+            <div class="empty" id="eventEmpty">Koi event ya vacation add nahi hui.</div>
+          </div>
+        </div>
+
+        <!-- PHOTO GALLERY -->
+        <div class="view" id="view-gallery">
+          <div class="panel">
+            <h3>Upload Photo</h3>
+            <div class="form-grid">
+              <div class="field"><label>Title / Caption</label><input id="galTitle" type="text" placeholder="e.g. Summer Vacation Trip"></div>
+              <div class="field"><label>Album</label>
+                <select id="galType">
+                  <option value="Event">Education Event</option>
+                  <option value="Vacation">Vacation</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="field" style="grid-column:1/-1;"><label>Photo File</label><input id="galFile" type="file" accept="image/*"></div>
+            </div>
+            <button class="btn green" onclick="addGalleryPhoto()">+ Add to Gallery</button>
+            <p class="hint">Photos is browser/cloud database mein save hoti hain, isliye bohot zyada ya bohot badi photos add karne se bachein.</p>
+          </div>
+          <div class="panel">
+            <h3>Gallery</h3>
+            <div class="gallery-grid" id="galleryGrid"></div>
+            <div class="empty" id="galleryEmpty">Abhi tak koi photo add nahi hui.</div>
+          </div>
+        </div>
+
+        <!-- RESULTS / EXAM REPORTS -->
+        <div class="view" id="view-results">
+          <div class="panel">
+            <h3>Create Exam Result</h3>
+            <div class="form-grid">
+              <div class="field"><label>Student</label>
+                <select id="resStudent"></select>
+              </div>
+              <div class="field"><label>Exam / Term</label><input id="resExam" type="text" placeholder="e.g. Mid Term 2026"></div>
+              <div class="field"><label>Date</label><input id="resDate" type="date"></div>
+            </div>
+            <h3 style="margin-top:18px; font-size:13px;">Subjects</h3>
+            <div id="subjectRows"></div>
+            <button class="btn outline small" onclick="addSubjectRow()">+ Add Subject</button>
+            <br>
+            <button class="btn green" onclick="saveExamResult()">💾 Save Result</button>
+          </div>
+          <div class="panel">
+            <h3>All Results</h3>
+            <div id="resultList"></div>
+            <div class="empty" id="resultEmpty">Koi result save nahi hua.</div>
+          </div>
+        </div>
+
+        <!-- WHATSAPP AWARENESS / AI QUOTES -->
+        <div class="view" id="view-quotes">
+          <div class="reminder-banner" id="quoteReminderBanner">
+            <span id="quoteReminderText">⏰ Scheduled quote time ho gaya hai!</span>
+            <button class="btn whatsapp small" onclick="sendScheduledQuoteNow()">📱 Send to WhatsApp Group</button>
+          </div>
+          <div class="panel">
+            <h3>Today's Awareness Quote</h3>
+            <div class="quote-card" id="waQuoteCard"></div>
+            <button class="btn whatsapp" onclick="sendQuoteWhatsAppNow()">📱 Send This Quote via WhatsApp Now</button>
+            <button class="btn outline" onclick="newRandomQuote()">🔄 New Quote</button>
+          </div>
+          <div class="panel">
+            <h3>Automatic Daily Schedule</h3>
+            <p class="hint">
+              Yeh system browser mein WhatsApp par seedha, khud-b-khud (silently, bina click ke) message send nahi kar sakta —
+              WhatsApp iski ijazat nahi deta bagair official WhatsApp Business API (jo alag se server, Meta approval aur
+              phone number verification maangta hai) ke. Iske bajaye, yeh system neeche di gayi 4 times par ek reminder
+              dikhayega (jab yeh page/tab khula ho) aur ek click mein WhatsApp group ko quote bhej dega.
+            </p>
+            <div class="toggle-row">
+              <input type="checkbox" id="waEnabled" onchange="saveWaSettings()">
+              <label for="waEnabled" style="font-size:13px; font-weight:600;">Daily reminders enable karein</label>
+            </div>
+            <div class="time-slots">
+              <div class="field"><label>Time 1</label><input type="time" id="waTime1" onchange="saveWaSettings()"></div>
+              <div class="field"><label>Time 2</label><input type="time" id="waTime2" onchange="saveWaSettings()"></div>
+              <div class="field"><label>Time 3</label><input type="time" id="waTime3" onchange="saveWaSettings()"></div>
+              <div class="field"><label>Time 4</label><input type="time" id="waTime4" onchange="saveWaSettings()"></div>
+            </div>
+            <div class="field"><label>School WhatsApp Group Invite Link (reference only)</label><input type="text" id="waGroupLink" placeholder="https://chat.whatsapp.com/..." onchange="saveWaSettings()"></div>
+          </div>
+          <div class="panel">
+            <h3>Send Log</h3>
+            <div id="quoteLogList"></div>
+            <div class="empty" id="quoteLogEmpty">Abhi tak koi quote send nahi hui.</div>
+          </div>
+        </div>
+
         <!-- REPORTS -->
         <div class="view" id="view-reports">
           <div class="panel">
@@ -537,9 +694,15 @@ let notices = [];
 let loginLog = [];
 let idCounter = 1;
 let schoolSettings = { name:'The Smart Modern Public School', address:'Qamber, Sindh', principal:'', contact:'' };
+let events = [];
+let galleryPhotos = [];
+let examResults = [];
+let waSettings = { enabled:false, times:['08:00','11:00','13:30','16:30'], groupLink:'', lastSent:{} };
+let quoteLog = [];
+let currentQuote = null;
 
 function saveData(){
-  const data = { students, staff, fees, attendanceRecords, notices, loginLog, idCounter, schoolSettings, savedAt: new Date().toISOString() };
+  const data = { students, staff, fees, attendanceRecords, notices, loginLog, idCounter, schoolSettings, events, galleryPhotos, examResults, waSettings, quoteLog, savedAt: new Date().toISOString() };
   const s = document.getElementById('saveStatus');
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -565,6 +728,11 @@ function applyData(data){
   loginLog = data.loginLog || [];
   idCounter = data.idCounter || 1;
   schoolSettings = data.schoolSettings || schoolSettings;
+  events = data.events || [];
+  galleryPhotos = data.galleryPhotos || [];
+  examResults = data.examResults || [];
+  waSettings = data.waSettings || waSettings;
+  quoteLog = data.quoteLog || [];
 }
 function loadData(){
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -584,7 +752,7 @@ function loadData(){
   });
 }
 function backupData(){
-  const data = { students, staff, fees, attendanceRecords, notices, idCounter, schoolSettings, exportedAt: new Date().toISOString() };
+  const data = { students, staff, fees, attendanceRecords, notices, idCounter, schoolSettings, events, galleryPhotos, examResults, waSettings, quoteLog, exportedAt: new Date().toISOString() };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -638,7 +806,7 @@ function setRole(role){
   document.getElementById('loginError').style.display = 'none';
 }
 
-/* ===================== SCHOOL QUOTES ===================== */
+/* ===================== SCHOOL QUOTES / AWARENESS LIBRARY ===================== */
 const SCHOOL_QUOTES = [
   { text: 'Education is the most powerful weapon which you can use to change the world.', by: 'Nelson Mandela' },
   { text: 'The beautiful thing about learning is that no one can take it away from you.', by: 'B.B. King' },
@@ -654,6 +822,111 @@ const SCHOOL_QUOTES = [
   const el = document.getElementById('quoteText');
   if(el) el.innerHTML = '&ldquo;' + q.text + '&rdquo;<br><span style="font-style:normal; font-size:10.5px; color:var(--muted);">— ' + q.by + '</span>';
 })();
+
+const AWARENESS_QUOTES = [
+  { text: 'Education is the most powerful weapon which you can use to change the world.', by: 'Nelson Mandela' },
+  { text: 'The beautiful thing about learning is that no one can take it away from you.', by: 'B.B. King' },
+  { text: 'An investment in knowledge pays the best interest.', by: 'Benjamin Franklin' },
+  { text: 'Believe you can and you are halfway there.', by: 'Theodore Roosevelt' },
+  { text: 'Taleem hi woh hathiyar hai jis se dunya badli ja sakti hai.', by: 'School Awareness' },
+  { text: 'Roz school aana aur waqt par aana kamiyabi ki pehli seerhi hai.', by: 'School Awareness' },
+  { text: 'Bacchon ko school bhejna aur unki taleem par tawajjo dena har walidain ka farz hai.', by: 'School Awareness' },
+  { text: 'Saaf pani piyein, haath dho kar khayein — sehat hi sab se bari daulat hai.', by: 'Health Awareness' },
+  { text: 'Roz kam az kam 30 minute khel-kood ya walk zaroor karein.', by: 'Health Awareness' },
+  { text: 'Beti ki taleem, poore ghar ki taraqqi hai.', by: 'Girls Education Awareness' },
+  { text: 'Har bacha school jaaye — yeh uska bunyadi haq hai.', by: 'Sindh Education Awareness' },
+  { text: 'Homework roz waqt par mukammal karna acchi aadat hai.', by: 'School Awareness' },
+  { text: 'Kitab dost hai — roz thora parhne ki aadat banayein.', by: 'Reading Awareness' },
+  { text: 'Waldain aur ustaad ka ehtiram karna sab se pehla sabaq hai.', by: 'Moral Education' },
+  { text: 'The function of education is to teach one to think intensively and to think critically.', by: 'Martin Luther King Jr.' },
+  { text: 'Live as if you were to die tomorrow. Learn as if you were to live forever.', by: 'Mahatma Gandhi' },
+  { text: 'Sadgi aur waqt ki pabandi kamiyab talib-e-ilm ki pehchan hai.', by: 'School Awareness' },
+  { text: 'Traffic rules ka khayal rakhein — school aate jaate hamesha ehtiyat karein.', by: 'Safety Awareness' },
+  { text: 'Bijli aur gas ka besaja istemal na karein — bachat qaumi zimmedari hai.', by: 'Awareness' },
+  { text: 'Rozana masawaat aur adab se pesh aana ek acche shehri ki nishani hai.', by: 'Moral Education' }
+];
+function pickTodayQuote(){
+  const day = new Date().toDateString();
+  const idx = Math.abs(day.split('').reduce((a,c)=>a + c.charCodeAt(0),0)) % AWARENESS_QUOTES.length;
+  return AWARENESS_QUOTES[idx];
+}
+function newRandomQuote(){
+  currentQuote = AWARENESS_QUOTES[Math.floor(Math.random()*AWARENESS_QUOTES.length)];
+  renderWaQuoteCard();
+}
+function renderWaQuoteCard(){
+  const el = document.getElementById('waQuoteCard');
+  if(!el || !currentQuote) return;
+  el.innerHTML = '&ldquo;' + currentQuote.text + '&rdquo;<span class="by">— ' + currentQuote.by + '</span>';
+}
+function waLinkFor(text){
+  return 'https://wa.me/?text=' + encodeURIComponent(text);
+}
+function sendQuoteWhatsAppNow(){
+  if(!currentQuote) currentQuote = pickTodayQuote();
+  const msg = '📚 ' + schoolSettings.name + ' — Daily Awareness\n\n"' + currentQuote.text + '"\n— ' + currentQuote.by;
+  window.open(waLinkFor(msg), '_blank');
+  quoteLog.unshift({ text: currentQuote.text, time: new Date().toLocaleString(), mode:'manual' });
+  if(quoteLog.length > 100) quoteLog.length = 100;
+  saveData();
+  renderQuoteLog();
+}
+function sendScheduledQuoteNow(){
+  sendQuoteWhatsAppNow();
+  document.getElementById('quoteReminderBanner').classList.remove('show');
+}
+function fillWaSettingsForm(){
+  const t = waSettings.times || ['08:00','11:00','13:30','16:30'];
+  document.getElementById('waEnabled').checked = !!waSettings.enabled;
+  document.getElementById('waTime1').value = t[0] || '';
+  document.getElementById('waTime2').value = t[1] || '';
+  document.getElementById('waTime3').value = t[2] || '';
+  document.getElementById('waTime4').value = t[3] || '';
+  document.getElementById('waGroupLink').value = waSettings.groupLink || '';
+}
+function saveWaSettings(){
+  waSettings = {
+    enabled: document.getElementById('waEnabled').checked,
+    times: [
+      document.getElementById('waTime1').value,
+      document.getElementById('waTime2').value,
+      document.getElementById('waTime3').value,
+      document.getElementById('waTime4').value
+    ].filter(Boolean),
+    groupLink: document.getElementById('waGroupLink').value.trim(),
+    lastSent: waSettings.lastSent || {}
+  };
+  saveData();
+}
+function renderQuoteLog(){
+  const list = document.getElementById('quoteLogList');
+  if(!list) return;
+  document.getElementById('quoteLogEmpty').style.display = quoteLog.length ? 'none' : 'block';
+  list.innerHTML = quoteLog.slice(0,20).map(q => `<div class="quote-log-item">📱 <b>${q.time}</b> — "${q.text}"</div>`).join('');
+}
+function checkQuoteSchedule(){
+  if(!waSettings.enabled) return;
+  const now = new Date();
+  const hhmm = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  const today = now.toDateString();
+  (waSettings.times||[]).forEach(t => {
+    if(t === hhmm && waSettings.lastSent[t] !== today){
+      waSettings.lastSent[t] = today;
+      currentQuote = pickTodayQuote();
+      renderWaQuoteCard();
+      const banner = document.getElementById('quoteReminderBanner');
+      if(banner) banner.classList.add('show');
+      saveData();
+    }
+  });
+}
+setInterval(checkQuoteSchedule, 30000);
+function renderQuotesView(){
+  if(!currentQuote) currentQuote = pickTodayQuote();
+  renderWaQuoteCard();
+  fillWaSettingsForm();
+  renderQuoteLog();
+}
 
 
 function logActivity(action){
@@ -757,13 +1030,15 @@ function showView(name){
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.querySelectorAll('.nav-list button').forEach(b => b.classList.toggle('active', b.dataset.view === name));
-  const titles = {dashboard:'Dashboard', students:'Student Management', staff:'Teachers & Staff', fees:'Fees & Challan', attendance:'Attendance', notices:'Notice Board', reports:'Reports', settings:'Settings & Backup', loginlog:'Login Activity'};
+  const titles = {dashboard:'Dashboard', students:'Student Management', staff:'Teachers & Staff', fees:'Fees & Challan', attendance:'Attendance', notices:'Notice Board', events:'Events & Vacations', gallery:'Photo Gallery', results:'Results / Exam Reports', quotes:'WhatsApp Awareness', reports:'Reports', settings:'Settings & Backup', loginlog:'Login Activity'};
   document.getElementById('viewTitle').textContent = titles[name];
   if(name==='attendance') renderAttendanceForm();
   if(name==='fees') renderFeeStudentOptions();
   if(name==='reports') renderReports();
   if(name==='settings') fillSettingsForm();
   if(name==='loginlog') renderLoginLog();
+  if(name==='results') renderResultStudentOptions();
+  if(name==='quotes') renderQuotesView();
 }
 
 /* ===================== STUDENTS ===================== */
@@ -991,8 +1266,259 @@ function renderNotices(){
   const list = document.getElementById('noticeList');
   const dash = document.getElementById('dashNotices');
   document.getElementById('noticeEmpty').style.display = notices.length ? 'none' : 'block';
-  list.innerHTML = notices.map(n => `<div style="padding:10px 0; border-bottom:1px solid var(--rule);"><b>${n.title}</b><div style="font-size:11px; color:var(--muted); margin-top:2px;">${n.date}</div><div style="font-size:13px; margin-top:4px;">${n.body||''}</div></div>`).join('');
+  list.innerHTML = notices.map(n => `<div style="padding:10px 0; border-bottom:1px solid var(--rule);"><b>${n.title}</b><div style="font-size:11px; color:var(--muted); margin-top:2px;">${n.date}</div><div style="font-size:13px; margin-top:4px;">${n.body||''}</div><div style="margin-top:8px;"><button class="btn whatsapp small" onclick="shareNoticeWhatsApp(${n.id})">📱 Send via WhatsApp</button></div></div>`).join('');
   dash.innerHTML = notices.length ? notices.slice(0,3).map(n => `<div style="padding:6px 0; font-size:13px;">📌 <b>${n.title}</b> <span style="color:var(--muted); font-size:11px;">(${n.date})</span></div>`).join('') : '<div class="empty">Koi notice nahi hai.</div>';
+}
+function shareNoticeWhatsApp(id){
+  const n = notices.find(x => x.id === id);
+  if(!n) return;
+  const msg = '📢 ' + schoolSettings.name + ' — Notice\n\n*' + n.title + '*\n' + (n.body||'') + '\n\n(' + n.date + ')';
+  window.open(waLinkFor(msg), '_blank');
+}
+
+/* ===================== EVENTS & VACATIONS ===================== */
+function addEvent(){
+  const title = document.getElementById('evtTitle').value.trim();
+  if(!title){ alert('Event ka title likhein.'); return; }
+  events.unshift({
+    id: idCounter++,
+    title,
+    type: document.getElementById('evtType').value,
+    date: document.getElementById('evtDate').value || new Date().toISOString().slice(0,10),
+    endDate: document.getElementById('evtEndDate').value,
+    desc: document.getElementById('evtDesc').value.trim()
+  });
+  ['evtTitle','evtDate','evtEndDate','evtDesc'].forEach(id => document.getElementById(id).value = '');
+  renderAll();
+}
+function deleteEvent(id){
+  if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
+  events = events.filter(e => e.id !== id);
+  renderAll();
+}
+function renderEvents(){
+  const list = document.getElementById('eventList');
+  if(!list) return;
+  document.getElementById('eventEmpty').style.display = events.length ? 'none' : 'block';
+  const canDelete = session && session.role === 'admin';
+  list.innerHTML = events.map(e => `
+    <div class="event-card">
+      <span class="tag ${e.type}">${e.type === 'Vacation' ? '🏖️ Vacation' : '🎉 Education Event'}</span>
+      <h4>${e.title}</h4>
+      <div class="d">${e.date}${e.endDate ? ' → ' + e.endDate : ''}</div>
+      <p>${e.desc || ''}</p>
+      <div class="actions">
+        <button class="btn small gold" onclick="printEvent(${e.id})">🖨️ Print</button>
+        <button class="btn whatsapp small" onclick="shareEventWhatsApp(${e.id})">📱 WhatsApp</button>
+        ${canDelete ? `<button class="btn small red" onclick="deleteEvent(${e.id})">Delete</button>` : ''}
+      </div>
+    </div>`).join('');
+}
+function shareEventWhatsApp(id){
+  const e = events.find(x => x.id === id);
+  if(!e) return;
+  const msg = (e.type === 'Vacation' ? '🏖️ ' : '🎉 ') + schoolSettings.name + ' — ' + (e.type === 'Vacation' ? 'Vacation Notice' : 'Education Event') + '\n\n*' + e.title + '*\n' + e.date + (e.endDate ? ' to ' + e.endDate : '') + '\n' + (e.desc || '');
+  window.open(waLinkFor(msg), '_blank');
+}
+function printEvent(id){
+  const e = events.find(x => x.id === id);
+  if(!e) return;
+  document.getElementById('printPage').innerHTML = `
+    <div class="adm-form">
+      <div class="adm-form-head">
+        <h3>${schoolSettings.name}</h3>
+        <div class="addr">${schoolSettings.address || 'Qamber, Sindh'}</div>
+        <div class="s">${e.type === 'Vacation' ? 'Vacation Notice' : 'Education Event Notice'}</div>
+      </div>
+      <div class="adm-grid">
+        <div class="adm-row full"><span class="k">Title</span><span class="v">${e.title}</span></div>
+        <div class="adm-row"><span class="k">Start Date</span><span class="v">${e.date}</span></div>
+        <div class="adm-row"><span class="k">End Date</span><span class="v">${e.endDate || '—'}</span></div>
+        <div class="adm-row full"><span class="k">Description</span><span class="v">${e.desc || '—'}</span></div>
+      </div>
+    </div>`;
+  document.getElementById('printModal').style.display = 'flex';
+}
+
+/* ===================== PHOTO GALLERY ===================== */
+function addGalleryPhoto(){
+  const title = document.getElementById('galTitle').value.trim();
+  const fileInput = document.getElementById('galFile');
+  const file = fileInput.files[0];
+  if(!file){ alert('Pehle ek photo select karein.'); return; }
+  const reader = new FileReader();
+  reader.onload = function(e){
+    galleryPhotos.unshift({
+      id: idCounter++,
+      title: title || 'Untitled',
+      album: document.getElementById('galType').value,
+      dataUrl: e.target.result,
+      date: new Date().toDateString()
+    });
+    document.getElementById('galTitle').value = '';
+    fileInput.value = '';
+    renderAll();
+  };
+  reader.readAsDataURL(file);
+}
+function deleteGalleryPhoto(id){
+  if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
+  galleryPhotos = galleryPhotos.filter(p => p.id !== id);
+  renderAll();
+}
+function renderGallery(){
+  const grid = document.getElementById('galleryGrid');
+  if(!grid) return;
+  document.getElementById('galleryEmpty').style.display = galleryPhotos.length ? 'none' : 'block';
+  const canDelete = session && session.role === 'admin';
+  grid.innerHTML = galleryPhotos.map(p => `
+    <div class="gallery-item">
+      <img src="${p.dataUrl}" alt="${p.title}">
+      <div class="cap">
+        <b>${p.title}</b>
+        <div class="d">${p.album} · ${p.date}</div>
+        <div class="actions">
+          <button class="btn small gold" onclick="printGalleryPhoto(${p.id})">🖨️</button>
+          ${canDelete ? `<button class="btn small red" onclick="deleteGalleryPhoto(${p.id})">Delete</button>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+function printGalleryPhoto(id){
+  const p = galleryPhotos.find(x => x.id === id);
+  if(!p) return;
+  document.getElementById('printPage').innerHTML = `
+    <div class="adm-form" style="text-align:center;">
+      <h3>${schoolSettings.name}</h3>
+      <div class="s" style="margin:8px 0 14px;">${p.title}</div>
+      <img src="${p.dataUrl}" style="width:100%; border-radius:8px;">
+      <div class="d" style="margin-top:10px; font-size:11px; color:var(--muted);">${p.album} · ${p.date}</div>
+    </div>`;
+  document.getElementById('printModal').style.display = 'flex';
+}
+
+/* ===================== RESULTS / EXAM REPORTS ===================== */
+let subjectRowCount = 0;
+function renderResultStudentOptions(){
+  const sel = document.getElementById('resStudent');
+  if(!sel) return;
+  sel.innerHTML = students.map(s => `<option value="${s.id}">${s.name} — ${s.adm}</option>`).join('') || '<option value="">Pehle student add karein</option>';
+}
+function addSubjectRow(){
+  subjectRowCount++;
+  const rid = 'subj' + subjectRowCount;
+  const wrap = document.getElementById('subjectRows');
+  const row = document.createElement('div');
+  row.className = 'subject-row';
+  row.id = rid;
+  row.innerHTML = `
+    <input type="text" placeholder="Subject name" class="subj-name">
+    <input type="number" placeholder="Obtained" class="subj-obt">
+    <input type="number" placeholder="Total" class="subj-total">
+    <button class="btn small red" onclick="document.getElementById('${rid}').remove()">✕</button>`;
+  wrap.appendChild(row);
+}
+function saveExamResult(){
+  const studentId = Number(document.getElementById('resStudent').value);
+  const student = students.find(s => s.id === studentId);
+  if(!student){ alert('Pehle Student Management se ek student add karein.'); return; }
+  const exam = document.getElementById('resExam').value.trim();
+  if(!exam){ alert('Exam / Term ka naam likhein.'); return; }
+  const rows = document.querySelectorAll('#subjectRows .subject-row');
+  if(!rows.length){ alert('Kam az kam ek subject add karein.'); return; }
+  const subjects = [];
+  rows.forEach(r => {
+    const name = r.querySelector('.subj-name').value.trim();
+    const obt = Number(r.querySelector('.subj-obt').value) || 0;
+    const total = Number(r.querySelector('.subj-total').value) || 0;
+    if(name) subjects.push({ name, obt, total });
+  });
+  if(!subjects.length){ alert('Subject ka naam likhein.'); return; }
+  const totalObtained = subjects.reduce((a,s) => a + s.obt, 0);
+  const totalMax = subjects.reduce((a,s) => a + s.total, 0);
+  const percentage = totalMax ? ((totalObtained/totalMax)*100).toFixed(1) : '0.0';
+  const grade = gradeFor(Number(percentage));
+  examResults.unshift({
+    id: idCounter++,
+    studentId,
+    exam,
+    date: document.getElementById('resDate').value || new Date().toISOString().slice(0,10),
+    subjects, totalObtained, totalMax, percentage, grade
+  });
+  document.getElementById('resExam').value = '';
+  document.getElementById('resDate').value = '';
+  document.getElementById('subjectRows').innerHTML = '';
+  renderAll();
+}
+function gradeFor(pct){
+  if(pct >= 90) return 'A+';
+  if(pct >= 80) return 'A';
+  if(pct >= 70) return 'B';
+  if(pct >= 60) return 'C';
+  if(pct >= 50) return 'D';
+  return 'F';
+}
+function deleteExamResult(id){
+  if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
+  examResults = examResults.filter(r => r.id !== id);
+  renderAll();
+}
+function renderResults(){
+  const list = document.getElementById('resultList');
+  if(!list) return;
+  document.getElementById('resultEmpty').style.display = examResults.length ? 'none' : 'block';
+  const canDelete = session && session.role === 'admin';
+  list.innerHTML = examResults.map(r => {
+    const student = students.find(s => s.id === r.studentId);
+    return `<div class="event-card">
+      <h4>${student ? student.name : '—'} — ${r.exam}</h4>
+      <div class="d">${r.date} · ${student ? (student.cls||'—')+'/'+(student.section||'—') : ''}</div>
+      <p>Total: ${r.totalObtained}/${r.totalMax} — ${r.percentage}% — Grade <b>${r.grade}</b></p>
+      <div class="actions">
+        <button class="btn small gold" onclick="printResultCard(${r.id})">🖨️ Print</button>
+        <button class="btn whatsapp small" onclick="shareResultWhatsApp(${r.id})">📱 WhatsApp</button>
+        ${canDelete ? `<button class="btn small red" onclick="deleteExamResult(${r.id})">Delete</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function shareResultWhatsApp(id){
+  const r = examResults.find(x => x.id === id);
+  if(!r) return;
+  const student = students.find(s => s.id === r.studentId);
+  const msg = '📝 ' + schoolSettings.name + ' — Result\n\n' + (student ? student.name : '') + ' (' + (student ? student.adm : '') + ')\n' + r.exam + ' — ' + r.date + '\nTotal: ' + r.totalObtained + '/' + r.totalMax + ' (' + r.percentage + '%)\nGrade: ' + r.grade;
+  window.open(waLinkFor(msg), '_blank');
+}
+function printResultCard(id){
+  const r = examResults.find(x => x.id === id);
+  if(!r) return;
+  const student = students.find(s => s.id === r.studentId);
+  const rows = r.subjects.map(s => `<tr><td>${s.name}</td><td>${s.obt}</td><td>${s.total}</td></tr>`).join('');
+  document.getElementById('printPage').innerHTML = `
+    <div class="result-card">
+      <div class="result-head">
+        <h3>${schoolSettings.name}</h3>
+        <div class="addr" style="font-size:11px; color:var(--muted);">${schoolSettings.address || 'Qamber, Sindh'}</div>
+        <div class="s">Exam Result / Report Card</div>
+      </div>
+      <div class="adm-grid">
+        <div class="adm-row"><span class="k">Student Name</span><span class="v">${student ? student.name : '—'}</span></div>
+        <div class="adm-row"><span class="k">Admission No.</span><span class="v">${student ? student.adm : '—'}</span></div>
+        <div class="adm-row"><span class="k">Class / Section</span><span class="v">${student ? (student.cls||'—')+' / '+(student.section||'—') : '—'}</span></div>
+        <div class="adm-row"><span class="k">Exam / Term</span><span class="v">${r.exam}</span></div>
+        <div class="adm-row"><span class="k">Date</span><span class="v">${r.date}</span></div>
+      </div>
+      <table class="result-table">
+        <thead><tr><th>Subject</th><th>Obtained</th><th>Total</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="result-summary"><span>Total: ${r.totalObtained} / ${r.totalMax} (${r.percentage}%)</span><span>Grade: ${r.grade}</span></div>
+      <div class="adm-signatures">
+        <div class="adm-sign"><div class="line">Class Teacher Signature</div></div>
+        <div class="adm-sign"><div class="line">Principal Signature</div></div>
+      </div>
+    </div>`;
+  document.getElementById('printModal').style.display = 'flex';
 }
 
 function renderLoginLog(){
@@ -1061,6 +1587,10 @@ function renderAll(){
   renderStaff();
   renderFees();
   renderNotices();
+  renderEvents();
+  renderGallery();
+  renderResults();
+  renderResultStudentOptions();
   renderDashboard();
   renderFeeStudentOptions();
   saveData();
