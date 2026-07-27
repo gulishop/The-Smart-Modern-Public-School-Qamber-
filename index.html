@@ -438,12 +438,21 @@
         <!-- ATTENDANCE -->
         <div class="view" id="view-attendance">
           <div class="panel">
+            <h3>Class-wise Attendance Summary</h3>
+            <table>
+              <thead><tr><th>Class</th><th>Total Students</th><th>Present</th><th>Absent</th></tr></thead>
+              <tbody id="attClassSummaryBody"></tbody>
+            </table>
+            <div class="empty" id="attClassSummaryEmpty">Abhi koi student nahi hai.</div>
+          </div>
+          <div class="panel">
             <h3>Mark Student Attendance</h3>
             <div class="form-grid">
               <div class="field"><label>Date</label><input id="attDate" type="date"></div>
+              <div class="field"><label>Class</label><select id="attClassFilter"><option value="">Sab Classes</option></select></div>
             </div>
             <table>
-              <thead><tr><th>Adm #</th><th>Name</th><th>Class</th><th>Status</th></tr></thead>
+              <thead><tr><th>Adm #</th><th>Name</th><th>Class</th><th>Status</th><th>WhatsApp</th></tr></thead>
               <tbody id="attTable"></tbody>
             </table>
             <div class="empty" id="attEmpty">Pehle Student Management mein students add karein.</div>
@@ -1238,20 +1247,65 @@ function printAdmissionForm(studentId){
 }
 
 /* ===================== ATTENDANCE ===================== */
+function populateAttClassFilter(){
+  const sel = document.getElementById('attClassFilter');
+  if(!sel) return;
+  const prev = sel.value;
+  const classes = Array.from(new Set(students.map(s => (s.cls||'').trim()).filter(Boolean)))
+    .sort((a,b)=> a.localeCompare(b, undefined, {numeric:true}));
+  sel.innerHTML = '<option value="">Sab Classes</option>' + classes.map(c => `<option value="${c}">${c}</option>`).join('');
+  if(classes.includes(prev)) sel.value = prev;
+}
+function waNumberFor(contact){
+  // Contact number ko WhatsApp link ke liye saaf karta hai (sirf digits, agar 0 se shuru ho to Pakistan code 92 lagata hai)
+  let digits = String(contact||'').replace(/\D/g,'');
+  if(!digits) return '';
+  if(digits.startsWith('0')) digits = '92' + digits.slice(1);
+  else if(!digits.startsWith('92') && digits.length === 10) digits = '92' + digits;
+  return digits;
+}
 function renderAttendanceForm(){
   const date = document.getElementById('attDate').value || new Date().toISOString().slice(0,10);
   const tbody = document.getElementById('attTable');
   tbody.innerHTML = '';
-  document.getElementById('attEmpty').style.display = students.length ? 'none' : 'block';
+  populateAttClassFilter();
+  const clsFilter = (document.getElementById('attClassFilter')||{}).value || '';
+  const list = clsFilter ? students.filter(s => (s.cls||'').trim() === clsFilter) : students;
+  document.getElementById('attEmpty').style.display = list.length ? 'none' : 'block';
   const dayRecord = attendanceRecords[date] || {};
-  students.forEach(s => {
+  list.forEach(s => {
     const status = dayRecord[s.id] || 'present';
+    const waBtn = status === 'absent'
+      ? (waNumberFor(s.contact)
+          ? `<button class="btn whatsapp small" onclick="sendAbsentWhatsApp(${s.id})">📱 Message</button>`
+          : `<span class="hint">Contact # nahi hai</span>`)
+      : '—';
     tbody.innerHTML += `<tr><td>${s.adm}</td><td>${s.name}</td><td>${s.cls||'—'}</td>
       <td>
         <button class="btn small ${status==='present'?'green':''}" style="${status==='present'?'':'background:var(--muted);'}" onclick="setAttStatus(${s.id},'present')">Present</button>
         <button class="btn small ${status==='absent'?'red':''}" style="${status==='absent'?'':'background:var(--muted);'} margin-left:6px;" onclick="setAttStatus(${s.id},'absent')">Absent</button>
-      </td></tr>`;
+      </td>
+      <td>${waBtn}</td></tr>`;
   });
+  renderAttClassSummary(date);
+}
+function renderAttClassSummary(date){
+  const body = document.getElementById('attClassSummaryBody');
+  if(!body) return;
+  date = date || document.getElementById('attDate').value || new Date().toISOString().slice(0,10);
+  const dayRecord = attendanceRecords[date] || {};
+  const counts = {};
+  students.forEach(s => {
+    const cls = (s.cls||'').trim() || 'Unassigned';
+    if(!counts[cls]) counts[cls] = { total:0, present:0, absent:0 };
+    counts[cls].total++;
+    const status = dayRecord[s.id] || 'present';
+    if(status === 'absent') counts[cls].absent++; else counts[cls].present++;
+  });
+  const classes = Object.keys(counts).sort((a,b)=> a.localeCompare(b, undefined, {numeric:true}));
+  const emptyEl = document.getElementById('attClassSummaryEmpty');
+  if(emptyEl) emptyEl.style.display = classes.length ? 'none' : 'block';
+  body.innerHTML = classes.map(c => `<tr><td>${c}</td><td>${counts[c].total}</td><td>${counts[c].present}</td><td>${counts[c].absent}</td></tr>`).join('');
 }
 function setAttStatus(studentId, status){
   const date = document.getElementById('attDate').value;
@@ -1260,12 +1314,21 @@ function setAttStatus(studentId, status){
   saveData();
   renderAttendanceForm();
 }
+function sendAbsentWhatsApp(studentId){
+  const s = students.find(x => x.id === studentId);
+  if(!s) return;
+  const num = waNumberFor(s.contact);
+  if(!num){ alert('Is student ka WhatsApp/contact number darj nahi hai.'); return; }
+  const date = document.getElementById('attDate').value || new Date().toISOString().slice(0,10);
+  const msg = 'Assalam-o-Alaikum,\n' + schoolSettings.name + ' se ittila di jaa rahi hai ke aap ka bacha/bachi *' + s.name + '* (Class: ' + (s.cls||'—') + ', Adm#: ' + s.adm + ') tareekh ' + date + ' ko school mein ghair-hazir (absent) tha/thi.\nBaraye meherbani wajah se agah karein.\nShukriya.';
+  window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
+}
 function saveAttendance(){
   saveData();
   alert('Attendance save ho gayi is date k liye: ' + document.getElementById('attDate').value);
   renderAll();
 }
-document.addEventListener('change', function(e){ if(e.target.id === 'attDate') renderAttendanceForm(); });
+document.addEventListener('change', function(e){ if(e.target.id === 'attDate' || e.target.id === 'attClassFilter') renderAttendanceForm(); });
 
 /* ===================== NOTICES ===================== */
 function addNotice(){
@@ -1661,6 +1724,22 @@ document.querySelectorAll('table').forEach(tbl=>{
   const el = document.getElementById('stuAdmDate');
   if(el && !el.value) el.value = new Date().toISOString().slice(0,10);
 })();
+/* ===================== REALTIME CLOUD SYNC ===================== */
+// Jab bhi kisi doosre device/tab se data update ho, yahan turant (realtime) apply ho jata hai.
+if(SCHOOL_DOC){
+  SCHOOL_DOC.onSnapshot({ includeMetadataChanges: true }, function(doc){
+    if(!doc.exists) return;
+    if(doc.metadata.hasPendingWrites) return; // yeh humara apna hi local write hai, dubara apply na karein
+    applyData(doc.data());
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(doc.data())); }catch(e){}
+    renderAll();
+    const s = document.getElementById('saveStatus');
+    if(s) s.textContent = '☁️ Realtime update mila · ' + new Date().toLocaleTimeString();
+  }, function(err){
+    console.warn('Realtime sync error:', err);
+  });
+}
+
 loadData().finally(()=>{
   const btn = document.getElementById('loginBtn');
   if(btn) btn.disabled = false;
