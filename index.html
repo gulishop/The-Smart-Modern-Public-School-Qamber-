@@ -1090,6 +1090,7 @@ function deleteStudent(id){
   if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
   students = students.filter(s => s.id !== id);
   fees = fees.filter(f => f.studentId !== id);
+  saveData();
   renderAll();
 }
 function renderStudents(){
@@ -1120,6 +1121,7 @@ function addStaff(){
 function deleteStaff(id){
   if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
   staff = staff.filter(s => s.id !== id);
+  saveData();
   renderAll();
 }
 function renderStaff(){
@@ -1371,6 +1373,7 @@ function addEvent(){
 function deleteEvent(id){
   if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
   events = events.filter(e => e.id !== id);
+  saveData();
   renderAll();
 }
 function renderEvents(){
@@ -1441,6 +1444,7 @@ function addGalleryPhoto(){
 function deleteGalleryPhoto(id){
   if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
   galleryPhotos = galleryPhotos.filter(p => p.id !== id);
+  saveData();
   renderAll();
 }
 function renderGallery(){
@@ -1538,6 +1542,7 @@ function gradeFor(pct){
 function deleteExamResult(id){
   if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
   examResults = examResults.filter(r => r.id !== id);
+  saveData();
   renderAll();
 }
 function renderResults(){
