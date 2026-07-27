@@ -343,6 +343,14 @@
             <div class="stat-card"><div class="n" id="statCollected">Rs. 0</div><div class="l">Fee Collected</div></div>
           </div>
           <div class="panel">
+            <h3>Class Wise Students</h3>
+            <table>
+              <thead><tr><th>Class</th><th>Total Students</th></tr></thead>
+              <tbody id="classWiseBody"></tbody>
+            </table>
+            <div class="empty" id="classWiseEmpty" style="display:none;">Abhi tak koi student record nahi hai.</div>
+          </div>
+          <div class="panel">
             <h3>Recent Notices</h3>
             <div id="dashNotices"></div>
           </div>
@@ -793,6 +801,9 @@ const CREDENTIALS = {
 };
 // Ye emails Firebase Authentication se login hone par bhi ADMIN access payenge (Staff nahi).
 const ADMIN_EMAILS = ['smart@smart.com'];
+// Hardcoded admin (username/password) Firebase Auth use nahi karta, isliye uski "logged in" state
+// yahan localStorage mein rakhi jaati hai taake refresh/naya tab par dobara login na maangay.
+const LOCAL_SESSION_KEY = 'smp_qamber_local_admin_session_v1';
 
 function setRole(role){
   currentRole = role;
@@ -944,7 +955,7 @@ function logActivity(action){
   }
 }
 
-function enterApp(name){
+function enterApp(name, isRestore){
   session = { role: currentRole, name: name };
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appScreen').style.display = 'block';
@@ -955,7 +966,8 @@ function enterApp(name){
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = currentRole==='admin' ? 'block' : 'none');
   document.getElementById('topDate').textContent = new Date().toDateString();
   document.getElementById('attDate').value = new Date().toISOString().slice(0,10);
-  logActivity('Login');
+  // Jab session refresh/reload par khud-bakhud restore ho, tab dobara "Login" activity record na karein.
+  if(!isRestore) logActivity('Login');
   fillSettingsForm();
   renderAll();
 }
@@ -971,6 +983,7 @@ function doLogin(){
   if(currentRole === 'admin'){
     const cred = CREDENTIALS.admin;
     if(u === cred.user && p === cred.pass){
+      try{ localStorage.setItem(LOCAL_SESSION_KEY, '1'); }catch(e){}
       enterApp('School Admin');
       return;
     }
@@ -1015,6 +1028,7 @@ function doLogin(){
 
 function doLogout(){
   if(session) logActivity('Logout');
+  try{ localStorage.removeItem(LOCAL_SESSION_KEY); }catch(e){}
   if(auth && auth.currentUser){
     auth.signOut().catch(()=>{});
   }
@@ -1559,6 +1573,19 @@ function saveSettings(){
 }
 
 /* ===================== DASHBOARD / REPORTS ===================== */
+function renderClassWiseCounts(){
+  const body = document.getElementById('classWiseBody');
+  if(!body) return;
+  const counts = {};
+  students.forEach(s=>{
+    const cls = (s.cls || '').trim() || 'Unassigned';
+    counts[cls] = (counts[cls] || 0) + 1;
+  });
+  const classes = Object.keys(counts).sort((a,b)=> a.localeCompare(b, undefined, {numeric:true}));
+  const emptyEl = document.getElementById('classWiseEmpty');
+  if(emptyEl) emptyEl.style.display = classes.length ? 'none' : 'block';
+  body.innerHTML = classes.map(c => `<tr><td>${c}</td><td>${counts[c]}</td></tr>`).join('');
+}
 function renderDashboard(){
   document.getElementById('statStudents').textContent = students.length;
   document.getElementById('statStaff').textContent = staff.length;
@@ -1569,6 +1596,7 @@ function renderDashboard(){
   document.getElementById('statPending').textContent = fees.filter(f => f.status === 'pending').length;
   const collected = fees.filter(f => f.status === 'paid').reduce((sum,f) => sum + f.amount, 0);
   document.getElementById('statCollected').textContent = 'Rs. ' + collected;
+  renderClassWiseCounts();
 }
 function renderReports(){
   document.getElementById('repTotalChallans').textContent = fees.length;
@@ -1643,6 +1671,39 @@ loadData().finally(()=>{
       : '📴 Cloud connect nahi hai — abhi sirf is browser mein (offline) data save hoga.';
   }
 });
+
+/* ===================== AUTO-RESTORE LOGIN SESSION =====================
+   Refresh/naya tab kholne par dobara login na maangay — jab tak user khud
+   "Logout" na kare. Firebase Auth (staff/admin email) apni state khud
+   localStorage mein rakhta hai; hardcoded Admin (username/password) ke
+   liye hum apna LOCAL_SESSION_KEY flag check karte hain. */
+function restoreLocalAdminSessionIfAny(){
+  try{
+    if(!session && localStorage.getItem(LOCAL_SESSION_KEY) === '1'){
+      currentRole = 'admin';
+      enterApp('School Admin', true);
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+if(auth){
+  auth.onAuthStateChanged(function(user){
+    if(session) return; // is tab mein already logged in (manual login abhi hua)
+    if(user){
+      const email = (user.email || '').toLowerCase();
+      const isAdmin = ADMIN_EMAILS.includes(email);
+      currentRole = isAdmin ? 'admin' : 'user';
+      const displayName = user.displayName || user.email || (isAdmin ? 'School Admin' : 'Staff User');
+      enterApp(displayName, true);
+    } else {
+      // Firebase ka koi user session nahi mila — hardcoded Admin session check karein
+      restoreLocalAdminSessionIfAny();
+    }
+  });
+} else {
+  restoreLocalAdminSessionIfAny();
+}
 window.addEventListener('online', ()=>{
   const s = document.getElementById('saveStatus');
   if(s) s.textContent = 'Online ho gaye — sync ho raha hai…';
