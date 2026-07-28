@@ -776,7 +776,7 @@ function loadData(){
     try{ applyData(JSON.parse(raw)); }catch(e){}
   }
   if(!SCHOOL_DOC) return Promise.resolve();
-  const corePromise = SCHOOL_DOC.get().then(doc=>{
+  const corePromise = SCHOOL_DOC.get({source:'server'}).catch(()=>SCHOOL_DOC.get()).then(doc=>{
     if(doc.exists){
       applyData(doc.data());
     } else {
@@ -785,7 +785,7 @@ function loadData(){
   }).catch(err=>{
     console.warn('Cloud se data load nahi ho saka — offline/local data use ho raha hai.', err);
   });
-  const galleryPromise = SCHOOL_GALLERY_DOC ? SCHOOL_GALLERY_DOC.get().then(doc=>{
+  const galleryPromise = SCHOOL_GALLERY_DOC ? SCHOOL_GALLERY_DOC.get({source:'server'}).catch(()=>SCHOOL_GALLERY_DOC.get()).then(doc=>{
     if(doc.exists && doc.data().galleryPhotos){
       galleryPhotos = doc.data().galleryPhotos;
     }
