@@ -722,6 +722,10 @@ let currentQuote = null;
 function saveData(){
   // Gallery (photos) yahan shamil NAHI — wo bohot bhari hoti hain (base64), isliye alag save hoti hain
   // taake koi bhi chhoti tabdeeli (jaise ek student add karna) fast save/sync ho.
+  // NOTE: students/staff/fees/notices/loginLog/events/examResults/quoteLog ab yahan se Firestore
+  // par POORI list ke tor par NAHI bheje jaate — un sab ke apne add/delete functions seedha
+  // cloudArrayAdd()/cloudArrayRemove() use karte hain, taake ek device ki nayi entry doosre device
+  // ki entry ko cloud par overwrite na kar de. Yahan sirf localStorage ke liye poora data rakha hai.
   const data = { students, staff, fees, attendanceRecords, notices, loginLog, idCounter, schoolSettings, events, examResults, waSettings, quoteLog, savedAt: new Date().toISOString() };
   const s = document.getElementById('saveStatus');
   try{
@@ -732,8 +736,9 @@ function saveData(){
     return;
   }
   if(SCHOOL_DOC){
+    const cloudData = { attendanceRecords, idCounter, schoolSettings, waSettings, savedAt: new Date().toISOString() };
     if(s) s.textContent = navigator.onLine ? 'Cloud pe sync ho raha hai…' : 'Offline — local save, net aane par cloud sync hoga';
-    SCHOOL_DOC.set(data, { merge:true })
+    SCHOOL_DOC.set(cloudData, { merge:true })
       .then(()=>{ if(s) s.textContent = '☁️ Cloud synced · ' + new Date().toLocaleTimeString(); })
       .catch(err=>{ if(s) s.textContent = 'Local mein save · cloud baad mein sync hoga'; console.warn('Cloud save failed:', err); });
   } else {
@@ -741,19 +746,35 @@ function saveData(){
   }
 }
 function saveGalleryData(){
-  // Gallery ko alag document mein save karta hai — sirf jab photo add/delete ho tab call hota hai.
-  const s = document.getElementById('saveStatus');
+  // Sirf localStorage cache update karta hai. Firestore par har naye/hataye gaye photo ke liye
+  // addGalleryPhoto()/deleteGalleryPhoto() khud cloudArrayAdd()/cloudArrayRemove() se cloud update
+  // karte hain, taake do devices ki photos ek doosre ko overwrite na karein.
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     const existing = raw ? JSON.parse(raw) : {};
     existing.galleryPhotos = galleryPhotos;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
   }catch(e){}
-  if(!SCHOOL_GALLERY_DOC) return;
-  if(s) s.textContent = navigator.onLine ? 'Gallery cloud pe sync ho rahi hai…' : 'Offline — gallery local save, net aane par sync hogi';
-  SCHOOL_GALLERY_DOC.set({ galleryPhotos, savedAt: new Date().toISOString() }, { merge:true })
-    .then(()=>{ if(s) s.textContent = '☁️ Gallery synced · ' + new Date().toLocaleTimeString(); })
-    .catch(err=>{ if(s) s.textContent = 'Gallery local mein save · cloud baad mein sync hogi'; console.warn('Gallery cloud save failed:', err); });
+}
+function newId(){
+  // Har device apna khud ka unique ID banata hai (waqt + random) — taake do devices agar
+  // aik hi second mein entry add karein to bhi ID kabhi takra (clash) na kare.
+  return Date.now()*1000 + Math.floor(Math.random()*1000);
+}
+function cloudArrayAdd(field, item, docRef){
+  // Poori list dobara bheje bina, sirf NAYI entry cloud list mein add karta hai (Firestore arrayUnion).
+  // Isse agar doosra device bhi usi waqt kuch add kare, dono entries mehfooz rehti hain.
+  docRef = docRef || SCHOOL_DOC;
+  if(!docRef) return;
+  docRef.set({ [field]: firebase.firestore.FieldValue.arrayUnion(item) }, { merge:true })
+    .catch(err => console.warn('Cloud add failed for ' + field + ':', err));
+}
+function cloudArrayRemove(field, item, docRef){
+  // Sirf wahi entry cloud list se hataata hai (Firestore arrayRemove), baaki list ko chhue bagair.
+  docRef = docRef || SCHOOL_DOC;
+  if(!docRef) return;
+  docRef.set({ [field]: firebase.firestore.FieldValue.arrayRemove(item) }, { merge:true })
+    .catch(err => console.warn('Cloud remove failed for ' + field + ':', err));
 }
 function applyData(data){
   students = data.students || [];
@@ -909,8 +930,10 @@ function sendQuoteWhatsAppNow(){
   if(!currentQuote) currentQuote = pickTodayQuote();
   const msg = '📚 ' + schoolSettings.name + ' — Daily Awareness\n\n"' + currentQuote.text + '"\n— ' + currentQuote.by;
   window.open(waLinkFor(msg), '_blank');
-  quoteLog.unshift({ text: currentQuote.text, time: new Date().toLocaleString(), mode:'manual' });
+  const quoteEntry = { text: currentQuote.text, time: new Date().toLocaleString(), mode:'manual' };
+  quoteLog.unshift(quoteEntry);
   if(quoteLog.length > 100) quoteLog.length = 100;
+  cloudArrayAdd('quoteLog', quoteEntry);
   saveData();
   renderQuoteLog();
 }
@@ -974,13 +997,15 @@ function renderQuotesView(){
 
 function logActivity(action){
   const s = session;
-  loginLog.unshift({
+  const entry = {
     name: s ? s.name : '—',
     role: s ? s.role : currentRole,
     action: action,
     time: new Date().toLocaleString()
-  });
+  };
+  loginLog.unshift(entry);
   if(loginLog.length > 200) loginLog.length = 200; // purani entries hata dein, list zyada badi na ho
+  cloudArrayAdd('loginLog', entry);
   saveData();
   if(document.getElementById('view-loginlog') && document.getElementById('view-loginlog').classList.contains('active')){
     renderLoginLog();
@@ -1080,8 +1105,8 @@ function showView(name){
 function addStudent(){
   const name = document.getElementById('stuName').value.trim();
   if(!name){ alert('Student ka naam likhein.'); return; }
-  students.push({
-    id: idCounter++,
+  const newStudent = {
+    id: newId(),
     adm: 'ADM-' + String(students.length+1).padStart(4,'0'),
     name,
     father: document.getElementById('stuFather').value.trim(),
@@ -1093,15 +1118,19 @@ function addStudent(){
     gender: document.getElementById('stuGender').value,
     admDate: document.getElementById('stuAdmDate').value || new Date().toISOString().slice(0,10),
     address: document.getElementById('stuAddress').value.trim()
-  });
+  };
+  students.push(newStudent);
+  cloudArrayAdd('students', newStudent);
   ['stuName','stuFather','stuClass','stuSection','stuRoll','stuContact','stuDOB','stuAddress'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('stuAdmDate').value = new Date().toISOString().slice(0,10);
   renderAll();
 }
 function deleteStudent(id){
   if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
+  const toRemove = students.find(s => s.id === id);
   students = students.filter(s => s.id !== id);
   fees = fees.filter(f => f.studentId !== id);
+  if(toRemove) cloudArrayRemove('students', toRemove);
   saveData();
   renderAll();
 }
@@ -1120,19 +1149,23 @@ function addStaff(){
   if(session.role !== 'admin'){ alert('Sirf Admin naya staff/teacher add kar sakta hai.'); return; }
   const name = document.getElementById('stfName').value.trim();
   if(!name){ alert('Naam likhein.'); return; }
-  staff.push({
-    id: idCounter++,
+  const newStaff = {
+    id: newId(),
     name,
     desg: document.getElementById('stfDesg').value.trim(),
     contact: document.getElementById('stfContact').value.trim(),
     salary: document.getElementById('stfSalary').value
-  });
+  };
+  staff.push(newStaff);
+  cloudArrayAdd('staff', newStaff);
   ['stfName','stfDesg','stfContact','stfSalary'].forEach(id => document.getElementById(id).value = '');
   renderAll();
 }
 function deleteStaff(id){
   if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
+  const toRemove = staff.find(s => s.id === id);
   staff = staff.filter(s => s.id !== id);
+  if(toRemove) cloudArrayRemove('staff', toRemove);
   saveData();
   renderAll();
 }
@@ -1158,20 +1191,26 @@ function addFee(){
   if(!student){ alert('Pehle Student Management se ek student add karein.'); return; }
   const amount = document.getElementById('feeAmount').value;
   if(!amount){ alert('Fee amount likhein.'); return; }
-  fees.push({
-    id: idCounter++,
+  const newFee = {
+    id: newId(),
     studentId,
     month: document.getElementById('feeMonth').value.trim() || '—',
     amount: Number(amount),
     due: document.getElementById('feeDue').value,
     status: 'pending'
-  });
+  };
+  fees.push(newFee);
+  cloudArrayAdd('fees', newFee);
   ['feeMonth','feeAmount','feeDue'].forEach(id => document.getElementById(id).value = '');
   renderAll();
 }
 function toggleFeeStatus(id){
   const f = fees.find(x => x.id === id);
-  if(f) f.status = f.status === 'paid' ? 'pending' : 'paid';
+  if(!f) return;
+  const oldFee = Object.assign({}, f);
+  f.status = f.status === 'paid' ? 'pending' : 'paid';
+  cloudArrayRemove('fees', oldFee);
+  cloudArrayAdd('fees', Object.assign({}, f));
   renderAll();
 }
 function renderFees(){
@@ -1348,7 +1387,9 @@ document.addEventListener('change', function(e){ if(e.target.id === 'attDate' ||
 function addNotice(){
   const title = document.getElementById('noticeTitle').value.trim();
   if(!title){ alert('Notice ka title likhein.'); return; }
-  notices.unshift({ id: idCounter++, title, body: document.getElementById('noticeBody').value.trim(), date: new Date().toDateString() });
+  const newNotice = { id: newId(), title, body: document.getElementById('noticeBody').value.trim(), date: new Date().toDateString() };
+  notices.unshift(newNotice);
+  cloudArrayAdd('notices', newNotice);
   document.getElementById('noticeTitle').value = '';
   document.getElementById('noticeBody').value = '';
   renderAll();
@@ -1371,20 +1412,24 @@ function shareNoticeWhatsApp(id){
 function addEvent(){
   const title = document.getElementById('evtTitle').value.trim();
   if(!title){ alert('Event ka title likhein.'); return; }
-  events.unshift({
-    id: idCounter++,
+  const newEvent = {
+    id: newId(),
     title,
     type: document.getElementById('evtType').value,
     date: document.getElementById('evtDate').value || new Date().toISOString().slice(0,10),
     endDate: document.getElementById('evtEndDate').value,
     desc: document.getElementById('evtDesc').value.trim()
-  });
+  };
+  events.unshift(newEvent);
+  cloudArrayAdd('events', newEvent);
   ['evtTitle','evtDate','evtEndDate','evtDesc'].forEach(id => document.getElementById(id).value = '');
   renderAll();
 }
 function deleteEvent(id){
   if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
+  const toRemove = events.find(e => e.id === id);
   events = events.filter(e => e.id !== id);
+  if(toRemove) cloudArrayRemove('events', toRemove);
   saveData();
   renderAll();
 }
@@ -1440,13 +1485,15 @@ function addGalleryPhoto(){
   if(!file){ alert('Pehle ek photo select karein.'); return; }
   const reader = new FileReader();
   reader.onload = function(e){
-    galleryPhotos.unshift({
-      id: idCounter++,
+    const newPhoto = {
+      id: newId(),
       title: title || 'Untitled',
       album: document.getElementById('galType').value,
       dataUrl: e.target.result,
       date: new Date().toDateString()
-    });
+    };
+    galleryPhotos.unshift(newPhoto);
+    cloudArrayAdd('galleryPhotos', newPhoto, SCHOOL_GALLERY_DOC);
     document.getElementById('galTitle').value = '';
     fileInput.value = '';
     renderGallery();
@@ -1456,7 +1503,9 @@ function addGalleryPhoto(){
 }
 function deleteGalleryPhoto(id){
   if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
+  const toRemove = galleryPhotos.find(p => p.id === id);
   galleryPhotos = galleryPhotos.filter(p => p.id !== id);
+  if(toRemove) cloudArrayRemove('galleryPhotos', toRemove, SCHOOL_GALLERY_DOC);
   renderGallery();
   saveGalleryData();
 }
@@ -1532,13 +1581,15 @@ function saveExamResult(){
   const totalMax = subjects.reduce((a,s) => a + s.total, 0);
   const percentage = totalMax ? ((totalObtained/totalMax)*100).toFixed(1) : '0.0';
   const grade = gradeFor(Number(percentage));
-  examResults.unshift({
-    id: idCounter++,
+  const newResult = {
+    id: newId(),
     studentId,
     exam,
     date: document.getElementById('resDate').value || new Date().toISOString().slice(0,10),
     subjects, totalObtained, totalMax, percentage, grade
-  });
+  };
+  examResults.unshift(newResult);
+  cloudArrayAdd('examResults', newResult);
   document.getElementById('resExam').value = '';
   document.getElementById('resDate').value = '';
   document.getElementById('subjectRows').innerHTML = '';
@@ -1554,7 +1605,9 @@ function gradeFor(pct){
 }
 function deleteExamResult(id){
   if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
+  const toRemove = examResults.find(r => r.id === id);
   examResults = examResults.filter(r => r.id !== id);
+  if(toRemove) cloudArrayRemove('examResults', toRemove);
   saveData();
   renderAll();
 }
