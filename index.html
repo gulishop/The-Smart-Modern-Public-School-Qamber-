@@ -697,6 +697,7 @@ try{
   console.warn('Firebase config set nahi hai ya ghalat hai — sirf is browser mein (offline) data save hoga.', e);
 }
 const SCHOOL_DOC = db ? db.collection('school').doc('main') : null;
+const SCHOOL_GALLERY_DOC = db ? db.collection('school').doc('gallery') : null;
 </script>
 
 <script>
@@ -719,10 +720,13 @@ let quoteLog = [];
 let currentQuote = null;
 
 function saveData(){
-  const data = { students, staff, fees, attendanceRecords, notices, loginLog, idCounter, schoolSettings, events, galleryPhotos, examResults, waSettings, quoteLog, savedAt: new Date().toISOString() };
+  // Gallery (photos) yahan shamil NAHI — wo bohot bhari hoti hain (base64), isliye alag save hoti hain
+  // taake koi bhi chhoti tabdeeli (jaise ek student add karna) fast save/sync ho.
+  const data = { students, staff, fees, attendanceRecords, notices, loginLog, idCounter, schoolSettings, events, examResults, waSettings, quoteLog, savedAt: new Date().toISOString() };
   const s = document.getElementById('saveStatus');
   try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    const full = Object.assign({}, data, { galleryPhotos });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(full));
   }catch(e){
     if(s) s.textContent = 'Save failed — storage full/blocked';
     return;
@@ -736,6 +740,21 @@ function saveData(){
     if(s) s.textContent = 'Saved locally · ' + new Date().toLocaleTimeString();
   }
 }
+function saveGalleryData(){
+  // Gallery ko alag document mein save karta hai — sirf jab photo add/delete ho tab call hota hai.
+  const s = document.getElementById('saveStatus');
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const existing = raw ? JSON.parse(raw) : {};
+    existing.galleryPhotos = galleryPhotos;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+  }catch(e){}
+  if(!SCHOOL_GALLERY_DOC) return;
+  if(s) s.textContent = navigator.onLine ? 'Gallery cloud pe sync ho rahi hai…' : 'Offline — gallery local save, net aane par sync hogi';
+  SCHOOL_GALLERY_DOC.set({ galleryPhotos, savedAt: new Date().toISOString() }, { merge:true })
+    .then(()=>{ if(s) s.textContent = '☁️ Gallery synced · ' + new Date().toLocaleTimeString(); })
+    .catch(err=>{ if(s) s.textContent = 'Gallery local mein save · cloud baad mein sync hogi'; console.warn('Gallery cloud save failed:', err); });
+}
 function applyData(data){
   students = data.students || [];
   staff = data.staff || [];
@@ -746,7 +765,7 @@ function applyData(data){
   idCounter = data.idCounter || 1;
   schoolSettings = data.schoolSettings || schoolSettings;
   events = data.events || [];
-  galleryPhotos = data.galleryPhotos || [];
+  if(data.galleryPhotos) galleryPhotos = data.galleryPhotos;
   examResults = data.examResults || [];
   waSettings = data.waSettings || waSettings;
   quoteLog = data.quoteLog || [];
@@ -757,17 +776,27 @@ function loadData(){
     try{ applyData(JSON.parse(raw)); }catch(e){}
   }
   if(!SCHOOL_DOC) return Promise.resolve();
-  return SCHOOL_DOC.get().then(doc=>{
+  const corePromise = SCHOOL_DOC.get().then(doc=>{
     if(doc.exists){
       applyData(doc.data());
-      try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(doc.data())); }catch(e){}
     } else {
       saveData();
     }
   }).catch(err=>{
     console.warn('Cloud se data load nahi ho saka — offline/local data use ho raha hai.', err);
   });
+  const galleryPromise = SCHOOL_GALLERY_DOC ? SCHOOL_GALLERY_DOC.get().then(doc=>{
+    if(doc.exists && doc.data().galleryPhotos){
+      galleryPhotos = doc.data().galleryPhotos;
+    }
+  }).catch(err=>{
+    console.warn('Gallery cloud se load nahi ho saki.', err);
+  }) : Promise.resolve();
+  return Promise.all([corePromise, galleryPromise]).then(()=>{
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(Object.assign({}, { students, staff, fees, attendanceRecords, notices, loginLog, idCounter, schoolSettings, events, examResults, waSettings, quoteLog }, { galleryPhotos }))); }catch(e){}
+  });
 }
+
 function backupData(){
   const data = { students, staff, fees, attendanceRecords, notices, idCounter, schoolSettings, events, galleryPhotos, examResults, waSettings, quoteLog, exportedAt: new Date().toISOString() };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -790,6 +819,7 @@ function restoreData(input){
       if(!confirm('Yeh maujooda data ko backup file k data se replace kar dega. Continue karein?')) { input.value=''; return; }
       applyData(data);
       saveData();
+      saveGalleryData();
       renderAll();
       fillSettingsForm();
       alert('Data kamyabi se restore ho gaya.');
@@ -1419,15 +1449,16 @@ function addGalleryPhoto(){
     });
     document.getElementById('galTitle').value = '';
     fileInput.value = '';
-    renderAll();
+    renderGallery();
+    saveGalleryData();
   };
   reader.readAsDataURL(file);
 }
 function deleteGalleryPhoto(id){
   if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
   galleryPhotos = galleryPhotos.filter(p => p.id !== id);
-  saveData();
-  renderAll();
+  renderGallery();
+  saveGalleryData();
 }
 function renderGallery(){
   const grid = document.getElementById('galleryGrid');
@@ -1660,7 +1691,7 @@ function renderReports(){
   document.getElementById('repAbsent').textContent = students.length - present;
 }
 
-function renderAll(){
+function renderOnly(){
   renderStudents();
   renderStaff();
   renderFees();
@@ -1671,6 +1702,9 @@ function renderAll(){
   renderResultStudentOptions();
   renderDashboard();
   renderFeeStudentOptions();
+}
+function renderAll(){
+  renderOnly();
   saveData();
 }
 
@@ -1718,12 +1752,35 @@ if(SCHOOL_DOC){
     if(!doc.exists) return;
     if(doc.metadata.hasPendingWrites) return; // yeh humara apna hi local write hai, dubara apply na karein
     applyData(doc.data());
-    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(doc.data())); }catch(e){}
-    renderAll();
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const merged = Object.assign({}, raw ? JSON.parse(raw) : {}, doc.data());
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    }catch(e){}
+    renderOnly();
     const s = document.getElementById('saveStatus');
     if(s) s.textContent = '☁️ Realtime update mila · ' + new Date().toLocaleTimeString();
   }, function(err){
     console.warn('Realtime sync error:', err);
+  });
+}
+if(SCHOOL_GALLERY_DOC){
+  SCHOOL_GALLERY_DOC.onSnapshot({ includeMetadataChanges: true }, function(doc){
+    if(!doc.exists) return;
+    if(doc.metadata.hasPendingWrites) return;
+    if(doc.data().galleryPhotos){
+      galleryPhotos = doc.data().galleryPhotos;
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const merged = Object.assign({}, raw ? JSON.parse(raw) : {}, { galleryPhotos });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      }catch(e){}
+      renderGallery();
+      const s = document.getElementById('saveStatus');
+      if(s) s.textContent = '☁️ Gallery realtime update mila · ' + new Date().toLocaleTimeString();
+    }
+  }, function(err){
+    console.warn('Gallery realtime sync error:', err);
   });
 }
 
