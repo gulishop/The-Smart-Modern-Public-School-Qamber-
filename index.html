@@ -603,6 +603,15 @@
             </div>
           </div>
           <div class="panel">
+            <h3>Class-wise Fee Summary</h3>
+            <p class="hint">Har class ki total fees, kitni mil chuki (paid) aur kitni baaki (pending) hai.</p>
+            <table>
+              <thead><tr><th>Class</th><th>Total Challans</th><th>Total Fee (Rs.)</th><th>Paid (Rs.)</th><th>Pending (Rs.)</th></tr></thead>
+              <tbody id="repClassFeeTable"></tbody>
+            </table>
+            <div class="empty" id="repClassFeeEmpty">Abhi tak koi fee record nahi hai.</div>
+          </div>
+          <div class="panel">
             <h3>Attendance Summary (Today)</h3>
             <div class="stat-grid">
               <div class="stat-card"><div class="n" id="repPresent">0</div><div class="l">Present</div></div>
@@ -1737,11 +1746,39 @@ function renderReports(){
   document.getElementById('repPaid').textContent = fees.filter(f=>f.status==='paid').length;
   document.getElementById('repPending').textContent = fees.filter(f=>f.status==='pending').length;
   document.getElementById('repAmount').textContent = 'Rs. ' + fees.filter(f=>f.status==='paid').reduce((s,f)=>s+f.amount,0);
+  renderClassFeeSummary();
   const today = new Date().toISOString().slice(0,10);
   const todayRec = attendanceRecords[today] || {};
   const present = students.filter(s => (todayRec[s.id] || 'present') === 'present').length;
   document.getElementById('repPresent').textContent = present;
   document.getElementById('repAbsent').textContent = students.length - present;
+}
+
+function renderClassFeeSummary(){
+  const tbody = document.getElementById('repClassFeeTable');
+  tbody.innerHTML = '';
+  const byClass = {};
+  fees.forEach(f => {
+    const student = students.find(s => s.id === f.studentId);
+    const cls = (student && student.cls && student.cls.trim()) || 'Unassigned';
+    if(!byClass[cls]) byClass[cls] = { count:0, total:0, paid:0, pending:0 };
+    byClass[cls].count += 1;
+    byClass[cls].total += f.amount;
+    if(f.status === 'paid') byClass[cls].paid += f.amount;
+    else byClass[cls].pending += f.amount;
+  });
+  const classNames = Object.keys(byClass).sort((a,b) => a.localeCompare(b, undefined, {numeric:true}));
+  document.getElementById('repClassFeeEmpty').style.display = classNames.length ? 'none' : 'block';
+  classNames.forEach(cls => {
+    const c = byClass[cls];
+    tbody.innerHTML += `<tr>
+      <td>${cls}</td>
+      <td>${c.count}</td>
+      <td>Rs. ${c.total}</td>
+      <td>Rs. ${c.paid}</td>
+      <td>Rs. ${c.pending}</td>
+    </tr>`;
+  });
 }
 
 function renderOnly(){
