@@ -339,7 +339,7 @@
             <div class="stat-card"><div class="n" id="statStudents">0</div><div class="l">Total Students</div></div>
             <div class="stat-card"><div class="n" id="statStaff">0</div><div class="l">Total Teachers / Staff</div></div>
             <div class="stat-card"><div class="n" id="statPresent">0</div><div class="l">Present Today</div></div>
-            <div class="stat-card"><div class="n" id="statPending">0</div><div class="l">Pending Fee Challans</div></div>
+            <div class="stat-card" style="cursor:pointer;" onclick="showAllPendingFees()"><div class="n" id="statPending">0</div><div class="l">Pending Fee Challans</div></div>
             <div class="stat-card"><div class="n" id="statCollected">Rs. 0</div><div class="l">Fee Collected</div></div>
           </div>
           <div class="panel">
@@ -349,6 +349,15 @@
               <tbody id="classWiseBody"></tbody>
             </table>
             <div class="empty" id="classWiseEmpty" style="display:none;">Abhi tak koi student record nahi hai.</div>
+          </div>
+          <div class="panel">
+            <h3>Class Wise Fee Status</h3>
+            <p class="hint">Pending amount par click karein — us class ke unpaid challans khul jayenge.</p>
+            <table>
+              <thead><tr><th>Class</th><th>Total Fee (Rs.)</th><th>Paid (Rs.)</th><th>Pending (Rs.)</th></tr></thead>
+              <tbody id="dashClassFeeTable"></tbody>
+            </table>
+            <div class="empty" id="dashClassFeeEmpty" style="display:none;">Abhi tak koi fee record nahi hai.</div>
           </div>
           <div class="panel">
             <h3>Recent Notices</h3>
@@ -427,6 +436,10 @@
           <div class="panel">
             <h3>Fee Records</h3>
             <p class="hint">Print button se School Copy + Student Copy — dono ek hi A4 page par print hongi.</p>
+            <div id="feeFilterBanner" style="display:none; margin-bottom:10px; padding:8px 12px; background:var(--gold); color:#1a1a1a; border-radius:6px; font-size:13px; justify-content:space-between; align-items:center;">
+              <span id="feeFilterText"></span>
+              <button class="btn small" style="background:var(--navy); margin:0;" onclick="clearFeeFilter()">Clear Filter</button>
+            </div>
             <table>
               <thead><tr><th>Student</th><th>Month</th><th>Amount</th><th>Due Date</th><th>Status</th><th></th></tr></thead>
               <tbody id="feeTable"></tbody>
@@ -716,6 +729,8 @@ const STORAGE_KEY = 'smp_qamber_school_data_v1';
 let students = [];
 let staff = [];
 let fees = [];
+let feeFilterClass = null;
+let feeFilterStatus = null;
 let attendanceRecords = {};
 let notices = [];
 let loginLog = [];
@@ -1225,8 +1240,30 @@ function toggleFeeStatus(id){
 function renderFees(){
   const tbody = document.getElementById('feeTable');
   tbody.innerHTML = '';
-  document.getElementById('feeEmpty').style.display = fees.length ? 'none' : 'block';
-  fees.forEach(f => {
+  let list = fees;
+  if(feeFilterClass !== null || feeFilterStatus !== null){
+    list = fees.filter(f => {
+      const student = students.find(s => s.id === f.studentId);
+      const cls = (student && student.cls && student.cls.trim()) || 'Unassigned';
+      const classOk = feeFilterClass === null || cls === feeFilterClass;
+      const statusOk = feeFilterStatus === null || f.status === feeFilterStatus;
+      return classOk && statusOk;
+    });
+  }
+  const banner = document.getElementById('feeFilterBanner');
+  const bannerText = document.getElementById('feeFilterText');
+  if(feeFilterClass !== null || feeFilterStatus !== null){
+    banner.style.display = 'flex';
+    const parts = [];
+    if(feeFilterStatus !== null) parts.push(feeFilterStatus.toUpperCase());
+    parts.push('fees');
+    if(feeFilterClass !== null) parts.push('— Class ' + feeFilterClass);
+    bannerText.textContent = 'Showing ' + parts.join(' ');
+  } else {
+    banner.style.display = 'none';
+  }
+  document.getElementById('feeEmpty').style.display = list.length ? 'none' : 'block';
+  list.forEach(f => {
     const student = students.find(s => s.id === f.studentId);
     tbody.innerHTML += `<tr>
       <td>${student ? student.name : '—'}</td>
@@ -1240,6 +1277,23 @@ function renderFees(){
       </td>
     </tr>`;
   });
+}
+function clearFeeFilter(){
+  feeFilterClass = null;
+  feeFilterStatus = null;
+  renderFees();
+}
+function showUnpaidFeesForClass(cls){
+  feeFilterClass = cls;
+  feeFilterStatus = 'pending';
+  showView('fees');
+  renderFees();
+}
+function showAllPendingFees(){
+  feeFilterClass = null;
+  feeFilterStatus = 'pending';
+  showView('fees');
+  renderFees();
 }
 function challanBlockHTML(label, f, student){
   return `
@@ -1740,6 +1794,34 @@ function renderDashboard(){
   const collected = fees.filter(f => f.status === 'paid').reduce((sum,f) => sum + f.amount, 0);
   document.getElementById('statCollected').textContent = 'Rs. ' + collected;
   renderClassWiseCounts();
+  renderDashboardClassFees();
+}
+function renderDashboardClassFees(){
+  const tbody = document.getElementById('dashClassFeeTable');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  const byClass = {};
+  fees.forEach(f => {
+    const student = students.find(s => s.id === f.studentId);
+    const cls = (student && student.cls && student.cls.trim()) || 'Unassigned';
+    if(!byClass[cls]) byClass[cls] = { total:0, paid:0, pending:0 };
+    byClass[cls].total += f.amount;
+    if(f.status === 'paid') byClass[cls].paid += f.amount;
+    else byClass[cls].pending += f.amount;
+  });
+  const classNames = Object.keys(byClass).sort((a,b) => a.localeCompare(b, undefined, {numeric:true}));
+  const emptyEl = document.getElementById('dashClassFeeEmpty');
+  if(emptyEl) emptyEl.style.display = classNames.length ? 'none' : 'block';
+  classNames.forEach(cls => {
+    const c = byClass[cls];
+    const clickable = c.pending > 0;
+    tbody.innerHTML += `<tr>
+      <td>${cls}</td>
+      <td>Rs. ${c.total}</td>
+      <td>Rs. ${c.paid}</td>
+      <td>${clickable ? `<span style="cursor:pointer; text-decoration:underline; color:var(--navy); font-weight:600;" onclick="showUnpaidFeesForClass('${cls.replace(/'/g,"\\'")}')">Rs. ${c.pending}</span>` : 'Rs. 0'}</td>
+    </tr>`;
+  });
 }
 function renderReports(){
   document.getElementById('repTotalChallans').textContent = fees.length;
