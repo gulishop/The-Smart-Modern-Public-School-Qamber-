@@ -426,6 +426,7 @@
           <div class="panel">
             <h3>Generate Fee Challan</h3>
             <div class="form-grid">
+              <div class="field"><label>Class</label><select id="feeClass" onchange="renderFeeStudentOptions()"></select></div>
               <div class="field"><label>Student</label><select id="feeStudent"></select></div>
               <div class="field"><label>Month</label><input id="feeMonth" type="text" placeholder="e.g. August 2026"></div>
               <div class="field"><label>Amount (Rs.)</label><input id="feeAmount" type="number"></div>
@@ -1205,9 +1206,20 @@ function renderStaff(){
 }
 
 /* ===================== FEES / CHALLAN ===================== */
+function renderFeeClassOptions(){
+  const sel = document.getElementById('feeClass');
+  const prevValue = sel.value;
+  const classes = Array.from(new Set(students.map(s => (s.cls||'').trim()).filter(Boolean)))
+    .sort((a,b) => a.localeCompare(b, undefined, {numeric:true}));
+  sel.innerHTML = '<option value="">All Classes</option>' + classes.map(c => `<option value="${c}">${c}</option>`).join('');
+  if(classes.includes(prevValue)) sel.value = prevValue;
+}
 function renderFeeStudentOptions(){
+  renderFeeClassOptions();
   const sel = document.getElementById('feeStudent');
-  sel.innerHTML = students.map(s => `<option value="${s.id}">${s.name} — ${s.adm}</option>`).join('') || '<option value="">Pehle student add karein</option>';
+  const selectedClass = document.getElementById('feeClass').value;
+  const list = selectedClass ? students.filter(s => (s.cls||'').trim() === selectedClass) : students;
+  sel.innerHTML = list.map(s => `<option value="${s.id}">${s.name} — ${s.adm}</option>`).join('') || '<option value="">Is class mein koi student nahi</option>';
 }
 function addFee(){
   const studentId = Number(document.getElementById('feeStudent').value);
