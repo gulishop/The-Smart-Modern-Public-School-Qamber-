@@ -1244,10 +1244,41 @@ function toggleFeeStatus(id){
   const f = fees.find(x => x.id === id);
   if(!f) return;
   const oldFee = Object.assign({}, f);
+  const becamePaid = f.status !== 'paid';
   f.status = f.status === 'paid' ? 'pending' : 'paid';
+  if(becamePaid) f.paidDate = new Date().toISOString().slice(0,10);
   cloudArrayRemove('fees', oldFee);
   cloudArrayAdd('fees', Object.assign({}, f));
   renderAll();
+  if(becamePaid) sendFeePaidWhatsApp(id);
+}
+function sendFeePaidWhatsApp(feeId){
+  const f = fees.find(x => x.id === feeId);
+  if(!f) return;
+  const s = students.find(x => x.id === f.studentId);
+  if(!s){ alert('Student record nahi mila.'); return; }
+  const num = waNumberFor(s.contact);
+  if(!num){ alert('Is student ka WhatsApp/contact number darj nahi hai.'); return; }
+  const dateStr = f.paidDate || new Date().toISOString().slice(0,10);
+  const classSection = (s.cls||'—') + (s.section ? ' / ' + s.section : '');
+  const msg = '*' + schoolSettings.name + '*\n'
+    + '_Fee Payment Confirmation_\n'
+    + '——————————————\n'
+    + 'Respected Parent,\n\n'
+    + 'Aap ki fee payment kamyabi se wusool ho chuki hai. Tafseelat mulahiza karein:\n\n'
+    + '*Student Name:* ' + s.name + '\n'
+    + '*Class / Section:* ' + classSection + '\n'
+    + '*Admission No.:* ' + s.adm + '\n'
+    + '*Fee Month:* ' + f.month + '\n'
+    + '*Amount Paid:* Rs. ' + f.amount + '\n'
+    + '*Payment Date:* ' + dateStr + '\n'
+    + '——————————————\n'
+    + 'Ye paigham fee wusooli ki tasdeeq ke taur par bheja gaya hai; asal receipt/challan school office se hasil ki ja sakti hai.\n\n'
+    + 'Barah-e-karam kisi bhi sawal ya wazahat ke liye school office se rabta karein' + (schoolSettings.contact ? ' (' + schoolSettings.contact + ')' : '') + '.\n\n'
+    + 'Shukriya,\n'
+    + '*' + schoolSettings.name + '*\n'
+    + 'Administration';
+  window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
 }
 function renderFees(){
   const tbody = document.getElementById('feeTable');
@@ -1286,6 +1317,7 @@ function renderFees(){
       <td style="display:flex; gap:6px;">
         <button class="btn small gold" onclick="openChallan(${f.id})">Print</button>
         <button class="btn small" style="background:var(--muted);" onclick="toggleFeeStatus(${f.id})">${f.status==='paid'?'Mark Pending':'Mark Paid'}</button>
+        ${f.status==='paid' ? `<button class="btn whatsapp small" onclick="sendFeePaidWhatsApp(${f.id})">📱 Message</button>` : ''}
       </td>
     </tr>`;
   });
