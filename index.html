@@ -1320,6 +1320,36 @@ function addFee(){
   ['feeMonth','feeAmount','feeDue'].forEach(id => document.getElementById(id).value = '');
   renderAll();
 }
+function editFee(id){
+  if(session.role !== 'admin'){ alert('Sirf Admin edit kar sakta hai.'); return; }
+  const f = fees.find(x => x.id === id);
+  if(!f) return;
+  const oldFee = Object.assign({}, f);
+  const newMonth = prompt('Month:', f.month);
+  if(newMonth === null) return;
+  const newAmount = prompt('Amount (Rs.):', f.amount);
+  if(newAmount === null) return;
+  if(!newAmount || isNaN(Number(newAmount))){ alert('Sahi amount likhein.'); return; }
+  const newDue = prompt('Due Date (YYYY-MM-DD):', f.due || '');
+  if(newDue === null) return;
+  f.month = newMonth.trim() || f.month;
+  f.amount = Number(newAmount);
+  f.due = newDue.trim();
+  cloudArrayRemove('fees', oldFee);
+  cloudArrayAdd('fees', Object.assign({}, f));
+  saveData();
+  renderAll();
+}
+function deleteFee(id){
+  if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
+  const f = fees.find(x => x.id === id);
+  if(!f) return;
+  if(!confirm('Ye fee challan delete karna hai?')) return;
+  fees = fees.filter(x => x.id !== id);
+  cloudArrayRemove('fees', f);
+  saveData();
+  renderAll();
+}
 function toggleFeeStatus(id){
   if(session.role !== 'admin'){ alert('Sirf Admin fee status change kar sakta hai.'); return; }
   const f = fees.find(x => x.id === id);
@@ -1400,6 +1430,8 @@ function renderFees(){
         <button class="btn small gold" onclick="openChallan(${f.id})">Print</button>
         ${isAdmin ? `<button class="btn small" style="background:var(--muted);" onclick="toggleFeeStatus(${f.id})">${f.status==='paid'?'Mark Pending':'Mark Paid'}</button>` : ''}
         ${f.status==='paid' ? `<button class="btn whatsapp small" onclick="sendFeePaidWhatsApp(${f.id})">📱 Message</button>` : ''}
+        ${isAdmin ? `<button class="btn small" style="background:var(--navy);" onclick="editFee(${f.id})">Edit</button>` : ''}
+        ${isAdmin ? `<button class="btn small red" onclick="deleteFee(${f.id})">Delete</button>` : ''}
       </td>
     </tr>`;
   });
