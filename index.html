@@ -401,7 +401,7 @@
 
         <!-- STAFF -->
         <div class="view" id="view-staff">
-          <div class="panel">
+          <div class="panel admin-only">
             <h3>Teacher / Staff Entry</h3>
             <div class="form-grid">
               <div class="field"><label>Full Name</label><input id="stfName" type="text"></div>
@@ -417,7 +417,7 @@
           <div class="panel">
             <h3>Teacher &amp; Staff List</h3>
             <table>
-              <thead><tr><th>Staff ID</th><th>Name</th><th>Designation</th><th>Contact</th><th>Salary</th><th>Login Email</th><th>Password</th><th></th></tr></thead>
+              <thead><tr id="staffTableHead"><th>Staff ID</th><th>Name</th><th>Designation</th><th>Contact</th><th>Salary</th><th>Login Email</th><th>Password</th><th></th></tr></thead>
               <tbody id="staffTable"></tbody>
             </table>
             <div class="empty" id="staffEmpty">Abhi tak koi teacher/staff add nahi hua.</div>
@@ -1094,7 +1094,8 @@ function doLogin(){
       return;
     }
     hashPassword(p).then(hash => {
-      const match = staff.find(s => ('STF-' + (s.staffCode || s.id)).toLowerCase() === u.toLowerCase() && s.passHash && s.passHash === hash);
+      const enteredId = u.toLowerCase().replace(/^stf-?/, '').trim();
+      const match = staff.find(s => String(s.staffCode || s.id).toLowerCase() === enteredId && s.passHash && s.passHash === hash);
       if(!match){
         errorBox.textContent = 'Ghalat Staff ID ya password.';
         errorBox.style.display = 'block';
@@ -1264,12 +1265,19 @@ function deleteStaff(id){
 }
 function renderStaff(){
   const tbody = document.getElementById('staffTable');
+  const thead = document.getElementById('staffTableHead');
   tbody.innerHTML = '';
   document.getElementById('staffEmpty').style.display = staff.length ? 'none' : 'block';
-  const addBtn = document.querySelector('#view-staff .panel .btn');
-  if(addBtn) addBtn.style.display = (session && session.role === 'admin') ? 'inline-block' : 'none';
+  const isAdmin = session && session.role === 'admin';
+  thead.innerHTML = isAdmin
+    ? '<th>Staff ID</th><th>Name</th><th>Designation</th><th>Contact</th><th>Salary</th><th>Login Email</th><th>Password</th><th></th>'
+    : '<th>Staff ID</th><th>Name</th><th>Designation</th>';
   staff.forEach(s => {
-    tbody.innerHTML += `<tr><td>STF-${s.staffCode || s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td><td>${s.contact||'—'}</td><td>${s.salary ? 'Rs. '+s.salary : '—'}</td><td>${s.email||'—'}</td><td>${s.passHash ? '●●●●●●' : '<span style="color:var(--red);">Not set</span>'}</td><td style="display:flex; gap:6px;">${(session && session.role==='admin') ? `<button class="btn small" style="background:var(--navy);" onclick="changeStaffPassword(${s.id})">Change Password</button><button class="btn small red" onclick="deleteStaff(${s.id})">Delete</button>` : ''}</td></tr>`;
+    if(isAdmin){
+      tbody.innerHTML += `<tr><td>STF-${s.staffCode || s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td><td>${s.contact||'—'}</td><td>${s.salary ? 'Rs. '+s.salary : '—'}</td><td>${s.email||'—'}</td><td>${s.passHash ? '●●●●●●' : '<span style="color:var(--red);">Not set</span>'}</td><td style="display:flex; gap:6px;"><button class="btn small" style="background:var(--navy);" onclick="changeStaffPassword(${s.id})">Change Password</button><button class="btn small red" onclick="deleteStaff(${s.id})">Delete</button></td></tr>`;
+    } else {
+      tbody.innerHTML += `<tr><td>STF-${s.staffCode || s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td></tr>`;
+    }
   });
 }
 
