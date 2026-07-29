@@ -789,6 +789,11 @@ function newId(){
   // aik hi second mein entry add karein to bhi ID kabhi takra (clash) na kare.
   return Date.now()*1000 + Math.floor(Math.random()*1000);
 }
+function nextStaffCode(){
+  // Staff login ke liye chhota, aasan-se-type ID (STF-1001, STF-1002, ...) — internal id se alag.
+  const used = staff.map(s => s.staffCode).filter(Boolean);
+  return used.length ? Math.max(...used) + 1 : 1001;
+}
 function cloudArrayAdd(field, item, docRef){
   // Poori list dobara bheje bina, sirf NAYI entry cloud list mein add karta hai (Firestore arrayUnion).
   // Isse agar doosra device bhi usi waqt kuch add kare, dono entries mehfooz rehti hain.
@@ -1089,7 +1094,7 @@ function doLogin(){
       return;
     }
     hashPassword(p).then(hash => {
-      const match = staff.find(s => ('STF-' + s.id).toLowerCase() === u.toLowerCase() && s.passHash && s.passHash === hash);
+      const match = staff.find(s => ('STF-' + (s.staffCode || s.id)).toLowerCase() === u.toLowerCase() && s.passHash && s.passHash === hash);
       if(!match){
         errorBox.textContent = 'Ghalat Staff ID ya password.';
         errorBox.style.display = 'block';
@@ -1214,8 +1219,10 @@ async function addStaff(){
   const name = document.getElementById('stfName').value.trim();
   if(!name){ alert('Naam likhein.'); return; }
   const pwd = document.getElementById('stfPassword').value;
+  const staffCode = nextStaffCode();
   const newStaff = {
     id: newId(),
+    staffCode,
     name,
     desg: document.getElementById('stfDesg').value.trim(),
     contact: document.getElementById('stfContact').value.trim(),
@@ -1227,13 +1234,13 @@ async function addStaff(){
   cloudArrayAdd('staff', newStaff);
   ['stfName','stfDesg','stfContact','stfSalary','stfEmail','stfPassword'].forEach(id => document.getElementById(id).value = '');
   renderAll();
-  alert('Staff add ho gaya! Staff ID: STF-' + newStaff.id + (pwd ? ' — is ID aur password se wo "Staff / User" tab se login kar sakte hain.' : ' — password set nahi kiya gaya, staff abhi login nahi kar sakega jab tak password set na ho.'));
+  alert('Staff add ho gaya! Staff ID: STF-' + staffCode + (pwd ? ' — is ID aur password se wo "Staff / User" tab se login kar sakte hain.' : ' — password set nahi kiya gaya, staff abhi login nahi kar sakega jab tak password set na ho.'));
 }
 async function changeStaffPassword(id){
   if(session.role !== 'admin'){ alert('Sirf Admin password change kar sakta hai.'); return; }
   const s = staff.find(x => x.id === id);
   if(!s) return;
-  const newPwd = prompt('Naya password likhein (Staff ID: STF-' + s.id + '):');
+  const newPwd = prompt('Naya password likhein (Staff ID: STF-' + (s.staffCode || s.id) + '):');
   if(newPwd === null) return;
   if(!newPwd.trim()){ alert('Password khali nahi ho sakta.'); return; }
   const oldStaff = Object.assign({}, s);
@@ -1252,7 +1259,7 @@ function deleteStaff(id){
   saveData();
   renderAll();
   if(toRemove && toRemove.passHash){
-    alert('Staff record delete ho gaya — is staff ka login (Staff ID: STF-' + toRemove.id + ') bhi saath hi khud-ba-khud band ho gaya hai, dobara login nahi kar sakega.');
+    alert('Staff record delete ho gaya — is staff ka login (Staff ID: STF-' + (toRemove.staffCode || toRemove.id) + ') bhi saath hi khud-ba-khud band ho gaya hai, dobara login nahi kar sakega.');
   }
 }
 function renderStaff(){
@@ -1262,7 +1269,7 @@ function renderStaff(){
   const addBtn = document.querySelector('#view-staff .panel .btn');
   if(addBtn) addBtn.style.display = (session && session.role === 'admin') ? 'inline-block' : 'none';
   staff.forEach(s => {
-    tbody.innerHTML += `<tr><td>STF-${s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td><td>${s.contact||'—'}</td><td>${s.salary ? 'Rs. '+s.salary : '—'}</td><td>${s.email||'—'}</td><td>${s.passHash ? '●●●●●●' : '<span style="color:var(--red);">Not set</span>'}</td><td style="display:flex; gap:6px;">${(session && session.role==='admin') ? `<button class="btn small" style="background:var(--navy);" onclick="changeStaffPassword(${s.id})">Change Password</button><button class="btn small red" onclick="deleteStaff(${s.id})">Delete</button>` : ''}</td></tr>`;
+    tbody.innerHTML += `<tr><td>STF-${s.staffCode || s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td><td>${s.contact||'—'}</td><td>${s.salary ? 'Rs. '+s.salary : '—'}</td><td>${s.email||'—'}</td><td>${s.passHash ? '●●●●●●' : '<span style="color:var(--red);">Not set</span>'}</td><td style="display:flex; gap:6px;">${(session && session.role==='admin') ? `<button class="btn small" style="background:var(--navy);" onclick="changeStaffPassword(${s.id})">Change Password</button><button class="btn small red" onclick="deleteStaff(${s.id})">Delete</button>` : ''}</td></tr>`;
   });
 }
 
