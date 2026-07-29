@@ -306,7 +306,7 @@
         <li><button data-view="dashboard" onclick="showView('dashboard')">📊 Dashboard</button></li>
         <li><button data-view="students" onclick="showView('students')">👨‍🎓 Student Management</button></li>
         <li><button data-view="staff" onclick="showView('staff')">👩‍🏫 Teachers &amp; Staff</button></li>
-        <li><button data-view="fees" onclick="showView('fees')">💰 Fees &amp; Challan</button></li>
+        <li class="admin-only"><button data-view="fees" onclick="showView('fees')">💰 Fees &amp; Challan</button></li>
         <li><button data-view="attendance" onclick="showView('attendance')">📅 Attendance</button></li>
         <li><button data-view="notices" onclick="showView('notices')">📢 Notice Board</button></li>
         <li><button data-view="events" onclick="showView('events')">🎉 Events &amp; Vacations</button></li>
@@ -342,7 +342,7 @@
             <div class="stat-card"><div class="n" id="statStudents">0</div><div class="l">Total Students</div></div>
             <div class="stat-card"><div class="n" id="statStaff">0</div><div class="l">Total Teachers / Staff</div></div>
             <div class="stat-card"><div class="n" id="statPresent">0</div><div class="l">Present Today</div></div>
-            <div class="stat-card" style="cursor:pointer;" onclick="showAllPendingFees()"><div class="n" id="statPending">0</div><div class="l">Pending Fee Challans</div></div>
+            <div class="stat-card admin-only" style="cursor:pointer;" onclick="showAllPendingFees()"><div class="n" id="statPending">0</div><div class="l">Pending Fee Challans</div></div>
             <div class="stat-card admin-only"><div class="n" id="statCollected">Rs. 0</div><div class="l">Fee Collected</div></div>
           </div>
           <div class="panel">
@@ -353,7 +353,7 @@
             </table>
             <div class="empty" id="classWiseEmpty" style="display:none;">Abhi tak koi student record nahi hai.</div>
           </div>
-          <div class="panel">
+          <div class="panel admin-only">
             <h3>Class Wise Fee Status</h3>
             <p class="hint">Pending amount par click karein — us class ke unpaid challans khul jayenge.</p>
             <table>
@@ -613,7 +613,7 @@
 
         <!-- REPORTS -->
         <div class="view" id="view-reports">
-          <div class="panel">
+          <div class="panel admin-only">
             <h3>Fee Collection Summary</h3>
             <div class="stat-grid">
               <div class="stat-card"><div class="n" id="repTotalChallans">0</div><div class="l">Total Challans</div></div>
@@ -622,7 +622,7 @@
               <div class="stat-card"><div class="n" id="repAmount">Rs. 0</div><div class="l">Total Collected</div></div>
             </div>
           </div>
-          <div class="panel">
+          <div class="panel admin-only">
             <h3>Class-wise Fee Summary</h3>
             <p class="hint">Har class ki total fees, kitni mil chuki (paid) aur kitni baaki (pending) hai.</p>
             <table>
@@ -1160,6 +1160,7 @@ function doLogout(){
 
 /* ===================== NAVIGATION ===================== */
 function showView(name){
+  if(name==='fees' && (!session || session.role !== 'admin')){ alert('Sirf Admin Fees section dekh sakta hai.'); return; }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.querySelectorAll('.nav-list button').forEach(b => b.classList.toggle('active', b.dataset.view === name));
