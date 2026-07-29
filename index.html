@@ -1081,6 +1081,13 @@ function doLogin(){
 
   if(currentRole === 'user'){
     // Staff login local Staff ID + password se hota hai (Firebase account ki zaroorat nahi).
+    if(!window.crypto || !window.crypto.subtle){
+      errorBox.textContent = 'Ye login sirf secure (https) link se kaam karta hai. Please https wali site se khulen.';
+      errorBox.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = originalText;
+      return;
+    }
     hashPassword(p).then(hash => {
       const match = staff.find(s => ('STF-' + s.id).toLowerCase() === u.toLowerCase() && s.passHash && s.passHash === hash);
       if(!match){
