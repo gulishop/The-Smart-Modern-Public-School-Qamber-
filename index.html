@@ -2116,5 +2116,10 @@ window.addEventListener('offline', ()=>{
   if(s) s.textContent = 'Offline — sirf is device par save ho raha hai';
 });
 </script>
+    <script>
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/The-Smart-Modern-Public-School-Qamber-/sw.js');
+  }
+    </script>
 </body>
 </html>
