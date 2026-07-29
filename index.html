@@ -276,7 +276,7 @@
       <button id="tabUser" onclick="setRole('user')">Staff / User</button>
     </div>
 
-    <div class="field"><label>Email</label><input id="loginUser" type="text" placeholder="Enter email (e.g. smart@smart.com)"></div>
+    <div class="field"><label>Email / Staff ID</label><input id="loginUser" type="text" placeholder="Enter email (e.g. smart@smart.com)"></div>
     <div class="field"><label>Password</label><input id="loginPass" type="password" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <button id="loginBtn" class="login-btn admin" onclick="doLogin()" disabled>Login as Admin</button>
     <div id="loginError" class="login-error">Ghalat username ya password. Dobara koshish karein.</div>
@@ -408,13 +408,16 @@
               <div class="field"><label>Designation</label><input id="stfDesg" type="text" placeholder="e.g. Teacher, Clerk"></div>
               <div class="field"><label>Contact No.</label><input id="stfContact" type="text"></div>
               <div class="field"><label>Monthly Salary (Rs.)</label><input id="stfSalary" type="number"></div>
+              <div class="field"><label>Login Email (agar system access diya ho)</label><input id="stfEmail" type="text" placeholder="e.g. staff@smart.com"></div>
+              <div class="field"><label>Staff Login Password</label><input id="stfPassword" type="text" placeholder="Set a password for app login"></div>
             </div>
             <button class="btn green" onclick="addStaff()">+ Add Teacher / Staff</button>
+            <p class="hint">Staff login ke liye ek "Staff ID" (jaise STF-1007) khud-ba-khud ban jayega — list mein dikh jayega, wahi ID password ke saath login screen par "Staff / User" tab mein use hogi.</p>
           </div>
           <div class="panel">
             <h3>Teacher &amp; Staff List</h3>
             <table>
-              <thead><tr><th>ID</th><th>Name</th><th>Designation</th><th>Contact</th><th>Salary</th><th></th></tr></thead>
+              <thead><tr><th>Staff ID</th><th>Name</th><th>Designation</th><th>Contact</th><th>Salary</th><th>Login Email</th><th>Password</th><th></th></tr></thead>
               <tbody id="staffTable"></tbody>
             </table>
             <div class="empty" id="staffEmpty">Abhi tak koi teacher/staff add nahi hua.</div>
@@ -891,7 +894,7 @@ function setRole(role){
   btn.className = 'login-btn ' + (role==='admin' ? 'admin' : 'user');
   btn.textContent = role==='admin' ? 'Login as Admin' : 'Login as Staff';
   const userField = document.getElementById('loginUser');
-  userField.placeholder = role==='admin' ? 'Enter email (e.g. smart@smart.com)' : 'Enter email (e.g. staff@smart.com)';
+  userField.placeholder = role==='admin' ? 'Enter email (e.g. smart@smart.com)' : 'Staff ID (e.g. STF-1001)';
   document.getElementById('loginError').style.display = 'none';
 }
 
@@ -1054,6 +1057,11 @@ function enterApp(name, isRestore){
   renderAll();
 }
 
+async function hashPassword(pw){
+  const enc = new TextEncoder().encode(pw);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
 function doLogin(){
   const u = document.getElementById('loginUser').value.trim();
   const p = document.getElementById('loginPass').value;
@@ -1061,14 +1069,8 @@ function doLogin(){
   const btn = document.getElementById('loginBtn');
   errorBox.style.display = 'none';
 
-  // Ab sab login Firebase Authentication (email + password) se hote hain — role email k hisab se decide hota hai
-  if(!auth){
-    errorBox.textContent = 'Cloud login abhi available nahi hai (Firebase connect nahi hai).';
-    errorBox.style.display = 'block';
-    return;
-  }
   if(!u || !p){
-    errorBox.textContent = 'Email aur password dono likhein.';
+    errorBox.textContent = currentRole==='admin' ? 'Email aur password dono likhein.' : 'Staff ID aur password dono likhein.';
     errorBox.style.display = 'block';
     return;
   }
@@ -1076,6 +1078,36 @@ function doLogin(){
   btn.disabled = true;
   const originalText = btn.textContent;
   btn.textContent = 'Signing in…';
+
+  if(currentRole === 'user'){
+    // Staff login local Staff ID + password se hota hai (Firebase account ki zaroorat nahi).
+    hashPassword(p).then(hash => {
+      const match = staff.find(s => ('STF-' + s.id).toLowerCase() === u.toLowerCase() && s.passHash && s.passHash === hash);
+      if(!match){
+        errorBox.textContent = 'Ghalat Staff ID ya password.';
+        errorBox.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = originalText;
+        return;
+      }
+      currentRole = 'user';
+      // Firestore rules ke liye ek anonymous session bana lein taake data save/sync chalta rahe (ye local password check ko affect nahi karta).
+      if(auth && auth.signInAnonymously){ auth.signInAnonymously().catch(()=>{}); }
+      enterApp(match.name);
+      btn.disabled = false;
+      btn.textContent = originalText;
+    });
+    return;
+  }
+
+  // Admin login Firebase Authentication (email + password) se hota hai
+  if(!auth){
+    errorBox.textContent = 'Cloud login abhi available nahi hai (Firebase connect nahi hai).';
+    errorBox.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = originalText;
+    return;
+  }
 
   auth.signInWithEmailAndPassword(u, p)
     .then((cred)=>{
@@ -1170,21 +1202,40 @@ function renderStudents(){
 }
 
 /* ===================== STAFF ===================== */
-function addStaff(){
+async function addStaff(){
   if(session.role !== 'admin'){ alert('Sirf Admin naya staff/teacher add kar sakta hai.'); return; }
   const name = document.getElementById('stfName').value.trim();
   if(!name){ alert('Naam likhein.'); return; }
+  const pwd = document.getElementById('stfPassword').value;
   const newStaff = {
     id: newId(),
     name,
     desg: document.getElementById('stfDesg').value.trim(),
     contact: document.getElementById('stfContact').value.trim(),
-    salary: document.getElementById('stfSalary').value
+    salary: document.getElementById('stfSalary').value,
+    email: document.getElementById('stfEmail').value.trim(),
+    passHash: pwd ? await hashPassword(pwd) : ''
   };
   staff.push(newStaff);
   cloudArrayAdd('staff', newStaff);
-  ['stfName','stfDesg','stfContact','stfSalary'].forEach(id => document.getElementById(id).value = '');
+  ['stfName','stfDesg','stfContact','stfSalary','stfEmail','stfPassword'].forEach(id => document.getElementById(id).value = '');
   renderAll();
+  alert('Staff add ho gaya! Staff ID: STF-' + newStaff.id + (pwd ? ' — is ID aur password se wo "Staff / User" tab se login kar sakte hain.' : ' — password set nahi kiya gaya, staff abhi login nahi kar sakega jab tak password set na ho.'));
+}
+async function changeStaffPassword(id){
+  if(session.role !== 'admin'){ alert('Sirf Admin password change kar sakta hai.'); return; }
+  const s = staff.find(x => x.id === id);
+  if(!s) return;
+  const newPwd = prompt('Naya password likhein (Staff ID: STF-' + s.id + '):');
+  if(newPwd === null) return;
+  if(!newPwd.trim()){ alert('Password khali nahi ho sakta.'); return; }
+  const oldStaff = Object.assign({}, s);
+  s.passHash = await hashPassword(newPwd.trim());
+  cloudArrayRemove('staff', oldStaff);
+  cloudArrayAdd('staff', Object.assign({}, s));
+  saveData();
+  renderAll();
+  alert('Password update ho gaya.');
 }
 function deleteStaff(id){
   if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
@@ -1193,6 +1244,9 @@ function deleteStaff(id){
   if(toRemove) cloudArrayRemove('staff', toRemove);
   saveData();
   renderAll();
+  if(toRemove && toRemove.passHash){
+    alert('Staff record delete ho gaya — is staff ka login (Staff ID: STF-' + toRemove.id + ') bhi saath hi khud-ba-khud band ho gaya hai, dobara login nahi kar sakega.');
+  }
 }
 function renderStaff(){
   const tbody = document.getElementById('staffTable');
@@ -1201,7 +1255,7 @@ function renderStaff(){
   const addBtn = document.querySelector('#view-staff .panel .btn');
   if(addBtn) addBtn.style.display = (session && session.role === 'admin') ? 'inline-block' : 'none';
   staff.forEach(s => {
-    tbody.innerHTML += `<tr><td>STF-${s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td><td>${s.contact||'—'}</td><td>${s.salary ? 'Rs. '+s.salary : '—'}</td><td>${(session && session.role==='admin') ? `<button class="btn small red" onclick="deleteStaff(${s.id})">Delete</button>` : ''}</td></tr>`;
+    tbody.innerHTML += `<tr><td>STF-${s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td><td>${s.contact||'—'}</td><td>${s.salary ? 'Rs. '+s.salary : '—'}</td><td>${s.email||'—'}</td><td>${s.passHash ? '●●●●●●' : '<span style="color:var(--red);">Not set</span>'}</td><td style="display:flex; gap:6px;">${(session && session.role==='admin') ? `<button class="btn small" style="background:var(--navy);" onclick="changeStaffPassword(${s.id})">Change Password</button><button class="btn small red" onclick="deleteStaff(${s.id})">Delete</button>` : ''}</td></tr>`;
   });
 }
 
