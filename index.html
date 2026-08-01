@@ -1791,7 +1791,6 @@ function closeChallan(){
 function admissionFormHTML(s){
   return `
     <div class="adm-form cert-wrap">
-      <img class="gold-stamp pos-adm" src="data:image/png;base64,${GOLD_STAMP_B64}" alt="Official Seal">
       <div class="adm-form-head">
         <img src="data:image/jpeg;base64,${LOGO_B64}" alt="Logo" style="width:56px;height:56px;border-radius:50%;object-fit:cover;margin-bottom:8px;">
         <h3>${schoolSettings.name || 'The Smart Modern Public School'}</h3>
@@ -1839,7 +1838,6 @@ function tcFormHTML(s){
   }
   return `
     <div class="tc-form cert-wrap">
-      <img class="gold-stamp pos-tc" src="data:image/png;base64,${GOLD_STAMP_B64}" alt="Official Seal">
       <div class="adm-form-head">
         <img src="data:image/jpeg;base64,${LOGO_B64}" alt="Logo" style="width:56px;height:56px;border-radius:50%;object-fit:cover;margin-bottom:8px;">
         <h3>${schoolSettings.name || 'The Smart Modern Public School'}</h3>
@@ -1878,7 +1876,6 @@ function idCardHTML(s){
   const initials = (s.name || '?').trim().split(/\s+/).map(w => w[0]).slice(0,2).join('').toUpperCase();
   return `
     <div class="idcard cert-wrap">
-      <img class="gold-stamp pos-id" src="data:image/png;base64,${GOLD_STAMP_B64}" alt="Official Seal">
       <div class="idcard-head">
         <img src="data:image/jpeg;base64,${LOGO_B64}" alt="Logo">
         <h4>${schoolSettings.name || 'The Smart Modern Public School'}</h4>
