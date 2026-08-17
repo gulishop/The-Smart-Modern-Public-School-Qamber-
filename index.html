@@ -3070,6 +3070,14 @@ window.addEventListener('offline', ()=>{
     <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/The-Smart-Modern-Public-School-Qamber-/sw.js');
+    // Jab naya service worker (naya update) control le le, to khula hua tab
+    // khud-ba-khud ek dafa refresh ho jaye — taake user ko manually kuch na karna paray.
+    let swRefreshed = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function(){
+      if(swRefreshed) return;
+      swRefreshed = true;
+      window.location.reload();
+    });
   }
     </script>
 </body>

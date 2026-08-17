@@ -1,5 +1,9 @@
 // sw.js - Service Worker for PWA Installation
-const CACHE_NAME = 'smp-v1';
+// Har naye deploy/update ke waqt ye version number badha dein (v2, v3, v4...).
+// Isi number ki wajah se purana cache khud saaf ho jaata hai aur sab users ko
+// naya version mil jaata hai — bina number badlaye naye files "same version"
+// samjhi jaayengi aur update nahi hoga.
+const CACHE_NAME = 'smp-v2';
 const urlsToCache = [
   '/The-Smart-Modern-Public-School-Qamber-/',
   '/The-Smart-Modern-Public-School-Qamber-/index.html',
@@ -14,14 +18,67 @@ self.addEventListener('install', function(event) {
       .then(function(cache) {
         return cache.addAll(urlsToCache);
       })
+      .then(function(){
+        // Naya service worker turant "waiting" state se nikal kar active ho jaye —
+        // purane service worker ke band/close hone ka intezaar na kare.
+        return self.skipWaiting();
+      })
+  );
+});
+
+self.addEventListener('activate', function(event) {
+  event.waitUntil(
+    caches.keys().then(function(cacheNames){
+      // Sab PURANE caches delete kar do, sirf naya CACHE_NAME wala rakho.
+      return Promise.all(
+        cacheNames
+          .filter(function(name){ return name !== CACHE_NAME; })
+          .map(function(name){ return caches.delete(name); })
+      );
+    }).then(function(){
+      // Sab already-khule tabs ko turant is naye service worker ke control mein le lo.
+      return self.clients.claim();
+    })
   );
 });
 
 self.addEventListener('fetch', function(event) {
+  const req = event.request;
+  const isHtmlPage = req.mode === 'navigate' ||
+    (req.method === 'GET' && req.headers.get('accept') && req.headers.get('accept').includes('text/html'));
+
+  if (isHtmlPage) {
+    // MAIN APP PAGE (index.html): hamesha pehle NETWORK se try karo taake
+    // naya update turant mil jaye. Sirf offline hone par cache se dikhao.
+    event.respondWith(
+      fetch(req)
+        .then(function(response){
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(function(cache){ cache.put(req, clone); });
+          return response;
+        })
+        .catch(function(){
+          return caches.match(req).then(function(cached){
+            return cached || caches.match('/The-Smart-Modern-Public-School-Qamber-/index.html');
+          });
+        })
+    );
+    return;
+  }
+
+  // BAAQI static files (icons, manifest, waghera): pehle cache se turant dikhao
+  // (fast + offline works), sath hi background mein network se bhi check karke
+  // cache update kar do — taake agli baar naya version mile.
   event.respondWith(
-    caches.match(event.request)
-      .then(function(response) {
-        return response || fetch(event.request);
-      })
+    caches.match(req).then(function(cached){
+      const networkFetch = fetch(req).then(function(response){
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(function(cache){ cache.put(req, clone); });
+        }
+        return response;
+      }).catch(function(){ return cached; });
+      return cached || networkFetch;
+    })
   );
 });
