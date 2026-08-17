@@ -393,6 +393,7 @@
             <div class="stat-card"><div class="n" id="statStudents">0</div><div class="l">Total Students</div></div>
             <div class="stat-card"><div class="n" id="statStaff">0</div><div class="l">Total Teachers / Staff</div></div>
             <div class="stat-card admin-only"><div class="n" id="statPresent">0</div><div class="l">Present Today</div></div>
+            <div class="stat-card admin-only" style="cursor:pointer;" onclick="showView('attendance')"><div class="n" id="statNotMarked">0</div><div class="l">Attendance Not Marked Yet</div></div>
             <div class="stat-card admin-only" style="cursor:pointer;" onclick="showAllPendingFees()"><div class="n" id="statPending">0</div><div class="l">Pending Fee Challans</div></div>
             <div class="stat-card admin-only"><div class="n" id="statCollected">Rs. 0</div><div class="l">Fee Collected</div></div>
           </div>
@@ -534,7 +535,7 @@
           <div class="panel">
             <h3>Class-wise Attendance Summary</h3>
             <table>
-              <thead><tr><th>Class</th><th>Total Students</th><th>Present</th><th>Absent</th></tr></thead>
+              <thead><tr><th>Class</th><th>Total Students</th><th>Present</th><th>Absent</th><th>Not Marked</th></tr></thead>
               <tbody id="attClassSummaryBody"></tbody>
             </table>
             <div class="empty" id="attClassSummaryEmpty">Abhi koi student nahi hai.</div>
@@ -816,6 +817,7 @@
             <div class="stat-grid">
               <div class="stat-card"><div class="n" id="repPresent">0</div><div class="l">Present</div></div>
               <div class="stat-card"><div class="n" id="repAbsent">0</div><div class="l">Absent</div></div>
+              <div class="stat-card"><div class="n" id="repNotMarked">0</div><div class="l">Not Marked</div></div>
             </div>
           </div>
         </div>
@@ -970,6 +972,26 @@ const feesCol         = makeRecordCollection('fees');
 const quoteLogCol     = makeRecordCollection('quoteLog');
 const loginLogCol     = makeRecordCollection('loginLog');
 const qrScanLogCol    = makeRecordCollection('qrScanLog');
+// 'presence' collection sirf ye track karti hai ke koi staff member is waqt app
+// mein "active/online" hai ya nahi — har login staff apna 'lastSeen' timestamp
+// har ~45 second baad yahan update karta hai (heartbeat). Ye chhota/temporary
+// data hai, is liye alag collection mein rakha gaya hai (backup/local storage mein nahi jaata).
+const presenceCol     = makeRecordCollection('presence');
+let presence = [];
+let presenceMap = {}; // { staffId: lastSeenMillis }
+let currentStaffId = null;
+let presenceHeartbeatTimer = null;
+const PRESENCE_ONLINE_THRESHOLD_MS = 90000; // 90 sec — is se zyada purana lastSeen ho to "Offline"
+function startPresenceHeartbeat(){
+  if(!presenceCol.colRef || !currentStaffId) return;
+  stopPresenceHeartbeat();
+  const beat = ()=> presenceCol.add({ id: currentStaffId, lastSeen: Date.now() });
+  beat();
+  presenceHeartbeatTimer = setInterval(beat, 45000);
+}
+function stopPresenceHeartbeat(){
+  if(presenceHeartbeatTimer){ clearInterval(presenceHeartbeatTimer); presenceHeartbeatTimer = null; }
+}
 
 // ===== ATTENDANCE: EK ALAG DOCUMENT PER DATE =====
 // Attendance roz badhti hai (har din, har student ke liye) — is liye ye kabhi
@@ -1437,6 +1459,7 @@ function enterApp(name, isRestore){
   document.getElementById('attDate').value = new Date().toISOString().slice(0,10);
   // Jab session refresh/reload par khud-bakhud restore ho, tab dobara "Login" activity record na karein.
   if(!isRestore) logActivity('Login');
+  if(currentRole === 'user' && currentStaffId) startPresenceHeartbeat();
   fillSettingsForm();
   renderAll();
 }
@@ -1483,6 +1506,7 @@ function doLogin(){
         return;
       }
       currentRole = 'user';
+      currentStaffId = match.id;
       // Firestore rules ke liye ek anonymous session bana lein taake data save/sync chalta rahe (ye local password check ko affect nahi karta).
       if(auth && auth.signInAnonymously){ auth.signInAnonymously().catch(()=>{}); }
       enterApp(match.name);
@@ -1506,6 +1530,7 @@ function doLogin(){
       const email = (cred.user.email || '').toLowerCase();
       const isAdmin = ADMIN_EMAILS.includes(email);
       currentRole = isAdmin ? 'admin' : 'user';
+      currentStaffId = null;
       const displayName = cred.user.displayName || cred.user.email || (isAdmin ? 'School Admin' : 'Staff User');
       enterApp(displayName);
     })
@@ -1524,6 +1549,8 @@ function doLogin(){
 
 function doLogout(){
   if(session) logActivity('Logout');
+  stopPresenceHeartbeat();
+  if(currentStaffId){ presenceCol.remove(currentStaffId); currentStaffId = null; }
   if(auth && auth.currentUser){
     auth.signOut().catch(()=>{});
   }
@@ -1748,13 +1775,18 @@ function renderStaff(){
   document.getElementById('staffEmpty').style.display = staff.length ? 'none' : 'block';
   const isAdmin = session && session.role === 'admin';
   thead.innerHTML = isAdmin
-    ? '<th>Staff ID</th><th>Name</th><th>Designation</th><th>Contact</th><th>Salary</th><th>Login Email</th><th>Password</th><th></th>'
-    : '<th>Staff ID</th><th>Name</th><th>Designation</th>';
+    ? '<th>Staff ID</th><th>Name</th><th>Designation</th><th>Status</th><th>Contact</th><th>Salary</th><th>Login Email</th><th>Password</th><th></th>'
+    : '<th>Staff ID</th><th>Name</th><th>Designation</th><th>Status</th>';
   staff.forEach(s => {
+    const lastSeen = presenceMap[String(s.id)];
+    const isOnline = !!lastSeen && (Date.now() - lastSeen) < PRESENCE_ONLINE_THRESHOLD_MS;
+    const statusHtml = isOnline
+      ? '<span style="color:var(--green); font-weight:600;">🟢 Online</span>'
+      : '<span style="color:#888;">⚪ Offline</span>';
     if(isAdmin){
-      tbody.innerHTML += `<tr><td>STF-${s.staffCode || s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td><td>${s.contact||'—'}</td><td>${s.salary ? 'Rs. '+s.salary : '—'}</td><td>${s.email||'—'}</td><td>${s.passHash ? '●●●●●●' : '<span style="color:var(--red);">Not set</span>'}</td><td style="display:flex; gap:6px;"><button class="btn small" style="background:var(--navy);" onclick="changeStaffPassword(${s.id})">Change Password</button><button class="btn small red" onclick="deleteStaff(${s.id})">Delete</button></td></tr>`;
+      tbody.innerHTML += `<tr><td>STF-${s.staffCode || s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td><td>${statusHtml}</td><td>${s.contact||'—'}</td><td>${s.salary ? 'Rs. '+s.salary : '—'}</td><td>${s.email||'—'}</td><td>${s.passHash ? '●●●●●●' : '<span style="color:var(--red);">Not set</span>'}</td><td style="display:flex; gap:6px;"><button class="btn small" style="background:var(--navy);" onclick="changeStaffPassword(${s.id})">Change Password</button><button class="btn small red" onclick="deleteStaff(${s.id})">Delete</button></td></tr>`;
     } else {
-      tbody.innerHTML += `<tr><td>STF-${s.staffCode || s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td></tr>`;
+      tbody.innerHTML += `<tr><td>STF-${s.staffCode || s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td><td>${statusHtml}</td></tr>`;
     }
   });
 }
@@ -2144,16 +2176,20 @@ function renderAttendanceForm(){
   document.getElementById('attEmpty').style.display = list.length ? 'none' : 'block';
   const dayRecord = attendanceRecords[date] || {};
   list.forEach(s => {
-    const status = dayRecord[s.id] || 'present';
+    // Din ki shuruaat mein status KHAALI hota hai (na Present na Absent) — jab tak
+    // admin/staff khud us student ke liye button na dabaye, tab tak "Not Marked" rahega.
+    const status = dayRecord[s.id] || '';
     const waBtn = status === 'absent'
       ? (waNumberFor(s.contact)
           ? `<button class="btn whatsapp small" onclick="sendAbsentWhatsApp(${s.id})">📱 Message</button>`
           : `<span class="hint">Contact # nahi hai</span>`)
       : '—';
+    const notMarkedTag = status ? '' : '<div style="font-size:11px; color:var(--red); margin-top:3px;">⚠ Not marked</div>';
     tbody.innerHTML += `<tr><td>${s.adm}</td><td>${s.name}</td><td>${s.cls||'—'}</td>
       <td>
         <button class="btn small ${status==='present'?'green':''}" style="${status==='present'?'':'background:var(--muted);'}" onclick="setAttStatus(${s.id},'present')">Present</button>
         <button class="btn small ${status==='absent'?'red':''}" style="${status==='absent'?'':'background:var(--muted);'} margin-left:6px;" onclick="setAttStatus(${s.id},'absent')">Absent</button>
+        ${notMarkedTag}
       </td>
       <td>${waBtn}</td></tr>`;
   });
@@ -2167,15 +2203,17 @@ function renderAttClassSummary(date){
   const counts = {};
   students.forEach(s => {
     const cls = (s.cls||'').trim() || 'Unassigned';
-    if(!counts[cls]) counts[cls] = { total:0, present:0, absent:0 };
+    if(!counts[cls]) counts[cls] = { total:0, present:0, absent:0, unmarked:0 };
     counts[cls].total++;
-    const status = dayRecord[s.id] || 'present';
-    if(status === 'absent') counts[cls].absent++; else counts[cls].present++;
+    const status = dayRecord[s.id] || '';
+    if(status === 'absent') counts[cls].absent++;
+    else if(status === 'present') counts[cls].present++;
+    else counts[cls].unmarked++;
   });
   const classes = Object.keys(counts).sort((a,b)=> a.localeCompare(b, undefined, {numeric:true}));
   const emptyEl = document.getElementById('attClassSummaryEmpty');
   if(emptyEl) emptyEl.style.display = classes.length ? 'none' : 'block';
-  body.innerHTML = classes.map(c => `<tr><td>${c}</td><td>${counts[c].total}</td><td>${counts[c].present}</td><td>${counts[c].absent}</td></tr>`).join('');
+  body.innerHTML = classes.map(c => `<tr><td>${c}</td><td>${counts[c].total}</td><td>${counts[c].present}</td><td>${counts[c].absent}</td><td>${counts[c].unmarked ? '<b style="color:var(--red);">'+counts[c].unmarked+'</b>' : '0'}</td></tr>`).join('');
 }
 function setAttStatus(studentId, status){
   const date = document.getElementById('attDate').value || new Date().toISOString().slice(0,10);
@@ -2796,8 +2834,11 @@ function renderDashboard(){
   document.getElementById('statStaff').textContent = staff.length;
   const today = new Date().toISOString().slice(0,10);
   const todayRec = attendanceRecords[today] || {};
-  const present = students.filter(s => (todayRec[s.id] || 'present') === 'present').length;
+  const present = students.filter(s => (todayRec[s.id] || '') === 'present').length;
+  const notMarked = students.filter(s => !(todayRec[s.id] || '')).length;
   document.getElementById('statPresent').textContent = present;
+  const notMarkedEl = document.getElementById('statNotMarked');
+  if(notMarkedEl) notMarkedEl.textContent = notMarked;
   document.getElementById('statPending').textContent = fees.filter(f => f.status === 'pending').length;
   const collected = fees.filter(f => f.status === 'paid').reduce((sum,f) => sum + f.amount, 0);
   document.getElementById('statCollected').textContent = 'Rs. ' + collected;
@@ -2851,9 +2892,12 @@ function renderReports(){
   renderClassFeeSummary();
   const today = new Date().toISOString().slice(0,10);
   const todayRec = attendanceRecords[today] || {};
-  const present = students.filter(s => (todayRec[s.id] || 'present') === 'present').length;
+  const present = students.filter(s => (todayRec[s.id] || '') === 'present').length;
+  const absent = students.filter(s => (todayRec[s.id] || '') === 'absent').length;
   document.getElementById('repPresent').textContent = present;
-  document.getElementById('repAbsent').textContent = students.length - present;
+  document.getElementById('repAbsent').textContent = absent;
+  const repNotMarkedEl = document.getElementById('repNotMarked');
+  if(repNotMarkedEl) repNotMarkedEl.textContent = students.length - present - absent;
 }
 
 function renderClassFeeSummary(){
@@ -2949,6 +2993,15 @@ const realtimeSaveStatus = () => {
 };
 studentsCol.listen(()=>students, v=>{ students=v; }, ()=>{ renderStudents(); renderDashboard(); renderFeeStudentOptions(); renderAttendanceForm(); realtimeSaveStatus(); });
 staffCol.listen(()=>staff, v=>{ staff=v; }, ()=>{ renderStaff(); renderDashboard(); realtimeSaveStatus(); });
+presenceCol.listen(()=>presence, v=>{
+  presence = v;
+  presenceMap = {};
+  presence.forEach(p=>{ if(p && p.id != null) presenceMap[String(p.id)] = p.lastSeen; });
+}, ()=>{ renderStaff(); });
+// Har 30 second baad staff list dobara render karo — taake koi staff jiska heartbeat
+// purana ho chuka hai (jaise browser band kar diya bina Logout kiye) khud-ba-khud
+// "Offline" dikhne lag jaye, na ke sirf tab jab koi naya cloud update aaye.
+setInterval(()=>{ if(typeof renderStaff === 'function') renderStaff(); }, 30000);
 noticesCol.listen(()=>notices, v=>{ notices=v; }, ()=>{ renderNotices(); realtimeSaveStatus(); });
 eventsCol.listen(()=>events, v=>{ events=v; }, ()=>{ renderEvents(); realtimeSaveStatus(); });
 examResultsCol.listen(()=>examResults, v=>{ examResults=v; }, ()=>{ renderResults(); realtimeSaveStatus(); });
