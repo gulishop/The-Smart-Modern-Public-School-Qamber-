@@ -910,6 +910,21 @@ try{
 }catch(e){
   console.warn('Firebase config set nahi hai ya ghalat hai — sirf is browser mein (offline) data save hoga.', e);
 }
+// ===== CLASS NAME NORMALIZATION =====
+// Data mein kabhi kabhi ek hi class alag-alag likhawat mein aa jaati hai (jaise
+// "Nursery" aur "nursery" ya extra spaces) — jis se woh dashboard/attendance mein
+// do alag-alag class ban kar dikhti hai aur students "missing" lagte hain.
+// classKey() grouping/comparison ke liye hamesha ek jaisi (lowercase, trimmed)
+// value deta hai; classDisplay() dikhane ke liye saaf, consistent naam deta hai.
+function classDisplay(cls){
+  const c = (cls || '').toString().replace(/\s+/g, ' ').trim();
+  if(!c) return '';
+  if(/^k\.?g\.?$/i.test(c)) return 'K.G';
+  return c.split(' ').map(w => /^\d+$/.test(w) ? w : (w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())).join(' ');
+}
+function classKey(cls){
+  return classDisplay(cls).toLowerCase();
+}
 // ===== FIRESTORE DATA SPLIT — HAR CHEEZ APNI ALAG DOCUMENT/COLLECTION MEIN =====
 // Firestore ki EK document sirf 1MB tak ho sakti hai. Pehle poora school ka data
 // (students, staff, fees, attendance, quoteLog, loginLog, waghera) ek hi
@@ -980,14 +995,19 @@ const presenceCol     = makeRecordCollection('presence');
 let presence = [];
 let presenceMap = {}; // { staffId: lastSeenMillis }
 let currentStaffId = null;
+// PWA/tab reload ke baad staff session khud-ba-khud restore hoti hai (login dobara
+// nahi maangta), lekin JS memory (currentStaffId) reset ho jaati hai — is liye
+// staff ki ID yahan localStorage mein bhi rakhi jaati hai taake restore ke waqt
+// presence/online heartbeat sahi staff ke naam se dobara shuru ho sake.
+const STAFF_SESSION_KEY = 'smp_qamber_current_staff_id';
 let presenceHeartbeatTimer = null;
-const PRESENCE_ONLINE_THRESHOLD_MS = 90000; // 90 sec — is se zyada purana lastSeen ho to "Offline"
+const PRESENCE_ONLINE_THRESHOLD_MS = 40000; // 40 sec — is se zyada purana lastSeen ho to "Offline" (fast update)
 function startPresenceHeartbeat(){
   if(!presenceCol.colRef || !currentStaffId) return;
   stopPresenceHeartbeat();
   const beat = ()=> presenceCol.add({ id: currentStaffId, lastSeen: Date.now() });
   beat();
-  presenceHeartbeatTimer = setInterval(beat, 45000);
+  presenceHeartbeatTimer = setInterval(beat, 20000); // 20 sec heartbeat (fast online/offline update)
 }
 function stopPresenceHeartbeat(){
   if(presenceHeartbeatTimer){ clearInterval(presenceHeartbeatTimer); presenceHeartbeatTimer = null; }
@@ -1288,6 +1308,10 @@ function restoreData(input){
 /* ===================== CREDENTIALS ===================== */
 let currentRole = 'admin';
 let session = null;
+// Poori app session (role + staff ID + naam) yahan save hoti hai taake refresh
+// ya PWA dobara khulne par login screen dobara na aaye — Firebase Auth restore
+// ka intezar kiye baghair, turant local se hi session bahaal ho jaaye.
+const APP_SESSION_KEY = 'smp_qamber_app_session_v1';
 // Ye emails Firebase Authentication se login hone par ADMIN access payenge (baaki sab Staff).
 const ADMIN_EMAILS = ['smart@smart.com'];
 
@@ -1448,6 +1472,11 @@ function logActivity(action){
 
 function enterApp(name, isRestore){
   session = { role: currentRole, name: name };
+  // App-level session ko localStorage mein save kar dein — is se refresh/reload
+  // (bar bar refresh) par bhi turant, reliably session restore ho jaati hai,
+  // chahe Firebase Auth ki apni restore thodi slow/na-mumkin ho (jaise offline
+  // ya kisi tab/PWA storage quirk mein).
+  try{ localStorage.setItem(APP_SESSION_KEY, JSON.stringify({ role: currentRole, staffId: currentStaffId, name: name })); }catch(e){}
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appScreen').style.display = 'block';
   document.getElementById('whoName').textContent = session.name;
@@ -1507,6 +1536,11 @@ function doLogin(){
       }
       currentRole = 'user';
       currentStaffId = match.id;
+      // Staff ID ko local mein bhi save kar dein — taake PWA/tab dobara khulne par
+      // (auto-restore session) ye pata chal sake ke ONLINE heartbeat kis staff ke
+      // naam se bhejna hai. Bina is ke, reload ke baad presence kabhi shuru nahi hoti
+      // aur staff hamesha "Offline" dikhta reh jaata tha jab tak dobara Login na kare.
+      try{ localStorage.setItem(STAFF_SESSION_KEY, String(currentStaffId)); }catch(e){}
       // Firestore rules ke liye ek anonymous session bana lein taake data save/sync chalta rahe (ye local password check ko affect nahi karta).
       if(auth && auth.signInAnonymously){ auth.signInAnonymously().catch(()=>{}); }
       enterApp(match.name);
@@ -1551,6 +1585,8 @@ function doLogout(){
   if(session) logActivity('Logout');
   stopPresenceHeartbeat();
   if(currentStaffId){ presenceCol.remove(currentStaffId); currentStaffId = null; }
+  try{ localStorage.removeItem(STAFF_SESSION_KEY); }catch(e){}
+  try{ localStorage.removeItem(APP_SESSION_KEY); }catch(e){}
   if(auth && auth.currentUser){
     auth.signOut().catch(()=>{});
   }
@@ -1671,15 +1707,17 @@ function renderStudents(){
   const searchBox = document.getElementById('stuSearch');
   const classSel = document.getElementById('stuSearchClass');
   if(classSel){
-    const classes = [...new Set(students.map(s => s.cls).filter(Boolean))];
+    const seen = {};
+    students.forEach(s => { const k = classKey(s.cls); if(k && !seen[k]) seen[k] = classDisplay(s.cls); });
+    const keys = Object.keys(seen).sort((a,b)=> seen[a].localeCompare(seen[b], undefined, {numeric:true}));
     const cur = classSel.value;
-    classSel.innerHTML = '<option value="">Sab Classes</option>' + classes.map(c => `<option value="${c}">Class ${c}</option>`).join('');
-    if(classes.includes(cur)) classSel.value = cur;
+    classSel.innerHTML = '<option value="">Sab Classes</option>' + keys.map(k => `<option value="${k}">Class ${seen[k]}</option>`).join('');
+    if(keys.includes(cur)) classSel.value = cur;
   }
   const q = searchBox ? searchBox.value.trim().toLowerCase() : '';
   const clsFilter = classSel ? classSel.value : '';
   const filtered = students.filter(s => {
-    if(clsFilter && s.cls !== clsFilter) return false;
+    if(clsFilter && classKey(s.cls) !== clsFilter) return false;
     if(!q) return true;
     return (s.name||'').toLowerCase().includes(q) || (s.adm||'').toLowerCase().includes(q) || (s.roll||'').toLowerCase().includes(q);
   });
@@ -1696,21 +1734,24 @@ function renderStudents(){
   });
   const promoteSel = document.getElementById('promoteFrom');
   if(promoteSel){
-    const classes = [...new Set(students.map(s => s.cls).filter(Boolean))];
+    const seen = {};
+    students.forEach(s => { const k = classKey(s.cls); if(k && !seen[k]) seen[k] = classDisplay(s.cls); });
+    const keys = Object.keys(seen).sort((a,b)=> seen[a].localeCompare(seen[b], undefined, {numeric:true}));
     const cur = promoteSel.value;
-    promoteSel.innerHTML = classes.map(c => `<option value="${c}">Class ${c}</option>`).join('') || '<option value="">—</option>';
-    if(classes.includes(cur)) promoteSel.value = cur;
+    promoteSel.innerHTML = keys.map(k => `<option value="${k}">Class ${seen[k]}</option>`).join('') || '<option value="">—</option>';
+    if(keys.includes(cur)) promoteSel.value = cur;
   }
 }
 function promoteStudents(){
   if(session.role !== 'admin'){ alert('Sirf Admin students promote kar sakta hai.'); return; }
   const fromCls = document.getElementById('promoteFrom').value;
+  const fromClsLabel = classDisplay(fromCls);
   const toCls = document.getElementById('promoteTo').value.trim();
   const toSection = document.getElementById('promoteToSection').value.trim();
   if(!fromCls || !toCls){ alert('From Class aur To Class dono zaroor bharein.'); return; }
-  const affected = students.filter(s => s.cls === fromCls);
+  const affected = students.filter(s => classKey(s.cls) === fromCls);
   if(!affected.length){ alert('Is class mein koi student nahi mila.'); return; }
-  if(!confirm(`${affected.length} students ko Class ${fromCls} se Class ${toCls} mein promote karna hai?`)) return;
+  if(!confirm(`${affected.length} students ko Class ${fromClsLabel} se Class ${toCls} mein promote karna hai?`)) return;
   affected.forEach(s => {
     s.cls = toCls;
     if(toSection) s.section = toSection;
@@ -1900,8 +1941,8 @@ function renderFees(){
   if(feeFilterClass !== null || feeFilterStatus !== null){
     list = fees.filter(f => {
       const student = students.find(s => s.id === f.studentId);
-      const cls = (student && student.cls && student.cls.trim()) || 'Unassigned';
-      const classOk = feeFilterClass === null || cls === feeFilterClass;
+      const key = (student ? classKey(student.cls) : '') || 'unassigned';
+      const classOk = feeFilterClass === null || key === feeFilterClass;
       const statusOk = feeFilterStatus === null || f.status === feeFilterStatus;
       return classOk && statusOk;
     });
@@ -1913,7 +1954,7 @@ function renderFees(){
     const parts = [];
     if(feeFilterStatus !== null) parts.push(feeFilterStatus.toUpperCase());
     parts.push('fees');
-    if(feeFilterClass !== null) parts.push('— Class ' + feeFilterClass);
+    if(feeFilterClass !== null) parts.push('— Class ' + (feeFilterClass === 'unassigned' ? 'Unassigned' : classDisplay(feeFilterClass)));
     bannerText.textContent = 'Showing ' + parts.join(' ');
   } else {
     banner.style.display = 'none';
@@ -2152,10 +2193,17 @@ function populateAttClassFilter(){
   const sel = document.getElementById('attClassFilter');
   if(!sel) return;
   const prev = sel.value;
-  const classes = Array.from(new Set(students.map(s => (s.cls||'').trim()).filter(Boolean)))
-    .sort((a,b)=> a.localeCompare(b, undefined, {numeric:true}));
-  sel.innerHTML = '<option value="">Sab Classes</option>' + classes.map(c => `<option value="${c}">${c}</option>`).join('');
-  if(classes.includes(prev)) sel.value = prev;
+  // Class ka naam chahe kisi bhi likhawat (case) mein ho, ek hi option ban kar aaye —
+  // is liye option ki VALUE hamesha classKey() hoti hai (grouping ke liye), aur
+  // dikhne wala naam classDisplay() (saaf/consistent) hota hai.
+  const seen = {};
+  students.forEach(s => {
+    const key = classKey(s.cls);
+    if(key && !seen[key]) seen[key] = classDisplay(s.cls);
+  });
+  const keys = Object.keys(seen).sort((a,b)=> seen[a].localeCompare(seen[b], undefined, {numeric:true}));
+  sel.innerHTML = '<option value="">Sab Classes</option>' + keys.map(k => `<option value="${k}">${seen[k]}</option>`).join('');
+  if(keys.includes(prev)) sel.value = prev;
 }
 function waNumberFor(contact){
   // Contact number ko WhatsApp link ke liye saaf karta hai (sirf digits, agar 0 se shuru ho to Pakistan code 92 lagata hai)
@@ -2172,7 +2220,7 @@ function renderAttendanceForm(){
   tbody.innerHTML = '';
   populateAttClassFilter();
   const clsFilter = (document.getElementById('attClassFilter')||{}).value || '';
-  const list = clsFilter ? students.filter(s => (s.cls||'').trim() === clsFilter) : students;
+  const list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : students;
   document.getElementById('attEmpty').style.display = list.length ? 'none' : 'block';
   const dayRecord = attendanceRecords[date] || {};
   list.forEach(s => {
@@ -2202,18 +2250,19 @@ function renderAttClassSummary(date){
   const dayRecord = attendanceRecords[date] || {};
   const counts = {};
   students.forEach(s => {
-    const cls = (s.cls||'').trim() || 'Unassigned';
-    if(!counts[cls]) counts[cls] = { total:0, present:0, absent:0, unmarked:0 };
-    counts[cls].total++;
+    const key = classKey(s.cls) || 'unassigned';
+    const label = classKey(s.cls) ? classDisplay(s.cls) : 'Unassigned';
+    if(!counts[key]) counts[key] = { label, total:0, present:0, absent:0, unmarked:0 };
+    counts[key].total++;
     const status = dayRecord[s.id] || '';
-    if(status === 'absent') counts[cls].absent++;
-    else if(status === 'present') counts[cls].present++;
-    else counts[cls].unmarked++;
+    if(status === 'absent') counts[key].absent++;
+    else if(status === 'present') counts[key].present++;
+    else counts[key].unmarked++;
   });
-  const classes = Object.keys(counts).sort((a,b)=> a.localeCompare(b, undefined, {numeric:true}));
+  const keys = Object.keys(counts).sort((a,b)=> counts[a].label.localeCompare(counts[b].label, undefined, {numeric:true}));
   const emptyEl = document.getElementById('attClassSummaryEmpty');
-  if(emptyEl) emptyEl.style.display = classes.length ? 'none' : 'block';
-  body.innerHTML = classes.map(c => `<tr><td>${c}</td><td>${counts[c].total}</td><td>${counts[c].present}</td><td>${counts[c].absent}</td><td>${counts[c].unmarked ? '<b style="color:var(--red);">'+counts[c].unmarked+'</b>' : '0'}</td></tr>`).join('');
+  if(emptyEl) emptyEl.style.display = keys.length ? 'none' : 'block';
+  body.innerHTML = keys.map(k => `<tr><td>${counts[k].label}</td><td>${counts[k].total}</td><td>${counts[k].present}</td><td>${counts[k].absent}</td><td>${counts[k].unmarked ? '<b style="color:var(--red);">'+counts[k].unmarked+'</b>' : '0'}</td></tr>`).join('');
 }
 function setAttStatus(studentId, status){
   const date = document.getElementById('attDate').value || new Date().toISOString().slice(0,10);
@@ -2820,14 +2869,16 @@ function renderClassWiseCounts(){
   const body = document.getElementById('classWiseBody');
   if(!body) return;
   const counts = {};
+  const labels = {};
   students.forEach(s=>{
-    const cls = (s.cls || '').trim() || 'Unassigned';
-    counts[cls] = (counts[cls] || 0) + 1;
+    const key = classKey(s.cls) || 'unassigned';
+    labels[key] = classKey(s.cls) ? classDisplay(s.cls) : 'Unassigned';
+    counts[key] = (counts[key] || 0) + 1;
   });
-  const classes = Object.keys(counts).sort((a,b)=> a.localeCompare(b, undefined, {numeric:true}));
+  const classes = Object.keys(counts).sort((a,b)=> labels[a].localeCompare(labels[b], undefined, {numeric:true}));
   const emptyEl = document.getElementById('classWiseEmpty');
   if(emptyEl) emptyEl.style.display = classes.length ? 'none' : 'block';
-  body.innerHTML = classes.map(c => `<tr><td>${c}</td><td>${counts[c]}</td></tr>`).join('');
+  body.innerHTML = classes.map(c => `<tr><td>${labels[c]}</td><td>${counts[c]}</td></tr>`).join('');
 }
 function renderDashboard(){
   document.getElementById('statStudents').textContent = students.length;
@@ -2872,23 +2923,24 @@ function renderDashboardClassFees(){
   const byClass = {};
   fees.forEach(f => {
     const student = students.find(s => s.id === f.studentId);
-    const cls = (student && student.cls && student.cls.trim()) || 'Unassigned';
-    if(!byClass[cls]) byClass[cls] = { total:0, paid:0, pending:0 };
-    byClass[cls].total += f.amount;
-    if(f.status === 'paid') byClass[cls].paid += f.amount;
-    else byClass[cls].pending += f.amount;
+    const key = (student ? classKey(student.cls) : '') || 'unassigned';
+    const label = key === 'unassigned' ? 'Unassigned' : classDisplay(student.cls);
+    if(!byClass[key]) byClass[key] = { label, total:0, paid:0, pending:0 };
+    byClass[key].total += f.amount;
+    if(f.status === 'paid') byClass[key].paid += f.amount;
+    else byClass[key].pending += f.amount;
   });
-  const classNames = Object.keys(byClass).sort((a,b) => a.localeCompare(b, undefined, {numeric:true}));
+  const classKeys = Object.keys(byClass).sort((a,b) => byClass[a].label.localeCompare(byClass[b].label, undefined, {numeric:true}));
   const emptyEl = document.getElementById('dashClassFeeEmpty');
-  if(emptyEl) emptyEl.style.display = classNames.length ? 'none' : 'block';
-  classNames.forEach(cls => {
-    const c = byClass[cls];
+  if(emptyEl) emptyEl.style.display = classKeys.length ? 'none' : 'block';
+  classKeys.forEach(key => {
+    const c = byClass[key];
     const clickable = c.pending > 0;
     tbody.innerHTML += `<tr>
-      <td>${cls}</td>
+      <td>${c.label}</td>
       <td>Rs. ${c.total}</td>
       <td>Rs. ${c.paid}</td>
-      <td>${clickable ? `<span style="cursor:pointer; text-decoration:underline; color:var(--navy); font-weight:600;" onclick="showUnpaidFeesForClass('${cls.replace(/'/g,"\\'")}')">Rs. ${c.pending}</span>` : 'Rs. 0'}</td>
+      <td>${clickable ? `<span style="cursor:pointer; text-decoration:underline; color:var(--navy); font-weight:600;" onclick="showUnpaidFeesForClass('${key.replace(/'/g,"\\'")}')">Rs. ${c.pending}</span>` : 'Rs. 0'}</td>
     </tr>`;
   });
 }
@@ -2914,19 +2966,20 @@ function renderClassFeeSummary(){
   const byClass = {};
   fees.forEach(f => {
     const student = students.find(s => s.id === f.studentId);
-    const cls = (student && student.cls && student.cls.trim()) || 'Unassigned';
-    if(!byClass[cls]) byClass[cls] = { count:0, total:0, paid:0, pending:0 };
-    byClass[cls].count += 1;
-    byClass[cls].total += f.amount;
-    if(f.status === 'paid') byClass[cls].paid += f.amount;
-    else byClass[cls].pending += f.amount;
+    const key = (student ? classKey(student.cls) : '') || 'unassigned';
+    const label = key === 'unassigned' ? 'Unassigned' : classDisplay(student.cls);
+    if(!byClass[key]) byClass[key] = { label, count:0, total:0, paid:0, pending:0 };
+    byClass[key].count += 1;
+    byClass[key].total += f.amount;
+    if(f.status === 'paid') byClass[key].paid += f.amount;
+    else byClass[key].pending += f.amount;
   });
-  const classNames = Object.keys(byClass).sort((a,b) => a.localeCompare(b, undefined, {numeric:true}));
-  document.getElementById('repClassFeeEmpty').style.display = classNames.length ? 'none' : 'block';
-  classNames.forEach(cls => {
-    const c = byClass[cls];
+  const classKeys = Object.keys(byClass).sort((a,b) => byClass[a].label.localeCompare(byClass[b].label, undefined, {numeric:true}));
+  document.getElementById('repClassFeeEmpty').style.display = classKeys.length ? 'none' : 'block';
+  classKeys.forEach(key => {
+    const c = byClass[key];
     tbody.innerHTML += `<tr>
-      <td>${cls}</td>
+      <td>${c.label}</td>
       <td>${c.count}</td>
       <td>Rs. ${c.total}</td>
       <td>Rs. ${c.paid}</td>
@@ -3009,7 +3062,7 @@ presenceCol.listen(()=>presence, v=>{
 // Har 30 second baad staff list aur dashboard dobara render karo — taake koi staff
 // jiska heartbeat purana ho chuka hai (jaise browser band kar diya bina Logout kiye)
 // khud-ba-khud "Offline" dikhne lag jaye, na ke sirf tab jab koi naya cloud update aaye.
-setInterval(()=>{ if(typeof renderStaff === 'function') renderStaff(); if(typeof renderDashboard === 'function') renderDashboard(); }, 30000);
+setInterval(()=>{ if(typeof renderStaff === 'function') renderStaff(); if(typeof renderDashboard === 'function') renderDashboard(); }, 15000); // 15 sec — staff online/offline status jaldi refresh ho
 noticesCol.listen(()=>notices, v=>{ notices=v; }, ()=>{ renderNotices(); realtimeSaveStatus(); });
 eventsCol.listen(()=>events, v=>{ events=v; }, ()=>{ renderEvents(); realtimeSaveStatus(); });
 examResultsCol.listen(()=>examResults, v=>{ examResults=v; }, ()=>{ renderResults(); realtimeSaveStatus(); });
@@ -3051,16 +3104,48 @@ loadData().finally(()=>{
 
 /* ===================== AUTO-RESTORE LOGIN SESSION =====================
    Refresh/naya tab kholne par dobara login na maangay — jab tak user khud
-   "Logout" na kare. Firebase Auth apni state khud localStorage mein
-   rakhta hai, is liye bas onAuthStateChanged listen karna kaafi hai. */
+   "Logout" na kare. Session yahan LOCALSTORAGE se turant restore hoti hai
+   (Firebase Auth ki state ka intezar kiye baghair) — is se bar bar refresh
+   karne par bhi login screen wapas nahi aati, chahe network slow ho ya
+   Firebase Auth ki apni restore mein thodi der lage. */
+function restoreLocalSession(){
+  if(session) return true;
+  let raw = null;
+  try{ raw = localStorage.getItem(APP_SESSION_KEY); }catch(e){}
+  if(!raw) return false;
+  let saved;
+  try{ saved = JSON.parse(raw); }catch(e){ return false; }
+  if(!saved || (saved.role !== 'admin' && saved.role !== 'user')) return false;
+  currentRole = saved.role;
+  currentStaffId = saved.staffId || null;
+  enterApp(saved.name || (currentRole==='admin' ? 'School Admin' : 'Staff User'), true);
+  return true;
+}
+const sessionRestored = restoreLocalSession();
+
+// Fallback: agar localStorage se restore na ho saka (jaise pehli dafa kisi naye
+// device/browser par, ya storage clear ho gaya ho), tab Firebase Auth ki apni
+// restore state se koshish karein.
 if(auth){
   auth.onAuthStateChanged(function(user){
-    if(session) return; // is tab mein already logged in (manual login abhi hua)
+    if(session) return; // is tab mein already logged in (manual ya local-restore se)
     if(user){
       const email = (user.email || '').toLowerCase();
       const isAdmin = ADMIN_EMAILS.includes(email);
       currentRole = isAdmin ? 'admin' : 'user';
-      const displayName = user.displayName || user.email || (isAdmin ? 'School Admin' : 'Staff User');
+      let displayName = user.displayName || user.email || (isAdmin ? 'School Admin' : 'Staff User');
+      if(!isAdmin){
+        // Staff local login se hoti hai (Firebase email/password nahi) — is liye
+        // restore ke waqt staff ki asal ID localStorage se wapas layein taake
+        // ONLINE presence heartbeat sahi tarah dobara shuru ho sake.
+        let savedId = null;
+        try{ savedId = localStorage.getItem(STAFF_SESSION_KEY); }catch(e){}
+        if(savedId){
+          const match = staff.find(s => String(s.id) === String(savedId));
+          currentStaffId = match ? match.id : savedId;
+          if(match) displayName = match.name;
+        }
+      }
       enterApp(displayName, true);
     }
   });
