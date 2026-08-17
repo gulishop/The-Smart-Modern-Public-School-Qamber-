@@ -391,7 +391,7 @@
         <div class="view active" id="view-dashboard">
           <div class="stat-grid">
             <div class="stat-card"><div class="n" id="statStudents">0</div><div class="l">Total Students</div></div>
-            <div class="stat-card"><div class="n" id="statStaff">0</div><div class="l">Total Teachers / Staff</div></div>
+            <div class="stat-card"><div class="n" id="statStaff">0</div><div class="l">Total Teachers / Staff</div><div class="l" id="statStaffOnline" style="margin-top:4px; font-weight:600;"></div></div>
             <div class="stat-card admin-only"><div class="n" id="statPresent">0</div><div class="l">Present Today</div></div>
             <div class="stat-card admin-only" style="cursor:pointer;" onclick="showView('attendance')"><div class="n" id="statNotMarked">0</div><div class="l">Attendance Not Marked Yet</div></div>
             <div class="stat-card admin-only" style="cursor:pointer;" onclick="showAllPendingFees()"><div class="n" id="statPending">0</div><div class="l">Pending Fee Challans</div></div>
@@ -2832,6 +2832,14 @@ function renderClassWiseCounts(){
 function renderDashboard(){
   document.getElementById('statStudents').textContent = students.length;
   document.getElementById('statStaff').textContent = staff.length;
+  const staffOnlineEl = document.getElementById('statStaffOnline');
+  if(staffOnlineEl){
+    const onlineCount = staff.filter(s => {
+      const lastSeen = presenceMap[String(s.id)];
+      return !!lastSeen && (Date.now() - lastSeen) < PRESENCE_ONLINE_THRESHOLD_MS;
+    }).length;
+    staffOnlineEl.innerHTML = '<span style="color:var(--green);">🟢 ' + onlineCount + ' Online</span> · <span style="color:#888;">⚪ ' + (staff.length - onlineCount) + ' Offline</span>';
+  }
   const today = new Date().toISOString().slice(0,10);
   const todayRec = attendanceRecords[today] || {};
   const present = students.filter(s => (todayRec[s.id] || '') === 'present').length;
@@ -2997,11 +3005,11 @@ presenceCol.listen(()=>presence, v=>{
   presence = v;
   presenceMap = {};
   presence.forEach(p=>{ if(p && p.id != null) presenceMap[String(p.id)] = p.lastSeen; });
-}, ()=>{ renderStaff(); });
-// Har 30 second baad staff list dobara render karo — taake koi staff jiska heartbeat
-// purana ho chuka hai (jaise browser band kar diya bina Logout kiye) khud-ba-khud
-// "Offline" dikhne lag jaye, na ke sirf tab jab koi naya cloud update aaye.
-setInterval(()=>{ if(typeof renderStaff === 'function') renderStaff(); }, 30000);
+}, ()=>{ renderStaff(); renderDashboard(); });
+// Har 30 second baad staff list aur dashboard dobara render karo — taake koi staff
+// jiska heartbeat purana ho chuka hai (jaise browser band kar diya bina Logout kiye)
+// khud-ba-khud "Offline" dikhne lag jaye, na ke sirf tab jab koi naya cloud update aaye.
+setInterval(()=>{ if(typeof renderStaff === 'function') renderStaff(); if(typeof renderDashboard === 'function') renderDashboard(); }, 30000);
 noticesCol.listen(()=>notices, v=>{ notices=v; }, ()=>{ renderNotices(); realtimeSaveStatus(); });
 eventsCol.listen(()=>events, v=>{ events=v; }, ()=>{ renderEvents(); realtimeSaveStatus(); });
 examResultsCol.listen(()=>examResults, v=>{ examResults=v; }, ()=>{ renderResults(); realtimeSaveStatus(); });
