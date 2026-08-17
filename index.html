@@ -908,8 +908,104 @@ try{
 }catch(e){
   console.warn('Firebase config set nahi hai ya ghalat hai — sirf is browser mein (offline) data save hoga.', e);
 }
+// ===== FIRESTORE DATA SPLIT — HAR CHEEZ APNI ALAG DOCUMENT/COLLECTION MEIN =====
+// Firestore ki EK document sirf 1MB tak ho sakti hai. Pehle poora school ka data
+// (students, staff, fees, attendance, quoteLog, loginLog, waghera) ek hi
+// "school/main" document mein jama hota tha — jo 10-15 saal mein (khaas kar
+// homework attachments aur roz ki attendance/login logs ki wajah se) is 1MB
+// limit tak pohanch sakta tha. Ab har growing cheez apni ALAG Firestore
+// COLLECTION mein rehti hai — ek COLLECTION ki koi size limit nahi hoti, chahe
+// usmein lakhon documents kyun na ho jayein. school/main sirf chhoti settings
+// (idCounter, schoolSettings, waSettings) ke liye reh gaya hai.
 const SCHOOL_DOC = db ? db.collection('school').doc('main') : null;
+// Purana gallery doc — sirf MIGRATION ke liye rakha hai (naye photos ab
+// 'gallery' collection mein jaate hain, is doc mein nahi).
 const SCHOOL_GALLERY_DOC = db ? db.collection('school').doc('gallery') : null;
+
+// Har list (students, staff, notices, events, examResults, timetable, homework,
+// gallery, fees, quoteLog, loginLog, qrScanLog) ke liye ek chhota helper jo
+// har record ko uski apni collection mein uske 'id' ke naam se ek alag chhoti
+// document ki tarah save/update/delete/load karta hai.
+function makeRecordCollection(name){
+  const colRef = db ? db.collection(name) : null;
+  return {
+    colRef,
+    add(item){ if(colRef) colRef.doc(String(item.id)).set(item).catch(err=>console.warn('Cloud add failed ('+name+'):', err)); },
+    update(item){ if(colRef) colRef.doc(String(item.id)).set(item).catch(err=>console.warn('Cloud update failed ('+name+'):', err)); },
+    remove(id){ if(colRef) colRef.doc(String(id)).delete().catch(err=>console.warn('Cloud delete failed ('+name+'):', err)); },
+    loadAll(){
+      if(!colRef) return Promise.resolve([]);
+      return colRef.get().then(snap=>{ const arr=[]; snap.forEach(d=>arr.push(d.data())); return arr; })
+        .catch(err=>{ console.warn('Cloud load failed ('+name+'):', err); return []; });
+    },
+    // getArr/setArr functions ke through kaam karta hai (direct array reference nahi)
+    // kyunke ye top-level arrays kahin aur poori tarah REASSIGN ho jaati hain
+    // (jaise `students = students.filter(...)`) — function se hamesha current
+    // array milegi, purani (stale) copy nahi.
+    listen(getArr, setArr, onChange){
+      if(!colRef) return;
+      colRef.onSnapshot({ includeMetadataChanges:true }, function(snap){
+        if(snap.metadata.hasPendingWrites) return;
+        let arr = getArr().slice();
+        let changed = false;
+        snap.docChanges().forEach(change=>{
+          const idx = arr.findIndex(x => String(x.id) === change.doc.id);
+          if(change.type === 'removed'){ if(idx !== -1){ arr.splice(idx,1); changed = true; } }
+          else { const data = change.doc.data(); if(idx !== -1) arr[idx] = data; else arr.push(data); changed = true; }
+        });
+        if(changed){ setArr(arr); if(onChange) onChange(); }
+      }, function(err){ console.warn('Realtime sync error ('+name+'):', err); });
+    }
+  };
+}
+const studentsCol    = makeRecordCollection('students');
+const staffCol        = makeRecordCollection('staff');
+const noticesCol      = makeRecordCollection('notices');
+const eventsCol       = makeRecordCollection('events');
+const examResultsCol  = makeRecordCollection('examResults');
+const timetableCol    = makeRecordCollection('timetable');
+const homeworkCol     = makeRecordCollection('homework');
+const galleryCol      = makeRecordCollection('gallery');
+const feesCol         = makeRecordCollection('fees');
+const quoteLogCol     = makeRecordCollection('quoteLog');
+const loginLogCol     = makeRecordCollection('loginLog');
+const qrScanLogCol    = makeRecordCollection('qrScanLog');
+
+// ===== ATTENDANCE: EK ALAG DOCUMENT PER DATE =====
+// Attendance roz badhti hai (har din, har student ke liye) — is liye ye kabhi
+// bhi single document mein nahi rakhi jaati. Har tareekh (e.g. attendance/2026-08-17)
+// apni alag chhoti document hai jismein sirf usi din ka { studentId: status } record hai.
+const loadedAttendanceDates = new Set();
+const attendanceDateUnsubs = {};
+function attendanceDateRef(date){
+  return db ? db.collection('attendance').doc(date) : null;
+}
+// Us tareekh ke liye ek realtime listener laga deta hai — taake agar koi doosra
+// device usi din ki attendance badle (jaise QR scan se), to ye device bhi turant update ho jaye.
+function subscribeAttendanceDate(date){
+  if(!db || !date || attendanceDateUnsubs[date]) return;
+  attendanceDateUnsubs[date] = attendanceDateRef(date).onSnapshot({ includeMetadataChanges:true }, function(doc){
+    if(!doc.exists || doc.metadata.hasPendingWrites) return;
+    attendanceRecords[date] = doc.data() || {};
+    const attDateEl = document.getElementById('attDate');
+    const activeDate = (attDateEl && attDateEl.value) || new Date().toISOString().slice(0,10);
+    if(activeDate === date && typeof renderAttendanceForm === 'function') renderAttendanceForm();
+    if(date === new Date().toISOString().slice(0,10) && typeof renderDashboard === 'function') renderDashboard();
+  }, function(err){ console.warn('Attendance realtime sync error (' + date + '):', err); });
+}
+function ensureAttendanceDateLoaded(date){
+  if(!db || !date || loadedAttendanceDates.has(date)) return Promise.resolve();
+  loadedAttendanceDates.add(date);
+  return attendanceDateRef(date).get().then(doc=>{
+    if(doc.exists) attendanceRecords[date] = Object.assign({}, doc.data(), attendanceRecords[date]);
+    subscribeAttendanceDate(date);
+  }).catch(err=>{ console.warn('Attendance load failed for ' + date + ':', err); });
+}
+function saveAttendanceDateToCloud(date){
+  const ref = attendanceDateRef(date);
+  if(!ref) return;
+  ref.set(attendanceRecords[date] || {}).catch(err=>console.warn('Attendance cloud save failed:', err));
+}
 </script>
 
 <script>
@@ -939,23 +1035,22 @@ let quoteLog = [];
 let currentQuote = null;
 
 function saveData(){
-  // Gallery (photos) yahan shamil NAHI — wo bohot bhari hoti hain (base64), isliye alag save hoti hain
-  // taake koi bhi chhoti tabdeeli (jaise ek student add karna) fast save/sync ho.
-  // NOTE: students/staff/fees/notices/loginLog/events/examResults/quoteLog ab yahan se Firestore
-  // par POORI list ke tor par NAHI bheje jaate — un sab ke apne add/delete functions seedha
-  // cloudArrayAdd()/cloudArrayRemove() use karte hain, taake ek device ki nayi entry doosre device
-  // ki entry ko cloud par overwrite na kar de. Yahan sirf localStorage ke liye poora data rakha hai.
-  const data = { students, staff, fees, attendanceRecords, notices, loginLog, idCounter, schoolSettings, events, examResults, waSettings, quoteLog, timetable, homework, qrScanLog, savedAt: new Date().toISOString() };
+  // Sirf CHHOTI settings (idCounter, schoolSettings, waSettings) cloud "school/main" doc
+  // mein jaati hain — students/staff/fees/notices/loginLog/events/examResults/quoteLog/
+  // timetable/homework/qrScanLog/attendance/gallery ab apni apni alag collection/document
+  // mein apne add/update/delete function se seedha save hote hain (neeche dekhein), taake
+  // ye chhoti "school/main" document kabhi 1MB limit ke qareeb na jaye — chahe school
+  // dahaiyon (10-15+ saal) tak chalta rahe.
   const s = document.getElementById('saveStatus');
   try{
-    const full = Object.assign({}, data, { galleryPhotos });
+    const full = { students, staff, fees, attendanceRecords, notices, loginLog, idCounter, schoolSettings, events, examResults, waSettings, quoteLog, timetable, homework, qrScanLog, galleryPhotos, savedAt: new Date().toISOString() };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(full));
   }catch(e){
     if(s) s.textContent = 'Save failed — storage full/blocked';
     return;
   }
   if(SCHOOL_DOC){
-    const cloudData = { attendanceRecords, idCounter, schoolSettings, waSettings, savedAt: new Date().toISOString() };
+    const cloudData = { idCounter, schoolSettings, waSettings, savedAt: new Date().toISOString() };
     if(s) s.textContent = navigator.onLine ? 'Cloud pe sync ho raha hai…' : 'Offline — local save, net aane par cloud sync hoga';
     SCHOOL_DOC.set(cloudData, { merge:true })
       .then(()=>{ if(s) s.textContent = '☁️ Cloud synced · ' + new Date().toLocaleTimeString(); })
@@ -965,9 +1060,8 @@ function saveData(){
   }
 }
 function saveGalleryData(){
-  // Sirf localStorage cache update karta hai. Firestore par har naye/hataye gaye photo ke liye
-  // addGalleryPhoto()/deleteGalleryPhoto() khud cloudArrayAdd()/cloudArrayRemove() se cloud update
-  // karte hain, taake do devices ki photos ek doosre ko overwrite na karein.
+  // Sirf localStorage cache update karta hai (offline fallback ke liye). Cloud par
+  // har nayi/hatayi gayi photo apne 'gallery' collection document se khud handle hoti hai.
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     const existing = raw ? JSON.parse(raw) : {};
@@ -985,21 +1079,18 @@ function nextStaffCode(){
   const used = staff.map(s => s.staffCode).filter(Boolean);
   return used.length ? Math.max(...used) + 1 : 1001;
 }
-function cloudArrayAdd(field, item, docRef){
-  // Poori list dobara bheje bina, sirf NAYI entry cloud list mein add karta hai (Firestore arrayUnion).
-  // Isse agar doosra device bhi usi waqt kuch add kare, dono entries mehfooz rehti hain.
-  docRef = docRef || SCHOOL_DOC;
-  if(!docRef) return;
-  docRef.set({ [field]: firebase.firestore.FieldValue.arrayUnion(item) }, { merge:true })
-    .catch(err => console.warn('Cloud add failed for ' + field + ':', err));
+// applyScalars — sirf chhoti "school/main" settings apply karta hai (cloud se). Records
+// (students/staff/waghera) ki apni collections se load hoti hain, is function se nahi —
+// isliye ye kabhi bhi already-loaded records ko khali (overwrite) nahi karta.
+function applyScalars(data){
+  if(!data) return;
+  if(data.idCounter) idCounter = data.idCounter;
+  if(data.schoolSettings) schoolSettings = data.schoolSettings;
+  if(data.waSettings) waSettings = data.waSettings;
 }
-function cloudArrayRemove(field, item, docRef){
-  // Sirf wahi entry cloud list se hataata hai (Firestore arrayRemove), baaki list ko chhue bagair.
-  docRef = docRef || SCHOOL_DOC;
-  if(!docRef) return;
-  docRef.set({ [field]: firebase.firestore.FieldValue.arrayRemove(item) }, { merge:true })
-    .catch(err => console.warn('Cloud remove failed for ' + field + ':', err));
-}
+// applyData — POORA data set karta hai. Ye sirf (1) shuru mein localStorage cache se fast
+// paint ke liye, aur (2) backup-file RESTORE ke waqt use hota hai — dono jagah poori
+// arrays available hoti hain is liye applyData unhe seedha assign kar sakta hai.
 function applyData(data){
   students = data.students || [];
   staff = data.staff || [];
@@ -1007,16 +1098,95 @@ function applyData(data){
   attendanceRecords = data.attendanceRecords || {};
   notices = data.notices || [];
   loginLog = data.loginLog || [];
-  idCounter = data.idCounter || 1;
-  schoolSettings = data.schoolSettings || schoolSettings;
   events = data.events || [];
   if(data.galleryPhotos) galleryPhotos = data.galleryPhotos;
   examResults = data.examResults || [];
-  waSettings = data.waSettings || waSettings;
   quoteLog = data.quoteLog || [];
   timetable = data.timetable || [];
   homework = data.homework || [];
   qrScanLog = data.qrScanLog || [];
+  applyScalars(data);
+}
+// ===== PURANE (LEGACY) DATA KI AUTOMATIC MIGRATION =====
+// Agar is school ka data pehle (update se pehle) single "school/main" document (aur
+// purani "school/gallery" document) mein tha, to app khud-ba-khud usay dhoondh kar
+// har record ko uski nayi, apni collection mein copy kar deta hai — aur phir purani
+// document se wo bhara-bhari field hata deta hai. Isse purana data zaya nahi hota aur
+// khud alag documents mein chala jata hai, bina kisi manual kaam ke.
+function migrateLegacyData(legacyCore){
+  if(!db) return;
+  const jobs = [];
+  const recordFields = {
+    students: studentsCol, staff: staffCol, notices: noticesCol, events: eventsCol,
+    examResults: examResultsCol, timetable: timetableCol, homework: homeworkCol,
+    fees: feesCol
+  };
+  Object.keys(recordFields).forEach(field=>{
+    const arr = legacyCore && legacyCore[field];
+    if(Array.isArray(arr) && arr.length){
+      arr.forEach(item=>{ if(item && item.id != null) jobs.push(recordFields[field].colRef.doc(String(item.id)).set(item)); });
+      jobs.push(SCHOOL_DOC.set({ [field]: firebase.firestore.FieldValue.delete() }, { merge:true }));
+      console.log('Migrating legacy "' + field + '" (' + arr.length + ' records) into its own collection…');
+    }
+  });
+  // quoteLog/loginLog/qrScanLog purani entries mein 'id' nahi hota (qrScanLog ke ilawa) — is liye
+  // migrate karte waqt zaroorat ho to naya id de dete hain.
+  ['quoteLog','loginLog','qrScanLog'].forEach(field=>{
+    const arr = legacyCore && legacyCore[field];
+    const col = field === 'quoteLog' ? quoteLogCol : (field === 'loginLog' ? loginLogCol : qrScanLogCol);
+    if(Array.isArray(arr) && arr.length){
+      arr.forEach(item=>{
+        if(!item) return;
+        const withId = item.id != null ? item : Object.assign({ id:newId() }, item);
+        jobs.push(col.colRef.doc(String(withId.id)).set(withId));
+      });
+      jobs.push(SCHOOL_DOC.set({ [field]: firebase.firestore.FieldValue.delete() }, { merge:true }));
+      console.log('Migrating legacy "' + field + '" (' + arr.length + ' entries) into its own collection…');
+    }
+  });
+  // Purani attendanceRecords = { "2026-08-17": { studentId: status, ... }, ... } — har
+  // tareekh apni "attendance/{date}" document ban jaati hai.
+  const legacyAtt = legacyCore && legacyCore.attendanceRecords;
+  if(legacyAtt && typeof legacyAtt === 'object' && Object.keys(legacyAtt).length){
+    Object.keys(legacyAtt).forEach(date=>{
+      jobs.push(attendanceDateRef(date).set(legacyAtt[date] || {}));
+    });
+    jobs.push(SCHOOL_DOC.set({ attendanceRecords: firebase.firestore.FieldValue.delete() }, { merge:true }));
+    console.log('Migrating legacy attendance (' + Object.keys(legacyAtt).length + ' dates) into daily documents…');
+  }
+  // Purani "school/gallery" document ki galleryPhotos array bhi apni "gallery" collection mein.
+  if(SCHOOL_GALLERY_DOC){
+    SCHOOL_GALLERY_DOC.get().then(doc=>{
+      if(doc.exists && Array.isArray(doc.data().galleryPhotos) && doc.data().galleryPhotos.length){
+        const photos = doc.data().galleryPhotos;
+        Promise.all(photos.filter(p=>p && p.id != null).map(p => galleryCol.colRef.doc(String(p.id)).set(p)))
+          .then(()=> SCHOOL_GALLERY_DOC.set({ galleryPhotos: firebase.firestore.FieldValue.delete() }, { merge:true }))
+          .then(()=> console.log('Migrated legacy gallery (' + photos.length + ' photos) into its own collection.'))
+          .catch(err=>console.warn('Gallery migration warning:', err));
+      }
+    }).catch(()=>{});
+  }
+  if(jobs.length){
+    Promise.all(jobs).catch(err=>console.warn('Migration warning (kuch records dobara try honge):', err));
+  }
+}
+// Backup-file RESTORE ke baad, memory mein maujood poori arrays ko cloud ki
+// apni-apni collections/documents mein likh deta hai (taake baaki devices bhi update dekhein).
+function pushAllRecordsToCloud(){
+  if(!db) return;
+  students.forEach(x=>studentsCol.add(x));
+  staff.forEach(x=>staffCol.add(x));
+  notices.forEach(x=>noticesCol.add(x));
+  events.forEach(x=>eventsCol.add(x));
+  examResults.forEach(x=>examResultsCol.add(x));
+  timetable.forEach(x=>timetableCol.add(x));
+  homework.forEach(x=>homeworkCol.add(x));
+  fees.forEach(x=>feesCol.add(x));
+  quoteLog.forEach(x=>quoteLogCol.add(x.id != null ? x : Object.assign({ id:newId() }, x)));
+  loginLog.forEach(x=>loginLogCol.add(x.id != null ? x : Object.assign({ id:newId() }, x)));
+  qrScanLog.forEach(x=>qrScanLogCol.add(x));
+  galleryPhotos.forEach(x=>galleryCol.add(x));
+  Object.keys(attendanceRecords||{}).forEach(date=>{ attendanceDateRef(date).set(attendanceRecords[date] || {}).catch(()=>{}); });
 }
 function loadData(){
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -1024,24 +1194,35 @@ function loadData(){
     try{ applyData(JSON.parse(raw)); }catch(e){}
   }
   if(!SCHOOL_DOC) return Promise.resolve();
+  const today = new Date().toISOString().slice(0,10);
   const corePromise = SCHOOL_DOC.get({source:'server'}).catch(()=>SCHOOL_DOC.get()).then(doc=>{
     if(doc.exists){
-      applyData(doc.data());
+      const cloudCore = doc.data();
+      applyScalars(cloudCore);
+      migrateLegacyData(cloudCore);
     } else {
       saveData();
     }
   }).catch(err=>{
-    console.warn('Cloud se data load nahi ho saka — offline/local data use ho raha hai.', err);
+    console.warn('Cloud se settings load nahi ho saki — offline/local data use ho raha hai.', err);
   });
-  const galleryPromise = SCHOOL_GALLERY_DOC ? SCHOOL_GALLERY_DOC.get({source:'server'}).catch(()=>SCHOOL_GALLERY_DOC.get()).then(doc=>{
-    if(doc.exists && doc.data().galleryPhotos){
-      galleryPhotos = doc.data().galleryPhotos;
-    }
-  }).catch(err=>{
-    console.warn('Gallery cloud se load nahi ho saki.', err);
-  }) : Promise.resolve();
-  return Promise.all([corePromise, galleryPromise]).then(()=>{
-    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(Object.assign({}, { students, staff, fees, attendanceRecords, notices, loginLog, idCounter, schoolSettings, events, examResults, waSettings, quoteLog, timetable, homework, qrScanLog }, { galleryPhotos }))); }catch(e){}
+  const collectionPromises = [
+    studentsCol.loadAll().then(arr=>{ students = arr; }),
+    staffCol.loadAll().then(arr=>{ staff = arr; }),
+    noticesCol.loadAll().then(arr=>{ notices = arr; }),
+    eventsCol.loadAll().then(arr=>{ events = arr; }),
+    examResultsCol.loadAll().then(arr=>{ examResults = arr; }),
+    timetableCol.loadAll().then(arr=>{ timetable = arr; }),
+    homeworkCol.loadAll().then(arr=>{ homework = arr; }),
+    galleryCol.loadAll().then(arr=>{ if(arr.length) galleryPhotos = arr; }),
+    feesCol.loadAll().then(arr=>{ fees = arr; }),
+    quoteLogCol.loadAll().then(arr=>{ quoteLog = arr; }),
+    loginLogCol.loadAll().then(arr=>{ loginLog = arr; }),
+    qrScanLogCol.loadAll().then(arr=>{ qrScanLog = arr; }),
+    ensureAttendanceDateLoaded(today)
+  ];
+  return Promise.all([corePromise].concat(collectionPromises)).then(()=>{
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({ students, staff, fees, attendanceRecords, notices, loginLog, idCounter, schoolSettings, events, examResults, waSettings, quoteLog, timetable, homework, qrScanLog, galleryPhotos })); }catch(e){}
   });
 }
 
@@ -1068,6 +1249,9 @@ function restoreData(input){
       applyData(data);
       saveData();
       saveGalleryData();
+      // Backup file ka poora data cloud ki apni-apni collections/documents mein bhi bhej dein,
+      // taake baaki devices bhi restore hua data dekh sakein.
+      pushAllRecordsToCloud();
       renderAll();
       fillSettingsForm();
       alert('Data kamyabi se restore ho gaya.');
@@ -1157,10 +1341,10 @@ function sendQuoteWhatsAppNow(){
   if(!currentQuote) currentQuote = pickTodayQuote();
   const msg = '📚 ' + schoolSettings.name + ' — Daily Awareness\n\n"' + currentQuote.text + '"\n— ' + currentQuote.by;
   window.open(waLinkFor(msg), '_blank');
-  const quoteEntry = { text: currentQuote.text, time: new Date().toLocaleString(), mode:'manual' };
+  const quoteEntry = { id:newId(), text: currentQuote.text, time: new Date().toLocaleString(), mode:'manual' };
   quoteLog.unshift(quoteEntry);
   if(quoteLog.length > 100) quoteLog.length = 100;
-  cloudArrayAdd('quoteLog', quoteEntry);
+  quoteLogCol.add(quoteEntry);
   saveData();
   renderQuoteLog();
 }
@@ -1225,14 +1409,15 @@ function renderQuotesView(){
 function logActivity(action){
   const s = session;
   const entry = {
+    id:newId(),
     name: s ? s.name : '—',
     role: s ? s.role : currentRole,
     action: action,
     time: new Date().toLocaleString()
   };
   loginLog.unshift(entry);
-  if(loginLog.length > 200) loginLog.length = 200; // purani entries hata dein, list zyada badi na ho
-  cloudArrayAdd('loginLog', entry);
+  if(loginLog.length > 200) loginLog.length = 200; // sirf local list chhoti rakhne ke liye — cloud collection ki koi size limit nahi
+  loginLogCol.add(entry);
   saveData();
   if(document.getElementById('view-loginlog') && document.getElementById('view-loginlog').classList.contains('active')){
     renderLoginLog();
@@ -1388,8 +1573,7 @@ function addStudent(){
     s.gender = document.getElementById('stuGender').value;
     s.admDate = document.getElementById('stuAdmDate').value || s.admDate;
     s.address = document.getElementById('stuAddress').value.trim();
-    cloudArrayRemove('students', oldStudent);
-    cloudArrayAdd('students', Object.assign({}, s));
+    studentsCol.update(Object.assign({}, s));
     cancelEditStudent();
     saveData();
     renderAll();
@@ -1410,7 +1594,7 @@ function addStudent(){
     address: document.getElementById('stuAddress').value.trim()
   };
   students.push(newStudent);
-  cloudArrayAdd('students', newStudent);
+  studentsCol.add(newStudent);
   ['stuName','stuFather','stuClass','stuSection','stuRoll','stuContact','stuDOB','stuAddress'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('stuAdmDate').value = new Date().toISOString().slice(0,10);
   renderAll();
@@ -1449,7 +1633,7 @@ function deleteStudent(id){
   const toRemove = students.find(s => s.id === id);
   students = students.filter(s => s.id !== id);
   fees = fees.filter(f => f.studentId !== id);
-  if(toRemove) cloudArrayRemove('students', toRemove);
+  if(toRemove) studentsCol.remove(id);
   if(editingStudentId === id) cancelEditStudent();
   saveData();
   renderAll();
@@ -1501,11 +1685,9 @@ function promoteStudents(){
   if(!affected.length){ alert('Is class mein koi student nahi mila.'); return; }
   if(!confirm(`${affected.length} students ko Class ${fromCls} se Class ${toCls} mein promote karna hai?`)) return;
   affected.forEach(s => {
-    const oldStudent = Object.assign({}, s);
     s.cls = toCls;
     if(toSection) s.section = toSection;
-    cloudArrayRemove('students', oldStudent);
-    cloudArrayAdd('students', Object.assign({}, s));
+    studentsCol.update(Object.assign({}, s));
   });
   saveData();
   renderAll();
@@ -1530,7 +1712,7 @@ async function addStaff(){
     passHash: pwd ? await hashPassword(pwd) : ''
   };
   staff.push(newStaff);
-  cloudArrayAdd('staff', newStaff);
+  staffCol.add(newStaff);
   ['stfName','stfDesg','stfContact','stfSalary','stfEmail','stfPassword'].forEach(id => document.getElementById(id).value = '');
   renderAll();
   alert('Staff add ho gaya! Staff ID: STF-' + staffCode + (pwd ? ' — is ID aur password se wo "Staff / User" tab se login kar sakte hain.' : ' — password set nahi kiya gaya, staff abhi login nahi kar sakega jab tak password set na ho.'));
@@ -1542,10 +1724,8 @@ async function changeStaffPassword(id){
   const newPwd = prompt('Naya password likhein (Staff ID: STF-' + (s.staffCode || s.id) + '):');
   if(newPwd === null) return;
   if(!newPwd.trim()){ alert('Password khali nahi ho sakta.'); return; }
-  const oldStaff = Object.assign({}, s);
   s.passHash = await hashPassword(newPwd.trim());
-  cloudArrayRemove('staff', oldStaff);
-  cloudArrayAdd('staff', Object.assign({}, s));
+  staffCol.update(Object.assign({}, s));
   saveData();
   renderAll();
   alert('Password update ho gaya.');
@@ -1554,7 +1734,7 @@ function deleteStaff(id){
   if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
   const toRemove = staff.find(s => s.id === id);
   staff = staff.filter(s => s.id !== id);
-  if(toRemove) cloudArrayRemove('staff', toRemove);
+  if(toRemove) staffCol.remove(id);
   saveData();
   renderAll();
   if(toRemove && toRemove.passHash){
@@ -1610,7 +1790,7 @@ function addFee(){
     status: 'pending'
   };
   fees.push(newFee);
-  cloudArrayAdd('fees', newFee);
+  feesCol.add(newFee);
   ['feeMonth','feeAmount','feeDue'].forEach(id => document.getElementById(id).value = '');
   renderAll();
 }
@@ -1618,7 +1798,6 @@ function editFee(id){
   if(session.role !== 'admin'){ alert('Sirf Admin edit kar sakta hai.'); return; }
   const f = fees.find(x => x.id === id);
   if(!f) return;
-  const oldFee = Object.assign({}, f);
   const newMonth = prompt('Month:', f.month);
   if(newMonth === null) return;
   const newAmount = prompt('Amount (Rs.):', f.amount);
@@ -1629,8 +1808,7 @@ function editFee(id){
   f.month = newMonth.trim() || f.month;
   f.amount = Number(newAmount);
   f.due = newDue.trim();
-  cloudArrayRemove('fees', oldFee);
-  cloudArrayAdd('fees', Object.assign({}, f));
+  feesCol.update(Object.assign({}, f));
   saveData();
   renderAll();
 }
@@ -1640,7 +1818,7 @@ function deleteFee(id){
   if(!f) return;
   if(!confirm('Ye fee challan delete karna hai?')) return;
   fees = fees.filter(x => x.id !== id);
-  cloudArrayRemove('fees', f);
+  feesCol.remove(id);
   saveData();
   renderAll();
 }
@@ -1648,12 +1826,10 @@ function toggleFeeStatus(id){
   if(session.role !== 'admin'){ alert('Sirf Admin fee status change kar sakta hai.'); return; }
   const f = fees.find(x => x.id === id);
   if(!f) return;
-  const oldFee = Object.assign({}, f);
   const becamePaid = f.status !== 'paid';
   f.status = f.status === 'paid' ? 'pending' : 'paid';
   if(becamePaid) f.paidDate = new Date().toISOString().slice(0,10);
-  cloudArrayRemove('fees', oldFee);
-  cloudArrayAdd('fees', Object.assign({}, f));
+  feesCol.update(Object.assign({}, f));
   renderAll();
   if(becamePaid) sendFeePaidWhatsApp(id);
 }
@@ -1959,6 +2135,7 @@ function waNumberFor(contact){
 }
 function renderAttendanceForm(){
   const date = document.getElementById('attDate').value || new Date().toISOString().slice(0,10);
+  ensureAttendanceDateLoaded(date); // pehli baar is date par aane par cloud se load ho kar khud dobara render karega
   const tbody = document.getElementById('attTable');
   tbody.innerHTML = '';
   populateAttClassFilter();
@@ -2001,9 +2178,10 @@ function renderAttClassSummary(date){
   body.innerHTML = classes.map(c => `<tr><td>${c}</td><td>${counts[c].total}</td><td>${counts[c].present}</td><td>${counts[c].absent}</td></tr>`).join('');
 }
 function setAttStatus(studentId, status){
-  const date = document.getElementById('attDate').value;
+  const date = document.getElementById('attDate').value || new Date().toISOString().slice(0,10);
   if(!attendanceRecords[date]) attendanceRecords[date] = {};
   attendanceRecords[date][studentId] = status;
+  saveAttendanceDateToCloud(date);
   saveData();
   renderAttendanceForm();
 }
@@ -2017,8 +2195,10 @@ function sendAbsentWhatsApp(studentId){
   window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
 }
 function saveAttendance(){
+  const date = document.getElementById('attDate').value || new Date().toISOString().slice(0,10);
+  saveAttendanceDateToCloud(date);
   saveData();
-  alert('Attendance save ho gayi is date k liye: ' + document.getElementById('attDate').value);
+  alert('Attendance save ho gayi is date k liye: ' + date);
   renderAll();
 }
 document.addEventListener('change', function(e){ if(e.target.id === 'attDate' || e.target.id === 'attClassFilter') renderAttendanceForm(); });
@@ -2081,7 +2261,10 @@ function onQrScanSuccess(decodedText){
   }
   if(!attendanceRecords[date]) attendanceRecords[date] = {};
   attendanceRecords[date][s.id] = 'present';
-  qrScanLog.push({ id:newId(), date, time:new Date().toLocaleTimeString(), adm:s.adm, name:s.name, cls:s.cls, studentId:s.id });
+  saveAttendanceDateToCloud(date);
+  const scanEntry = { id:newId(), date, time:new Date().toLocaleTimeString(), adm:s.adm, name:s.name, cls:s.cls, studentId:s.id };
+  qrScanLog.push(scanEntry);
+  qrScanLogCol.add(scanEntry);
   saveData();
   resultBox.innerHTML = `<div style="padding:10px 14px; background:#e2f5e7; border-left:4px solid var(--green); border-radius:6px; font-size:13px;">✅ ${s.name} (${s.adm}) — Present mark ho gaya (${date})</div>`;
   renderQrScanLog();
@@ -2154,7 +2337,7 @@ function addTimetableSlot(){
   warnBox.style.display = 'none';
   const slot = { id:newId(), cls, section, day, time, subject, teacherId, teacherName: teacher ? teacher.name : '' };
   timetable.push(slot);
-  cloudArrayAdd('timetable', slot);
+  timetableCol.add(slot);
   saveData();
   ['ttTime','ttSubject'].forEach(id => document.getElementById(id).value = '');
   renderTimetableView();
@@ -2163,7 +2346,7 @@ function deleteTimetableSlot(id){
   if(session.role !== 'admin'){ alert('Sirf Admin timetable delete kar sakta hai.'); return; }
   const toRemove = timetable.find(t => t.id === id);
   timetable = timetable.filter(t => t.id !== id);
-  if(toRemove) cloudArrayRemove('timetable', toRemove);
+  if(toRemove) timetableCol.remove(id);
   saveData();
   renderTimetableView();
 }
@@ -2210,7 +2393,7 @@ function addHomework(){
       postedAt: new Date().toISOString()
     };
     homework.push(hw);
-    cloudArrayAdd('homework', hw);
+    homeworkCol.add(hw);
     saveData();
     ['hwClass','hwSection','hwSubject','hwTitle','hwDetails'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('hwDue').value = '';
@@ -2230,7 +2413,7 @@ function deleteHomework(id){
   if(session.role !== 'admin'){ alert('Sirf Admin homework delete kar sakta hai.'); return; }
   const toRemove = homework.find(h => h.id === id);
   homework = homework.filter(h => h.id !== id);
-  if(toRemove) cloudArrayRemove('homework', toRemove);
+  if(toRemove) homeworkCol.remove(id);
   saveData();
   renderHomework();
 }
@@ -2277,7 +2460,7 @@ function addNotice(){
   if(!title){ alert('Notice ka title likhein.'); return; }
   const newNotice = { id: newId(), title, body: document.getElementById('noticeBody').value.trim(), date: new Date().toDateString() };
   notices.unshift(newNotice);
-  cloudArrayAdd('notices', newNotice);
+  noticesCol.add(newNotice);
   document.getElementById('noticeTitle').value = '';
   document.getElementById('noticeBody').value = '';
   renderAll();
@@ -2309,7 +2492,7 @@ function addEvent(){
     desc: document.getElementById('evtDesc').value.trim()
   };
   events.unshift(newEvent);
-  cloudArrayAdd('events', newEvent);
+  eventsCol.add(newEvent);
   ['evtTitle','evtDate','evtEndDate','evtDesc'].forEach(id => document.getElementById(id).value = '');
   renderAll();
 }
@@ -2317,7 +2500,7 @@ function deleteEvent(id){
   if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
   const toRemove = events.find(e => e.id === id);
   events = events.filter(e => e.id !== id);
-  if(toRemove) cloudArrayRemove('events', toRemove);
+  if(toRemove) eventsCol.remove(id);
   saveData();
   renderAll();
 }
@@ -2381,7 +2564,7 @@ function addGalleryPhoto(){
       date: new Date().toDateString()
     };
     galleryPhotos.unshift(newPhoto);
-    cloudArrayAdd('galleryPhotos', newPhoto, SCHOOL_GALLERY_DOC);
+    galleryCol.add(newPhoto);
     document.getElementById('galTitle').value = '';
     fileInput.value = '';
     renderGallery();
@@ -2393,7 +2576,7 @@ function deleteGalleryPhoto(id){
   if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
   const toRemove = galleryPhotos.find(p => p.id === id);
   galleryPhotos = galleryPhotos.filter(p => p.id !== id);
-  if(toRemove) cloudArrayRemove('galleryPhotos', toRemove, SCHOOL_GALLERY_DOC);
+  if(toRemove) galleryCol.remove(id);
   renderGallery();
   saveGalleryData();
 }
@@ -2477,7 +2660,7 @@ function saveExamResult(){
     subjects, totalObtained, totalMax, percentage, grade
   };
   examResults.unshift(newResult);
-  cloudArrayAdd('examResults', newResult);
+  examResultsCol.add(newResult);
   document.getElementById('resExam').value = '';
   document.getElementById('resDate').value = '';
   document.getElementById('subjectRows').innerHTML = '';
@@ -2495,7 +2678,7 @@ function deleteExamResult(id){
   if(session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
   const toRemove = examResults.find(r => r.id === id);
   examResults = examResults.filter(r => r.id !== id);
-  if(toRemove) cloudArrayRemove('examResults', toRemove);
+  if(toRemove) examResultsCol.remove(id);
   saveData();
   renderAll();
 }
@@ -2756,40 +2939,41 @@ document.querySelectorAll('table').forEach(tbl=>{
 })();
 /* ===================== REALTIME CLOUD SYNC ===================== */
 // Jab bhi kisi doosre device/tab se data update ho, yahan turant (realtime) apply ho jata hai.
+// Har collection (students/staff/notices/events/examResults/timetable/homework/gallery/fees/
+// quoteLog/loginLog/qrScanLog) apni khud ki realtime listener rakhti hai — is se agar EK
+// device kuch add/edit/delete kare, baaki sab devices turant update dekhte hain, aur kabhi bhi
+// koi bhi ek document itni bhaari nahi hoti ke 1MB limit ke qareeb jaye.
+const realtimeSaveStatus = () => {
+  const s = document.getElementById('saveStatus');
+  if(s) s.textContent = '☁️ Realtime update mila · ' + new Date().toLocaleTimeString();
+};
+studentsCol.listen(()=>students, v=>{ students=v; }, ()=>{ renderStudents(); renderDashboard(); renderFeeStudentOptions(); renderAttendanceForm(); realtimeSaveStatus(); });
+staffCol.listen(()=>staff, v=>{ staff=v; }, ()=>{ renderStaff(); renderDashboard(); realtimeSaveStatus(); });
+noticesCol.listen(()=>notices, v=>{ notices=v; }, ()=>{ renderNotices(); realtimeSaveStatus(); });
+eventsCol.listen(()=>events, v=>{ events=v; }, ()=>{ renderEvents(); realtimeSaveStatus(); });
+examResultsCol.listen(()=>examResults, v=>{ examResults=v; }, ()=>{ renderResults(); realtimeSaveStatus(); });
+timetableCol.listen(()=>timetable, v=>{ timetable=v; }, ()=>{ if(typeof renderTimetableView === 'function') renderTimetableView(); realtimeSaveStatus(); });
+homeworkCol.listen(()=>homework, v=>{ homework=v; }, ()=>{ if(typeof renderHomework === 'function') renderHomework(); realtimeSaveStatus(); });
+galleryCol.listen(()=>galleryPhotos, v=>{ galleryPhotos=v; }, ()=>{ renderGallery(); saveGalleryData(); realtimeSaveStatus(); });
+feesCol.listen(()=>fees, v=>{ fees=v; }, ()=>{ renderFees(); renderDashboard(); realtimeSaveStatus(); });
+quoteLogCol.listen(()=>quoteLog, v=>{ quoteLog=v; }, ()=>{ if(typeof renderQuoteLog === 'function') renderQuoteLog(); });
+loginLogCol.listen(()=>loginLog, v=>{ loginLog=v; }, ()=>{ if(typeof renderLoginLog === 'function') renderLoginLog(); });
+qrScanLogCol.listen(()=>qrScanLog, v=>{ qrScanLog=v; }, ()=>{ if(typeof renderQrScanLog === 'function') renderQrScanLog(); });
+
+// school/main ab sirf chhoti settings rakhti hai — realtime mein sirf wahi apply hoti hain.
 if(SCHOOL_DOC){
   SCHOOL_DOC.onSnapshot({ includeMetadataChanges: true }, function(doc){
     if(!doc.exists) return;
     if(doc.metadata.hasPendingWrites) return; // yeh humara apna hi local write hai, dubara apply na karein
-    applyData(doc.data());
+    applyScalars(doc.data());
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
       const merged = Object.assign({}, raw ? JSON.parse(raw) : {}, doc.data());
       localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
     }catch(e){}
-    renderOnly();
-    const s = document.getElementById('saveStatus');
-    if(s) s.textContent = '☁️ Realtime update mila · ' + new Date().toLocaleTimeString();
+    realtimeSaveStatus();
   }, function(err){
     console.warn('Realtime sync error:', err);
-  });
-}
-if(SCHOOL_GALLERY_DOC){
-  SCHOOL_GALLERY_DOC.onSnapshot({ includeMetadataChanges: true }, function(doc){
-    if(!doc.exists) return;
-    if(doc.metadata.hasPendingWrites) return;
-    if(doc.data().galleryPhotos){
-      galleryPhotos = doc.data().galleryPhotos;
-      try{
-        const raw = localStorage.getItem(STORAGE_KEY);
-        const merged = Object.assign({}, raw ? JSON.parse(raw) : {}, { galleryPhotos });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-      }catch(e){}
-      renderGallery();
-      const s = document.getElementById('saveStatus');
-      if(s) s.textContent = '☁️ Gallery realtime update mila · ' + new Date().toLocaleTimeString();
-    }
-  }, function(err){
-    console.warn('Gallery realtime sync error:', err);
   });
 }
 
