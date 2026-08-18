@@ -3167,7 +3167,7 @@ window.addEventListener('offline', ()=>{
 </script>
     <script>
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('/The-Smart-Modern-Public-School-Qamber-/sw.js').then(function(reg){
+    navigator.serviceWorker.register('/The-Smart-Modern-Public-School-Qamber-/sw.js', { updateViaCache: 'none' }).then(function(reg){
       // Jab bhi tab wapas visible ho (installed PWA reopen/foreground) ya har 5 minute
       // baad, khud check karo ke naya version server par hai ya nahi — taake background
       // mein khula PWA bhi khud-ba-khud update ko detect kar le, sirf manual refresh
