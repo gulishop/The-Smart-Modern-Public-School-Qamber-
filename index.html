@@ -1046,7 +1046,12 @@ function ensureAttendanceDateLoaded(date){
 function saveAttendanceDateToCloud(date){
   const ref = attendanceDateRef(date);
   if(!ref) return;
-  ref.set(attendanceRecords[date] || {}).catch(err=>console.warn('Attendance cloud save failed:', err));
+  // merge:true zaroori hai — warna jab 2 staff members ek hi date ki attendance
+  // alag-alag classes/students ke liye saath save karein, to jis ka save baad mein
+  // pohnche wo poori document ko apni local copy se overwrite kar dega aur doosre
+  // staff ki entries mit jayengi. merge:true sirf changed studentId keys update
+  // karta hai, baaki sab (doosron ka data) mehfooz rehta hai.
+  ref.set(attendanceRecords[date] || {}, { merge:true }).catch(err=>console.warn('Attendance cloud save failed:', err));
 }
 </script>
 
@@ -3162,7 +3167,17 @@ window.addEventListener('offline', ()=>{
 </script>
     <script>
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('/The-Smart-Modern-Public-School-Qamber-/sw.js');
+    navigator.serviceWorker.register('/The-Smart-Modern-Public-School-Qamber-/sw.js').then(function(reg){
+      // Jab bhi tab wapas visible ho (installed PWA reopen/foreground) ya har 5 minute
+      // baad, khud check karo ke naya version server par hai ya nahi — taake background
+      // mein khula PWA bhi khud-ba-khud update ko detect kar le, sirf manual refresh
+      // ka intezaar na kare.
+      function checkForUpdate(){ reg.update().catch(function(){}); }
+      document.addEventListener('visibilitychange', function(){
+        if(document.visibilityState === 'visible') checkForUpdate();
+      });
+      setInterval(checkForUpdate, 5 * 60 * 1000);
+    });
     // Jab naya service worker (naya update) control le le, to khula hua tab
     // khud-ba-khud ek dafa refresh ho jaye — taake user ko manually kuch na karna paray.
     let swRefreshed = false;
