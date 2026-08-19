@@ -1,9 +1,12 @@
 // sw.js - Service Worker for PWA Installation
-// Har naye deploy/update ke waqt ye version number badha dein (v2, v3, v4...).
-// Isi number ki wajah se purana cache khud saaf ho jaata hai aur sab users ko
-// naya version mil jaata hai — bina number badlaye naye files "same version"
-// samjhi jaayengi aur update nahi hoga.
-const CACHE_NAME = 'smp-v2';
+//
+// CACHE_NAME AB KHUD-BA-KHUD (AUTOMATIC) SET HOTA HAI.
+// Neeche '__BUILD_ID__' ek placeholder hai — GitHub Actions workflow
+// (.github/workflows/deploy.yml) har push par ise khud commit SHA se
+// replace kar deta hai. Isliye ab AAPKO KABHI BHI MANUALLY VERSION
+// NUMBER BADHANE KI ZAROORAT NAHI — bas normal push karein, version
+// khud unique ho jayega aur purana cache khud saaf ho jayega.
+const CACHE_NAME = 'smp-__BUILD_ID__';
 const urlsToCache = [
   '/The-Smart-Modern-Public-School-Qamber-/',
   '/The-Smart-Modern-Public-School-Qamber-/index.html',

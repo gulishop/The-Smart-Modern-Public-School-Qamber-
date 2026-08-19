@@ -393,6 +393,7 @@
             <div class="stat-card"><div class="n" id="statStudents">0</div><div class="l">Total Students</div></div>
             <div class="stat-card"><div class="n" id="statStaff">0</div><div class="l">Total Teachers / Staff</div><div class="l" id="statStaffOnline" style="margin-top:4px; font-weight:600;"></div></div>
             <div class="stat-card admin-only"><div class="n" id="statPresent">0</div><div class="l">Present Today</div></div>
+            <div class="stat-card admin-only" style="cursor:pointer;" onclick="showView('attendance')"><div class="n" id="statAbsent">0</div><div class="l">Absent Today</div></div>
             <div class="stat-card admin-only" style="cursor:pointer;" onclick="showView('attendance')"><div class="n" id="statNotMarked">0</div><div class="l">Attendance Not Marked Yet</div></div>
             <div class="stat-card admin-only" style="cursor:pointer;" onclick="showAllPendingFees()"><div class="n" id="statPending">0</div><div class="l">Pending Fee Challans</div></div>
             <div class="stat-card admin-only"><div class="n" id="statCollected">Rs. 0</div><div class="l">Fee Collected</div></div>
@@ -2899,8 +2900,11 @@ function renderDashboard(){
   const today = new Date().toISOString().slice(0,10);
   const todayRec = attendanceRecords[today] || {};
   const present = students.filter(s => (todayRec[s.id] || '') === 'present').length;
+  const absent = students.filter(s => (todayRec[s.id] || '') === 'absent').length;
   const notMarked = students.filter(s => !(todayRec[s.id] || '')).length;
   document.getElementById('statPresent').textContent = present;
+  const statAbsentEl = document.getElementById('statAbsent');
+  if(statAbsentEl) statAbsentEl.textContent = absent;
   const notMarkedEl = document.getElementById('statNotMarked');
   if(notMarkedEl) notMarkedEl.textContent = notMarked;
   document.getElementById('statPending').textContent = fees.filter(f => f.status === 'pending').length;
