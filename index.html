@@ -3168,15 +3168,14 @@ window.addEventListener('offline', ()=>{
     <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/The-Smart-Modern-Public-School-Qamber-/sw.js', { updateViaCache: 'none' }).then(function(reg){
-      // Jab bhi tab wapas visible ho (installed PWA reopen/foreground) ya har 5 minute
-      // baad, khud check karo ke naya version server par hai ya nahi — taake background
-      // mein khula PWA bhi khud-ba-khud update ko detect kar le, sirf manual refresh
-      // ka intezaar na kare.
+      // Har 3 second baad khud check karo ke naya version server par hai ya nahi —
+      // taake installed/khula hua PWA bohat jald (~3 sec) update ko detect kar le,
+      // sirf manual refresh ya visibility change ka intezaar na kare.
       function checkForUpdate(){ reg.update().catch(function(){}); }
       document.addEventListener('visibilitychange', function(){
         if(document.visibilityState === 'visible') checkForUpdate();
       });
-      setInterval(checkForUpdate, 5 * 60 * 1000);
+      setInterval(checkForUpdate, 3 * 1000);
     });
     // Jab naya service worker (naya update) control le le, to khula hua tab
     // khud-ba-khud ek dafa refresh ho jaye — taake user ko manually kuch na karna paray.
