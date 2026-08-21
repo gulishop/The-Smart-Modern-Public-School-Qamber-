@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script type="module" src="./thermal-printer.js"></script>
     <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#1a73e8">
@@ -866,7 +867,7 @@
   <div class="print-wrap">
     <div class="modal-actions no-print" style="flex-wrap:wrap;">
       <button class="btn green" style="margin-top:0;" onclick="window.print()">🖨️ Print / Save as PDF</button>
-      <button class="btn" id="thermalPrintBtn" style="margin-top:0; background:#5b4636; color:#fff; display:none;" onclick="window.print()">🧾 Print Thermal Receipt</button>
+      <button class="btn" id="thermalPrintBtn" style="margin-top:0; background:#5b4636; color:#fff; display:none;" onclick="printThermalBluetooth()">🧾 Print on Bluetooth Printer</button>
       <button class="btn" style="margin-top:0; background:var(--muted);" onclick="closeChallan()">Close</button>
     </div>
     <div id="printPage"></div>
@@ -3242,6 +3243,48 @@ window.addEventListener('offline', ()=>{
       window.location.reload();
     });
   }
-    </script>
+    
+
+
+
+/* ===================== BLUETOOTH THERMAL PRINTER ===================== */
+async function printThermalBluetooth() {
+  if (!printModalFeeId) {
+    alert("Koi fee selected nahi hai");
+    return;
+  }
+  const f = fees.find(x => x.id === printModalFeeId);
+  if (!f) {
+    alert("Fee record nahi mila");
+    return;
+  }
+  const student = students.find(s => s.id === f.studentId);
+  try {
+    if (!window.schoolPrinter || !window.schoolPrinter.isConnected) {
+      await window.schoolPrinter.connect();
+    }
+    await window.schoolPrinter.printFeeReceipt({
+      studentName: student ? student.name : "Unknown",
+      className: student ? ((student.cls || "") + (student.section ? "-" + student.section : "")) : "—",
+      amount: f.amount,
+      receiptNo: f.id || "—",
+      date: f.due || f.month || new Date().toLocaleDateString(),
+      status: f.status || "paid"
+    });
+    alert("✅ Receipt Bluetooth printer pe print ho gayi!");
+  } catch (err) {
+    console.error(err);
+    alert("❌ Print Failed:\n" + err.message + "\n\nChrome browser use karein aur Bluetooth on rakhein.");
+  }
+}
+
+async function printFeeDirect(feeId) {
+  printModalFeeId = feeId;
+  await printThermalBluetooth();
+}
+
+</script>
+
+
 </body>
 </html>
