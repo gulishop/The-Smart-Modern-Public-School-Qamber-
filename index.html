@@ -926,6 +926,17 @@ function classDisplay(cls){
 function classKey(cls){
   return classDisplay(cls).toLowerCase();
 }
+// Pakistan local date (UTC+5). toISOString() UTC use karta hai jo subah 12–5 baje
+// galat tareekh de sakta hai — attendance/dashboard hamesha local calendar date use karein.
+function localDateStr(d){
+  d = d || new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return y + '-' + m + '-' + day;
+}
+// Attendance record keys hamesha string — number vs string mismatch se status "miss" na ho.
+function attKey(id){ return String(id); }
 // ===== FIRESTORE DATA SPLIT — HAR CHEEZ APNI ALAG DOCUMENT/COLLECTION MEIN =====
 // Firestore ki EK document sirf 1MB tak ho sakti hai. Pehle poora school ka data
 // (students, staff, fees, attendance, quoteLog, loginLog, waghera) ek hi
@@ -1029,18 +1040,28 @@ function subscribeAttendanceDate(date){
   if(!db || !date || attendanceDateUnsubs[date]) return;
   attendanceDateUnsubs[date] = attendanceDateRef(date).onSnapshot({ includeMetadataChanges:true }, function(doc){
     if(!doc.exists || doc.metadata.hasPendingWrites) return;
-    attendanceRecords[date] = doc.data() || {};
+    // Server data merge (replace mat) taake local recent marks na mitain. Keys string normalize.
+    const serverData = doc.data() || {};
+    const merged = Object.assign({}, attendanceRecords[date] || {});
+    Object.keys(serverData).forEach(k => { merged[attKey(k)] = serverData[k]; });
+    attendanceRecords[date] = merged;
     const attDateEl = document.getElementById('attDate');
-    const activeDate = (attDateEl && attDateEl.value) || new Date().toISOString().slice(0,10);
+    const activeDate = (attDateEl && attDateEl.value) || localDateStr();
     if(activeDate === date && typeof renderAttendanceForm === 'function') renderAttendanceForm();
-    if(date === new Date().toISOString().slice(0,10) && typeof renderDashboard === 'function') renderDashboard();
+    if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
   }, function(err){ console.warn('Attendance realtime sync error (' + date + '):', err); });
 }
 function ensureAttendanceDateLoaded(date){
   if(!db || !date || loadedAttendanceDates.has(date)) return Promise.resolve();
   loadedAttendanceDates.add(date);
   return attendanceDateRef(date).get().then(doc=>{
-    if(doc.exists) attendanceRecords[date] = Object.assign({}, doc.data(), attendanceRecords[date]);
+    if(doc.exists){
+      const serverData = doc.data() || {};
+      const merged = Object.assign({}, serverData, attendanceRecords[date] || {});
+      const normalized = {};
+      Object.keys(merged).forEach(k => { normalized[attKey(k)] = merged[k]; });
+      attendanceRecords[date] = normalized;
+    }
     subscribeAttendanceDate(date);
   }).catch(err=>{ console.warn('Attendance load failed for ' + date + ':', err); });
 }
@@ -1052,7 +1073,11 @@ function saveAttendanceDateToCloud(date){
   // pohnche wo poori document ko apni local copy se overwrite kar dega aur doosre
   // staff ki entries mit jayengi. merge:true sirf changed studentId keys update
   // karta hai, baaki sab (doosron ka data) mehfooz rehta hai.
-  ref.set(attendanceRecords[date] || {}, { merge:true }).catch(err=>console.warn('Attendance cloud save failed:', err));
+  const raw = attendanceRecords[date] || {};
+  const toSave = {};
+  Object.keys(raw).forEach(k => { toSave[attKey(k)] = raw[k]; });
+  attendanceRecords[date] = toSave;
+  ref.set(toSave, { merge:true }).catch(err=>console.warn('Attendance cloud save failed:', err));
 }
 </script>
 
@@ -1143,7 +1168,15 @@ function applyData(data){
   students = data.students || [];
   staff = data.staff || [];
   fees = data.fees || [];
-  attendanceRecords = data.attendanceRecords || {};
+  // Attendance keys normalize (string) — purane number keys se miss na ho
+  const rawAtt = data.attendanceRecords || {};
+  attendanceRecords = {};
+  Object.keys(rawAtt).forEach(date => {
+    const day = rawAtt[date] || {};
+    const normalized = {};
+    Object.keys(day).forEach(k => { normalized[String(k)] = day[k]; });
+    attendanceRecords[date] = normalized;
+  });
   notices = data.notices || [];
   loginLog = data.loginLog || [];
   events = data.events || [];
@@ -1242,7 +1275,7 @@ function loadData(){
     try{ applyData(JSON.parse(raw)); }catch(e){}
   }
   if(!SCHOOL_DOC) return Promise.resolve();
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDateStr();
   const corePromise = SCHOOL_DOC.get({source:'server'}).catch(()=>SCHOOL_DOC.get()).then(doc=>{
     if(doc.exists){
       const cloudCore = doc.data();
@@ -1491,7 +1524,7 @@ function enterApp(name, isRestore){
   badge.className = 'role-badge ' + (currentRole==='admin' ? 'admin' : 'user');
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = currentRole==='admin' ? 'block' : 'none');
   document.getElementById('topDate').textContent = new Date().toDateString();
-  document.getElementById('attDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('attDate').value = localDateStr();
   // Jab session refresh/reload par khud-bakhud restore ho, tab dobara "Login" activity record na karein.
   if(!isRestore) logActivity('Login');
   if(currentRole === 'user' && currentStaffId) startPresenceHeartbeat();
@@ -1611,6 +1644,7 @@ function showView(name){
   document.querySelectorAll('.nav-list button').forEach(b => b.classList.toggle('active', b.dataset.view === name));
   const titles = {dashboard:'Dashboard', students:'Student Management', staff:'Teachers & Staff', fees:'Fees & Challan', attendance:'Attendance', qrattendance:'QR Code Attendance', timetable:'Timetable', homework:'Homework / Assignments', notices:'Notice Board', events:'Events & Vacations', gallery:'Photo Gallery', results:'Results / Exam Reports', quotes:'WhatsApp Awareness', reports:'Reports', settings:'Settings & Backup', loginlog:'Login Activity'};
   document.getElementById('viewTitle').textContent = titles[name];
+  if(name==='dashboard') renderDashboard();
   if(name==='attendance') renderAttendanceForm();
   if(name==='fees') renderFeeStudentOptions();
   if(name==='reports') renderReports();
@@ -2220,26 +2254,24 @@ function waNumberFor(contact){
   return digits;
 }
 function renderAttendanceForm(){
-  const date = document.getElementById('attDate').value || new Date().toISOString().slice(0,10);
+  const date = document.getElementById('attDate').value || localDateStr();
   ensureAttendanceDateLoaded(date); // pehli baar is date par aane par cloud se load ho kar khud dobara render karega
   const tbody = document.getElementById('attTable');
-  tbody.innerHTML = '';
   populateAttClassFilter();
   const clsFilter = (document.getElementById('attClassFilter')||{}).value || '';
   const list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : students;
   document.getElementById('attEmpty').style.display = list.length ? 'none' : 'block';
   const dayRecord = attendanceRecords[date] || {};
-  list.forEach(s => {
-    // Din ki shuruaat mein status KHAALI hota hai (na Present na Absent) — jab tak
-    // admin/staff khud us student ke liye button na dabaye, tab tak "Not Marked" rahega.
-    const status = dayRecord[s.id] || '';
+  // Fast render: ek hi baar innerHTML set (loop mein += bohat slow hota hai 200+ students par)
+  const rows = list.map(s => {
+    const status = dayRecord[attKey(s.id)] || dayRecord[s.id] || '';
     const waBtn = status === 'absent'
       ? (waNumberFor(s.contact)
           ? `<button class="btn whatsapp small" onclick="sendAbsentWhatsApp(${s.id})">📱 Message</button>`
           : `<span class="hint">Contact # nahi hai</span>`)
       : '—';
     const notMarkedTag = status ? '' : '<div style="font-size:11px; color:var(--red); margin-top:3px;">⚠ Not marked</div>';
-    tbody.innerHTML += `<tr><td>${s.adm}</td><td>${s.name}</td><td>${s.cls||'—'}</td>
+    return `<tr><td>${s.adm}</td><td>${s.name}</td><td>${s.cls||'—'}</td>
       <td>
         <button class="btn small ${status==='present'?'green':''}" style="${status==='present'?'':'background:var(--muted);'}" onclick="setAttStatus(${s.id},'present')">Present</button>
         <button class="btn small ${status==='absent'?'red':''}" style="${status==='absent'?'':'background:var(--muted);'} margin-left:6px;" onclick="setAttStatus(${s.id},'absent')">Absent</button>
@@ -2247,12 +2279,13 @@ function renderAttendanceForm(){
       </td>
       <td>${waBtn}</td></tr>`;
   });
+  tbody.innerHTML = rows.join('');
   renderAttClassSummary(date);
 }
 function renderAttClassSummary(date){
   const body = document.getElementById('attClassSummaryBody');
   if(!body) return;
-  date = date || document.getElementById('attDate').value || new Date().toISOString().slice(0,10);
+  date = date || document.getElementById('attDate').value || localDateStr();
   const dayRecord = attendanceRecords[date] || {};
   const counts = {};
   students.forEach(s => {
@@ -2260,7 +2293,7 @@ function renderAttClassSummary(date){
     const label = classKey(s.cls) ? classDisplay(s.cls) : 'Unassigned';
     if(!counts[key]) counts[key] = { label, total:0, present:0, absent:0, unmarked:0 };
     counts[key].total++;
-    const status = dayRecord[s.id] || '';
+    const status = dayRecord[attKey(s.id)] || dayRecord[s.id] || '';
     if(status === 'absent') counts[key].absent++;
     else if(status === 'present') counts[key].present++;
     else counts[key].unmarked++;
@@ -2271,24 +2304,27 @@ function renderAttClassSummary(date){
   body.innerHTML = keys.map(k => `<tr><td>${counts[k].label}</td><td>${counts[k].total}</td><td>${counts[k].present}</td><td>${counts[k].absent}</td><td>${counts[k].unmarked ? '<b style="color:var(--red);">'+counts[k].unmarked+'</b>' : '0'}</td></tr>`).join('');
 }
 function setAttStatus(studentId, status){
-  const date = document.getElementById('attDate').value || new Date().toISOString().slice(0,10);
+  const date = document.getElementById('attDate').value || localDateStr();
   if(!attendanceRecords[date]) attendanceRecords[date] = {};
-  attendanceRecords[date][studentId] = status;
+  // Key hamesha string — miss na ho dashboard/summary mein
+  attendanceRecords[date][attKey(studentId)] = status;
   saveAttendanceDateToCloud(date);
   saveData();
   renderAttendanceForm();
+  // Dashboard turant update — warna mark ke baad dashboard par purana count dikhta tha
+  if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
 }
 function sendAbsentWhatsApp(studentId){
   const s = students.find(x => x.id === studentId);
   if(!s) return;
   const num = waNumberFor(s.contact);
   if(!num){ alert('Is student ka WhatsApp/contact number darj nahi hai.'); return; }
-  const date = document.getElementById('attDate').value || new Date().toISOString().slice(0,10);
+  const date = document.getElementById('attDate').value || localDateStr();
   const msg = 'Assalam-o-Alaikum,\n' + schoolSettings.name + ' se ittila di jaa rahi hai ke aap ka bacha/bachi *' + s.name + '* (Class: ' + (s.cls||'—') + ', Adm#: ' + s.adm + ') tareekh ' + date + ' ko school mein ghair-hazir (absent) tha/thi.\nBaraye meherbani wajah se agah karein.\nShukriya.';
   window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
 }
 function saveAttendance(){
-  const date = document.getElementById('attDate').value || new Date().toISOString().slice(0,10);
+  const date = document.getElementById('attDate').value || localDateStr();
   saveAttendanceDateToCloud(date);
   saveData();
   alert('Attendance save ho gayi is date k liye: ' + date);
@@ -2300,7 +2336,7 @@ document.addEventListener('change', function(e){ if(e.target.id === 'attDate' ||
 let qrScannerInstance = null;
 function renderQrAttendanceView(){
   const dateEl = document.getElementById('qrAttDate');
-  if(dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0,10);
+  if(dateEl && !dateEl.value) dateEl.value = localDateStr();
   const sel = document.getElementById('qrGenStudent');
   if(sel){
     sel.innerHTML = students.map(s => `<option value="${s.id}">${s.name} — ${s.adm}</option>`).join('');
@@ -2308,7 +2344,7 @@ function renderQrAttendanceView(){
   renderQrScanLog();
 }
 function renderQrScanLog(){
-  const today = document.getElementById('qrAttDate') ? (document.getElementById('qrAttDate').value || new Date().toISOString().slice(0,10)) : new Date().toISOString().slice(0,10);
+  const today = document.getElementById('qrAttDate') ? (document.getElementById('qrAttDate').value || localDateStr()) : localDateStr();
   const tbody = document.getElementById('qrScanLogTable');
   if(!tbody) return;
   const todays = qrScanLog.filter(x => x.date === today).sort((a,b) => (b.time||'').localeCompare(a.time||''));
@@ -2347,13 +2383,13 @@ function onQrScanSuccess(decodedText){
   const adm = decodedText.trim();
   const s = students.find(x => x.adm === adm || String(x.id) === adm);
   const resultBox = document.getElementById('qrScanResult');
-  const date = document.getElementById('qrAttDate').value || new Date().toISOString().slice(0,10);
+  const date = document.getElementById('qrAttDate').value || localDateStr();
   if(!s){
     resultBox.innerHTML = `<div style="padding:10px 14px; background:#fbe4e2; border-left:4px solid var(--red); border-radius:6px; font-size:13px;">❌ QR code kisi record se match nahi hua: ${adm}</div>`;
     return;
   }
   if(!attendanceRecords[date]) attendanceRecords[date] = {};
-  attendanceRecords[date][s.id] = 'present';
+  attendanceRecords[date][attKey(s.id)] = 'present';
   saveAttendanceDateToCloud(date);
   const scanEntry = { id:newId(), date, time:new Date().toLocaleTimeString(), adm:s.adm, name:s.name, cls:s.cls, studentId:s.id };
   qrScanLog.push(scanEntry);
@@ -2362,6 +2398,7 @@ function onQrScanSuccess(decodedText){
   resultBox.innerHTML = `<div style="padding:10px 14px; background:#e2f5e7; border-left:4px solid var(--green); border-radius:6px; font-size:13px;">✅ ${s.name} (${s.adm}) — Present mark ho gaya (${date})</div>`;
   renderQrScanLog();
   renderAttendanceForm();
+  if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
 }
 function printStudentQr(){
   const id = Number(document.getElementById('qrGenStudent').value);
@@ -2897,11 +2934,20 @@ function renderDashboard(){
     }).length;
     staffOnlineEl.innerHTML = '<span style="color:var(--green);">🟢 ' + onlineCount + ' Online</span> · <span style="color:#888;">⚪ ' + (staff.length - onlineCount) + ' Offline</span>';
   }
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDateStr();
   const todayRec = attendanceRecords[today] || {};
-  const present = students.filter(s => (todayRec[s.id] || '') === 'present').length;
-  const absent = students.filter(s => (todayRec[s.id] || '') === 'absent').length;
-  const notMarked = students.filter(s => !(todayRec[s.id] || '')).length;
+  const present = students.filter(s => {
+    const st = todayRec[attKey(s.id)] || todayRec[s.id] || '';
+    return st === 'present';
+  }).length;
+  const absent = students.filter(s => {
+    const st = todayRec[attKey(s.id)] || todayRec[s.id] || '';
+    return st === 'absent';
+  }).length;
+  const notMarked = students.filter(s => {
+    const st = todayRec[attKey(s.id)] || todayRec[s.id] || '';
+    return !st;
+  }).length;
   document.getElementById('statPresent').textContent = present;
   const statAbsentEl = document.getElementById('statAbsent');
   if(statAbsentEl) statAbsentEl.textContent = absent;
@@ -2959,10 +3005,16 @@ function renderReports(){
   document.getElementById('repPending').textContent = fees.filter(f=>f.status==='pending').length;
   document.getElementById('repAmount').textContent = 'Rs. ' + fees.filter(f=>f.status==='paid').reduce((s,f)=>s+f.amount,0);
   renderClassFeeSummary();
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDateStr();
   const todayRec = attendanceRecords[today] || {};
-  const present = students.filter(s => (todayRec[s.id] || '') === 'present').length;
-  const absent = students.filter(s => (todayRec[s.id] || '') === 'absent').length;
+  const present = students.filter(s => {
+    const st = todayRec[attKey(s.id)] || todayRec[s.id] || '';
+    return st === 'present';
+  }).length;
+  const absent = students.filter(s => {
+    const st = todayRec[attKey(s.id)] || todayRec[s.id] || '';
+    return st === 'absent';
+  }).length;
   document.getElementById('repPresent').textContent = present;
   document.getElementById('repAbsent').textContent = absent;
   const repNotMarkedEl = document.getElementById('repNotMarked');
