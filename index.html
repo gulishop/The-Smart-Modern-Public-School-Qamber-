@@ -2279,7 +2279,8 @@ function openChallanThermal(feeId){
   const f = fees.find(x => x.id === feeId);
   const student = students.find(s => s.id === f.studentId);
   document.getElementById('printModal').classList.add('thermal-mode');
-  document.getElementById('printPage').innerHTML = thermalReceiptHTML(f, student);
+  // Same design as full-page Student Copy — koi farq nahi
+  document.getElementById('printPage').innerHTML = challanBlockHTML('STUDENT COPY', f, student);
   const btBtn = document.getElementById('thermalPrintBtn');
   btBtn.style.display = 'inline-block';
   btBtn.textContent = '🧾 Print on Thermal Printer';
