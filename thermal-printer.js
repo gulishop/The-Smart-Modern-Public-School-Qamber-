@@ -388,10 +388,11 @@ export class ThermalPrinter {
   }
 
   /**
-   * Print logo from base64 JPEG/PNG (via canvas → ESC/POS raster)
-   * maxWidth dots: 58mm ≈ 384 dots, we use ~200 for a neat logo
+   * Print logo centered on full paper width.
+   * 58mm ≈ 384 dots, 80mm ≈ 576 dots.
+   * Logo is drawn in the middle of a full-width white canvas so it always centers.
    */
-  async printLogo(base64, maxWidth = 200) {
+  async printLogo(base64, maxWidth = 144) {
     if (!base64) return;
     try {
       const src = base64.startsWith('data:') ? base64 : ('data:image/jpeg;base64,' + base64);
@@ -402,50 +403,53 @@ export class ThermalPrinter {
         i.src = src;
       });
 
-      let w = maxWidth;
-      let h = Math.round((img.height / img.width) * w);
-      // width must be multiple of 8 for raster
-      w = Math.floor(w / 8) * 8;
-      if (w < 8) w = 8;
+      // Full paper width in dots (must be multiple of 8)
+      let paperDots = this.paperWidth <= 58 ? 384 : 576;
+      paperDots = Math.floor(paperDots / 8) * 8;
 
+      // Logo size (multiple of 8), centered inside paperDots
+      let logoW = Math.min(maxWidth, paperDots - 16);
+      logoW = Math.floor(logoW / 8) * 8;
+      if (logoW < 8) logoW = 8;
+      let logoH = Math.round((img.height / img.width) * logoW);
+
+      // Full-width canvas — logo drawn in center
       const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
+      canvas.width = paperDots;
+      canvas.height = logoH;
       const ctx = canvas.getContext('2d');
       ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, w, h);
-      ctx.drawImage(img, 0, 0, w, h);
+      ctx.fillRect(0, 0, paperDots, logoH);
+      const left = Math.floor((paperDots - logoW) / 2);
+      ctx.drawImage(img, left, 0, logoW, logoH);
 
-      const imageData = ctx.getImageData(0, 0, w, h);
+      const imageData = ctx.getImageData(0, 0, paperDots, logoH);
       const pixels = imageData.data;
-      const bytesPerRow = w / 8;
-      const raster = new Uint8Array(bytesPerRow * h);
+      const bytesPerRow = paperDots / 8;
+      const raster = new Uint8Array(bytesPerRow * logoH);
 
-      for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-          const i = (y * w + x) * 4;
+      for (let y = 0; y < logoH; y++) {
+        for (let x = 0; x < paperDots; x++) {
+          const i = (y * paperDots + x) * 4;
           const gray = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
-          // threshold: dark pixels print
           if (gray < 140) {
             raster[y * bytesPerRow + (x >> 3)] |= (0x80 >> (x & 7));
           }
         }
       }
 
-      // Center align
-      await this.write(new Uint8Array([0x1b, 0x61, 0x01]));
-      // GS v 0 — raster bit image
+      // Left align (bitmap already centered in full width)
+      await this.write(new Uint8Array([0x1b, 0x61, 0x00]));
       const xL = bytesPerRow & 0xff;
       const xH = (bytesPerRow >> 8) & 0xff;
-      const yL = h & 0xff;
-      const yH = (h >> 8) & 0xff;
+      const yL = logoH & 0xff;
+      const yH = (logoH >> 8) & 0xff;
       const header = new Uint8Array([0x1d, 0x76, 0x30, 0x00, xL, xH, yL, yH]);
       await this.write(header);
       await this.write(raster);
-      await this.write(new Uint8Array([0x0a])); // newline after logo
+      await this.write(new Uint8Array([0x0a]));
     } catch (e) {
       this.log('Logo print failed', e);
-      // logo fail → silently continue without logo
     }
   }
 
@@ -463,25 +467,35 @@ export class ThermalPrinter {
   }
 
   async printFeeReceipt(data) {
-    // Paper width se charsPerLine auto set
+    // Paper width se charsPerLine auto set (58mm=32, 80mm=48)
     this.charsPerLine = this.paperWidth <= 58 ? 32 : 48;
-    const line = this._line();
+    const w = this.charsPerLine;
+    const border = '+' + '-'.repeat(Math.max(w - 2, 8)) + '+';
+    const dots   = '.'.repeat(w);
+    const thick  = '='.repeat(w);
     await this.init();
 
-    // Logo
+    // BLACK CARD BORDER (screen rounded border → black box)
+    await this.printText(border, { align: 'left' });
+
+    // 1. Logo
     if (data.logoBase64) {
-      await this.printLogo(data.logoBase64, this.paperWidth <= 58 ? 160 : 240);
+      await this.printLogo(data.logoBase64, this.paperWidth <= 58 ? 144 : 200);
     }
 
-    // ===== SAME DESIGN AS SCREEN (Student Copy only) =====
-    await this.printText('STUDENT COPY', { align: 'center' });
+    // 2. STUDENT COPY (gold badge → black)
+    await this.printSmall('[ STUDENT COPY ]', { align: 'center' });
+
+    // 3. School name
     await this.printText('The Smart Modern', { align: 'center', bold: true });
     await this.printText('Public School', { align: 'center', bold: true });
-    await this.printText('FEE RECEIPT - QAMBER', { align: 'center', bold: true });
-    await this.printSmall('03362506588', { align: 'center' });
-    await this.printText(line, { align: 'center' });
 
-    // Rows — screen jaisa label ... value
+    // 4. FEE RECEIPT (gold → black bold) + phone
+    await this.printText('FEE RECEIPT - QAMBER', { align: 'center', bold: true });
+    await this.printText('03362506588', { align: 'center' });
+    await this.printText(dots, { align: 'center' });
+
+    // 5. Fields
     const rows = [
       ['Student Name', data.studentName || '—'],
       ['Class / Section', data.className || '—'],
@@ -500,10 +514,16 @@ export class ThermalPrinter {
       }
     }
 
-    await this.printText(line, { align: 'center' });
+    // 6. Total
+    await this.printText(thick, { align: 'center' });
     await this.printText(this._row('Total Amount', 'Rs. ' + (data.amount || 0)), { bold: true });
-    await this.printText(line, { align: 'center' });
+    await this.printText(dots, { align: 'center' });
+
+    // 7. Credit
     await this.printSmall('Software by Fazul Khan Chandio', { align: 'center' });
+
+    // BOTTOM BORDER
+    await this.printText(border, { align: 'left' });
 
     await this.feed(this.feedBeforeCut);
     await this.doCut();
