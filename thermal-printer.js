@@ -1,26 +1,36 @@
 /**
  * thermal-printer.js
- * HiLabel / SpeedX Bluetooth Thermal Printer for School PWA
+ * Generic ESC/POS Thermal Printer for School PWA
+ * Supports: Web Bluetooth + WebUSB (USB port)
+ * Works with most HiLabel, SpeedX, Xprinter, Rongta, Epson TM, etc.
  * The Smart Modern Public School Qamber
  */
 
 export class ThermalPrinter {
   constructor(options = {}) {
-    this.device = null;
-    this.server = null;
-    this.characteristic = null;
+    this.device = null;          // Bluetooth device or USB device
+    this.server = null;          // GATT server (Bluetooth)
+    this.characteristic = null; // Bluetooth write characteristic
+    this.usbDevice = null;       // WebUSB device
+    this.usbInterface = null;
+    this.usbEndpoint = null;
+    this.connectionType = null;  // 'bluetooth' | 'usb'
     this.isConnected = false;
-    this.chunkSize = options.chunkSize || 80;
-    this.chunkDelay = options.chunkDelay || 40;
+    this.chunkSize = options.chunkSize || 64;   // safer default for USB
+    this.chunkDelay = options.chunkDelay || 30;
     this.debug = options.debug || false;
 
+    // Common Bluetooth Service UUIDs used by many Chinese thermal printers
     this.SERVICE_UUIDS = [
       '000018f0-0000-1000-8000-00805f9b34fb',
       'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
       '49535343-fe7d-4ae5-8fa9-9fafd205e455',
       '0000ff00-0000-1000-8000-00805f9b34fb',
       '0000ae30-0000-1000-8000-00805f9b34fb',
-      '0000fff0-0000-1000-8000-00805f9b34fb'
+      '0000fff0-0000-1000-8000-00805f9b34fb',
+      '0000ffe0-0000-1000-8000-00805f9b34fb',
+      '0000ff10-0000-1000-8000-00805f9b34fb',
+      '49535343-fe7d-4ae5-8fa9-9fafd205e455'
     ];
 
     this.WRITE_CHAR_UUIDS = [
@@ -30,7 +40,9 @@ export class ThermalPrinter {
       '0000ff02-0000-1000-8000-00805f9b34fb',
       '0000ae01-0000-1000-8000-00805f9b34fb',
       '0000fff1-0000-1000-8000-00805f9b34fb',
-      '0000fff2-0000-1000-8000-00805f9b34fb'
+      '0000fff2-0000-1000-8000-00805f9b34fb',
+      '0000ffe1-0000-1000-8000-00805f9b34fb',
+      '0000ff11-0000-1000-8000-00805f9b34fb'
     ];
   }
 
@@ -38,19 +50,51 @@ export class ThermalPrinter {
     if (this.debug) console.log('[Printer]', ...args);
   }
 
+  /* ===================== CONNECT ===================== */
+
+  /**
+   * Smart connect — pehle user se poochta hai Bluetooth ya USB
+   */
   async connect() {
-    if (!navigator.bluetooth) {
-      throw new Error('Web Bluetooth support nahi hai. Chrome/Edge (Android) use karo.');
+    // Prefer Bluetooth on mobile, USB on desktop — but always ask via prompt for clarity
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    let choice = 'bluetooth';
+
+    if (navigator.usb && !isMobile) {
+      // Desktop: offer choice
+      const useUsb = confirm(
+        'Printer kaise connect karna hai?\n\n' +
+        'OK  = USB (computer ke USB port se)\n' +
+        'Cancel = Bluetooth'
+      );
+      choice = useUsb ? 'usb' : 'bluetooth';
+    } else if (!navigator.bluetooth && navigator.usb) {
+      choice = 'usb';
     }
 
+    if (choice === 'usb') {
+      return await this.connectUSB();
+    }
+    return await this.connectBluetooth();
+  }
+
+  async connectBluetooth() {
+    if (!navigator.bluetooth) {
+      throw new Error('Web Bluetooth support nahi hai.\nChrome/Edge (Android) use karo ya USB try karo.');
+    }
+
+    this.log('Requesting Bluetooth device...');
     this.device = await navigator.bluetooth.requestDevice({
       acceptAllDevices: true,
       optionalServices: this.SERVICE_UUIDS
     });
 
     this.server = await this.device.gatt.connect();
+    this.log('GATT connected, searching characteristics...');
 
     let found = false;
+
+    // First try known UUIDs
     for (const su of this.SERVICE_UUIDS) {
       try {
         const service = await this.server.getPrimaryService(su);
@@ -60,6 +104,7 @@ export class ThermalPrinter {
             if (char.properties.write || char.properties.writeWithoutResponse) {
               this.characteristic = char;
               found = true;
+              this.log('Found known characteristic', cu);
               break;
             }
           } catch (e) {}
@@ -68,43 +113,164 @@ export class ThermalPrinter {
       } catch (e) {}
     }
 
+    // Fallback: scan all services/characteristics
     if (!found) {
+      this.log('Scanning all services...');
       const services = await this.server.getPrimaryServices();
       for (const service of services) {
-        const chars = await service.getCharacteristics();
-        for (const char of chars) {
-          if (char.properties.write || char.properties.writeWithoutResponse) {
-            this.characteristic = char;
-            found = true;
-            break;
+        try {
+          const chars = await service.getCharacteristics();
+          for (const char of chars) {
+            if (char.properties.write || char.properties.writeWithoutResponse) {
+              this.characteristic = char;
+              found = true;
+              this.log('Found fallback characteristic', char.uuid);
+              break;
+            }
           }
-        }
+        } catch (e) {}
         if (found) break;
       }
     }
 
-    if (!found) throw new Error('Printer characteristic nahi mili');
+    if (!found) throw new Error('Printer write characteristic nahi mili.\nPrinter ON hai aur pair-able mode mein hai?');
 
+    this.connectionType = 'bluetooth';
     this.isConnected = true;
     this.device.addEventListener('gattserverdisconnected', () => {
       this.isConnected = false;
+      this.log('Bluetooth disconnected');
     });
 
-    return this.device.name || 'Printer';
+    return this.device.name || 'Bluetooth Printer';
+  }
+
+  async connectUSB() {
+    if (!navigator.usb) {
+      throw new Error('WebUSB support nahi hai.\nChrome/Edge latest version use karo (desktop).');
+    }
+
+    this.log('Requesting USB device...');
+    // filters empty = show all USB devices (user selects the printer)
+    this.usbDevice = await navigator.usb.requestDevice({
+      filters: [
+        // Common printer class
+        { classCode: 7 },
+        // Many Chinese thermal printers use vendor-specific
+        // We also allow any device so user can pick manually
+      ]
+    }).catch(async () => {
+      // If class filter fails or user cancels, try without filter
+      return await navigator.usb.requestDevice({ filters: [] });
+    });
+
+    await this.usbDevice.open();
+    if (this.usbDevice.configuration === null) {
+      await this.usbDevice.selectConfiguration(1);
+    }
+
+    // Find a suitable interface + bulk OUT endpoint
+    let iface = null;
+    let endpoint = null;
+
+    for (const config of this.usbDevice.configurations) {
+      for (const inter of config.interfaces) {
+        for (const alt of inter.alternates) {
+          // Prefer printer class (7) or vendor specific (255)
+          if (alt.interfaceClass === 7 || alt.interfaceClass === 255 || alt.interfaceClass === 0) {
+            for (const ep of alt.endpoints) {
+              if (ep.direction === 'out' && (ep.type === 'bulk' || ep.type === 'interrupt')) {
+                iface = inter;
+                endpoint = ep;
+                break;
+              }
+            }
+          }
+          if (endpoint) break;
+        }
+        if (endpoint) break;
+      }
+      if (endpoint) break;
+    }
+
+    // Last resort: any OUT bulk endpoint
+    if (!endpoint) {
+      for (const config of this.usbDevice.configurations) {
+        for (const inter of config.interfaces) {
+          for (const alt of inter.alternates) {
+            for (const ep of alt.endpoints) {
+              if (ep.direction === 'out') {
+                iface = inter;
+                endpoint = ep;
+                break;
+              }
+            }
+            if (endpoint) break;
+          }
+          if (endpoint) break;
+        }
+        if (endpoint) break;
+      }
+    }
+
+    if (!iface || !endpoint) {
+      await this.usbDevice.close().catch(() => {});
+      throw new Error('USB printer endpoint nahi mila.\nPrinter USB se connected hai aur drivers installed hain?');
+    }
+
+    await this.usbDevice.claimInterface(iface.interfaceNumber);
+    this.usbInterface = iface;
+    this.usbEndpoint = endpoint;
+    this.connectionType = 'usb';
+    this.isConnected = true;
+    this.device = this.usbDevice; // for name display
+
+    this.log('USB connected', this.usbDevice.productName, 'endpoint', endpoint.endpointNumber);
+
+    return this.usbDevice.productName || this.usbDevice.manufacturerName || 'USB Printer';
   }
 
   async disconnect() {
-    if (this.device?.gatt?.connected) await this.device.gatt.disconnect();
+    try {
+      if (this.connectionType === 'bluetooth' && this.device?.gatt?.connected) {
+        await this.device.gatt.disconnect();
+      }
+      if (this.connectionType === 'usb' && this.usbDevice) {
+        if (this.usbInterface != null) {
+          await this.usbDevice.releaseInterface(this.usbInterface.interfaceNumber).catch(() => {});
+        }
+        await this.usbDevice.close().catch(() => {});
+      }
+    } catch (e) {
+      this.log('Disconnect error', e);
+    }
     this.isConnected = false;
+    this.connectionType = null;
     this.device = null;
     this.server = null;
     this.characteristic = null;
+    this.usbDevice = null;
+    this.usbInterface = null;
+    this.usbEndpoint = null;
   }
 
+  /* ===================== LOW-LEVEL WRITE ===================== */
+
   async write(data) {
-    if (!this.isConnected || !this.characteristic) throw new Error('Printer connected nahi hai');
+    if (!this.isConnected) throw new Error('Printer connected nahi hai');
+
     const buffer = data instanceof Uint8Array ? data : new Uint8Array(data);
 
+    if (this.connectionType === 'bluetooth') {
+      await this._writeBluetooth(buffer);
+    } else if (this.connectionType === 'usb') {
+      await this._writeUSB(buffer);
+    } else {
+      throw new Error('Unknown connection type');
+    }
+  }
+
+  async _writeBluetooth(buffer) {
     for (let i = 0; i < buffer.length; i += this.chunkSize) {
       const chunk = buffer.slice(i, i + this.chunkSize);
       try {
@@ -114,6 +280,7 @@ export class ThermalPrinter {
           await this.characteristic.writeValue(chunk);
         }
       } catch (e) {
+        // retry with writeValue
         await this.characteristic.writeValue(chunk);
       }
       if (i + this.chunkSize < buffer.length) {
@@ -122,25 +289,57 @@ export class ThermalPrinter {
     }
   }
 
-  async init() { await this.write(new Uint8Array([0x1b, 0x40])); }
+  async _writeUSB(buffer) {
+    for (let i = 0; i < buffer.length; i += this.chunkSize) {
+      const chunk = buffer.slice(i, i + this.chunkSize);
+      await this.usbDevice.transferOut(this.usbEndpoint.endpointNumber, chunk);
+      if (i + this.chunkSize < buffer.length) {
+        await new Promise(r => setTimeout(r, this.chunkDelay));
+      }
+    }
+  }
+
+  /* ===================== ESC/POS COMMANDS ===================== */
+
+  async init() {
+    await this.write(new Uint8Array([0x1b, 0x40])); // ESC @
+  }
 
   async printText(text, opts = {}) {
     const { align = 'left', bold = false, double = false } = opts;
+
+    // Alignment
     if (align === 'center') await this.write(new Uint8Array([0x1b, 0x61, 0x01]));
     else if (align === 'right') await this.write(new Uint8Array([0x1b, 0x61, 0x02]));
     else await this.write(new Uint8Array([0x1b, 0x61, 0x00]));
 
+    // Bold
     if (bold) await this.write(new Uint8Array([0x1b, 0x45, 0x01]));
+
+    // Double height + width
     if (double) await this.write(new Uint8Array([0x1d, 0x21, 0x11]));
 
     await this.write(new TextEncoder().encode(text + '\n'));
 
+    // Reset size + bold
     await this.write(new Uint8Array([0x1d, 0x21, 0x00]));
     await this.write(new Uint8Array([0x1b, 0x45, 0x00]));
   }
 
-  async feed(n = 1) { await this.write(new Uint8Array([0x1b, 0x64, n])); }
-  async cut() { await this.write(new Uint8Array([0x1d, 0x56, 0x00])); }
+  async feed(n = 1) {
+    await this.write(new Uint8Array([0x1b, 0x64, Math.min(n, 255)]));
+  }
+
+  async cut() {
+    // Full cut
+    await this.write(new Uint8Array([0x1d, 0x56, 0x00]));
+  }
+
+  async partialCut() {
+    await this.write(new Uint8Array([0x1d, 0x56, 0x01]));
+  }
+
+  /* ===================== HIGH-LEVEL RECEIPTS ===================== */
 
   async printFeeReceipt(data) {
     await this.init();
@@ -167,8 +366,8 @@ export class ThermalPrinter {
   async printTest() {
     await this.init();
     await this.printText('=== SCHOOL PRINTER TEST ===', { align: 'center', bold: true });
-    await this.printText('HiLabel / SpeedX', { align: 'center' });
-    await this.printText('86:67:7A:0B:DE:C7', { align: 'center' });
+    await this.printText('Generic ESC/POS', { align: 'center' });
+    await this.printText(this.connectionType === 'usb' ? 'USB Connection' : 'Bluetooth Connection', { align: 'center' });
     await this.feed(1);
     await this.printText(new Date().toLocaleString(), { align: 'center' });
     await this.feed(3);
@@ -176,6 +375,6 @@ export class ThermalPrinter {
   }
 }
 
-// Global access for easy use in the school PWA
+// Global access for the school PWA
 window.ThermalPrinter = ThermalPrinter;
 window.schoolPrinter = new ThermalPrinter({ debug: true });
