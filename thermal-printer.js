@@ -23,7 +23,7 @@ export class ThermalPrinter {
     this.charsPerLine = this.paperWidth <= 58 ? 32 : 48;
     this.chunkSize = options.chunkSize || 48;         // smaller = more reliable on BT
     this.chunkDelay = options.chunkDelay || 40;       // ms between chunks (40-60 safe)
-    this.feedBeforeCut = options.feedBeforeCut || 1;  // lines before cut (1 = kam paper)
+    this.feedBeforeCut = options.feedBeforeCut != null ? options.feedBeforeCut : 0; // 0 = no blank paper
     this.usePartialCut = options.usePartialCut !== false; // true = kam paper advance
     this.debug = options.debug || false;
     // ========================================
@@ -358,15 +358,18 @@ export class ThermalPrinter {
   }
 
   async feed(n = 1) {
+    if (!n || n < 1) return; // 0 = no feed, extra paper nahi
     await this.write(new Uint8Array([0x1b, 0x64, Math.min(n, 255)]));
   }
 
   async cut() {
-    await this.write(new Uint8Array([0x1d, 0x56, 0x00])); // full cut
+    // Full cut with 0 extra feed (GS V 65 0)
+    await this.write(new Uint8Array([0x1d, 0x56, 0x41, 0x00]));
   }
 
   async partialCut() {
-    await this.write(new Uint8Array([0x1d, 0x56, 0x01])); // partial cut
+    // Partial cut with 0 extra feed (GS V 66 0) — minimum paper
+    await this.write(new Uint8Array([0x1d, 0x56, 0x42, 0x00]));
   }
 
   async doCut() {
@@ -374,11 +377,88 @@ export class ThermalPrinter {
     else await this.cut();
   }
 
+  /** Small font (Font B) for credit line */
+  async printSmall(text, opts = {}) {
+    const { align = 'center' } = opts;
+    if (align === 'center') await this.write(new Uint8Array([0x1b, 0x61, 0x01]));
+    else await this.write(new Uint8Array([0x1b, 0x61, 0x00]));
+    await this.write(new Uint8Array([0x1b, 0x4d, 0x01])); // ESC M 1 = Font B (smaller)
+    await this.write(new TextEncoder().encode(String(text) + '\n'));
+    await this.write(new Uint8Array([0x1b, 0x4d, 0x00])); // back to Font A
+  }
+
+  /**
+   * Print logo from base64 JPEG/PNG (via canvas → ESC/POS raster)
+   * maxWidth dots: 58mm ≈ 384 dots, we use ~200 for a neat logo
+   */
+  async printLogo(base64, maxWidth = 200) {
+    if (!base64) return;
+    try {
+      const src = base64.startsWith('data:') ? base64 : ('data:image/jpeg;base64,' + base64);
+      const img = await new Promise((resolve, reject) => {
+        const i = new Image();
+        i.onload = () => resolve(i);
+        i.onerror = reject;
+        i.src = src;
+      });
+
+      let w = maxWidth;
+      let h = Math.round((img.height / img.width) * w);
+      // width must be multiple of 8 for raster
+      w = Math.floor(w / 8) * 8;
+      if (w < 8) w = 8;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+
+      const imageData = ctx.getImageData(0, 0, w, h);
+      const pixels = imageData.data;
+      const bytesPerRow = w / 8;
+      const raster = new Uint8Array(bytesPerRow * h);
+
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const i = (y * w + x) * 4;
+          const gray = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+          // threshold: dark pixels print
+          if (gray < 140) {
+            raster[y * bytesPerRow + (x >> 3)] |= (0x80 >> (x & 7));
+          }
+        }
+      }
+
+      // Center align
+      await this.write(new Uint8Array([0x1b, 0x61, 0x01]));
+      // GS v 0 — raster bit image
+      const xL = bytesPerRow & 0xff;
+      const xH = (bytesPerRow >> 8) & 0xff;
+      const yL = h & 0xff;
+      const yH = (h >> 8) & 0xff;
+      const header = new Uint8Array([0x1d, 0x76, 0x30, 0x00, xL, xH, yL, yH]);
+      await this.write(header);
+      await this.write(raster);
+      await this.write(new Uint8Array([0x0a])); // newline after logo
+    } catch (e) {
+      this.log('Logo print failed', e);
+      // logo fail → silently continue without logo
+    }
+  }
+
   /* ===================== HIGH-LEVEL RECEIPTS ===================== */
 
   async printFeeReceipt(data) {
     const line = this._line();
     await this.init();
+
+    // Logo (agar diya ho)
+    if (data.logoBase64) {
+      await this.printLogo(data.logoBase64, this.paperWidth <= 58 ? 160 : 240);
+    }
 
     await this.printText('THE SMART MODERN', { align: 'center', bold: true });
     await this.printText('PUBLIC SCHOOL', { align: 'center', bold: true });
@@ -395,7 +475,8 @@ export class ThermalPrinter {
 
     await this.printText(line, { align: 'center' });
     await this.printText('Thank you!', { align: 'center' });
-    await this.printText('Software by Fazul Khan Chandio', { align: 'center' });
+    // Credit — chhota font
+    await this.printSmall('Software by Fazul Khan Chandio', { align: 'center' });
 
     await this.feed(this.feedBeforeCut);
     await this.doCut();
@@ -410,19 +491,19 @@ export class ThermalPrinter {
     await this.printText(this.connectionType === 'usb' ? 'USB Connection' : 'Bluetooth', { align: 'center' });
     await this.printText(new Date().toLocaleString(), { align: 'center' });
     await this.printText(line, { align: 'center' });
-    await this.printText('Software by Fazul Khan Chandio', { align: 'center' });
+    await this.printSmall('Software by Fazul Khan Chandio', { align: 'center' });
     await this.feed(this.feedBeforeCut);
     await this.doCut();
   }
 }
 
-// Global access — default settings tuned for HiLabel 58mm
+// Global access — minimum paper waste for HiLabel 58mm
 window.ThermalPrinter = ThermalPrinter;
 window.schoolPrinter = new ThermalPrinter({
   debug: true,
   paperWidth: 58,        // 58mm paper (HiLabel)
   chunkSize: 48,         // reliable on Bluetooth
   chunkDelay: 40,        // ms
-  feedBeforeCut: 1,      // kam paper
-  usePartialCut: true    // kam advance
+  feedBeforeCut: 0,      // ZERO extra feed — no blank paper
+  usePartialCut: true    // partial cut, 0 feed units
 });

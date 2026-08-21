@@ -869,9 +869,45 @@
       <button class="btn green" style="margin-top:0;" onclick="window.print()">🖨️ Print / Save as PDF</button>
       <button class="btn" id="thermalPrintBtn" style="margin-top:0; background:#5b4636; color:#fff; display:none;" onclick="printThermalBluetooth()">🧾 Print on Thermal Printer</button>
       <button class="btn" id="thermalModeBtn" style="margin-top:0; background:#3d5a80; color:#fff; display:none;"></button>
+      <button class="btn" id="printerSettingsBtn" style="margin-top:0; background:#555; color:#fff; display:none;" onclick="openPrinterSettings()">⚙️ Paper Settings</button>
       <button class="btn" style="margin-top:0; background:var(--muted);" onclick="closeChallan()">Close</button>
     </div>
     <div id="printPage"></div>
+  </div>
+</div>
+
+<!-- Thermal Printer Paper Settings -->
+<div id="printerSettingsModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:60; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#fff; border-radius:12px; padding:20px; max-width:360px; width:100%; box-shadow:0 8px 32px rgba(0,0,0,0.25);">
+    <h3 style="margin:0 0 14px; color:#16233f;">⚙️ Thermal Printer Settings</h3>
+    <label style="display:block; font-size:13px; margin-bottom:4px; font-weight:600;">Paper Width</label>
+    <select id="psPaperWidth" style="width:100%; padding:8px; margin-bottom:12px; border:1px solid #ccc; border-radius:6px;">
+      <option value="58">58 mm (HiLabel / most portable)</option>
+      <option value="80">80 mm (larger printers)</option>
+    </select>
+    <label style="display:block; font-size:13px; margin-bottom:4px; font-weight:600;">Extra Feed (blank lines before cut)</label>
+    <select id="psFeed" style="width:100%; padding:8px; margin-bottom:12px; border:1px solid #ccc; border-radius:6px;">
+      <option value="0">0 — minimum paper (recommended)</option>
+      <option value="1">1 line</option>
+      <option value="2">2 lines</option>
+      <option value="3">3 lines</option>
+    </select>
+    <label style="display:block; font-size:13px; margin-bottom:4px; font-weight:600;">Cut Type</label>
+    <select id="psCut" style="width:100%; padding:8px; margin-bottom:12px; border:1px solid #ccc; border-radius:6px;">
+      <option value="partial">Partial cut (less paper)</option>
+      <option value="full">Full cut</option>
+    </select>
+    <label style="display:block; font-size:13px; margin-bottom:4px; font-weight:600;">Print Speed / Reliability</label>
+    <select id="psSpeed" style="width:100%; padding:8px; margin-bottom:16px; border:1px solid #ccc; border-radius:6px;">
+      <option value="fast">Fast (chunk 64, delay 30)</option>
+      <option value="normal">Normal (chunk 48, delay 40) — recommended</option>
+      <option value="safe">Safe (chunk 32, delay 60) — if print incomplete</option>
+    </select>
+    <div style="display:flex; gap:10px;">
+      <button class="btn green" style="flex:1; margin:0;" onclick="savePrinterSettings()">💾 Save</button>
+      <button class="btn" style="flex:1; margin:0; background:#888; color:#fff;" onclick="closePrinterSettings()">Close</button>
+    </div>
+    <p style="font-size:11px; color:#666; margin:12px 0 0;">Settings is device pe save hoti hain (localStorage).</p>
   </div>
 </div>
 
@@ -2077,6 +2113,8 @@ function openChallan(feeId){
     modeBtn.textContent = '🧾 Switch to Thermal Receipt';
     modeBtn.onclick = () => openChallanThermal(printModalFeeId);
   }
+  const psBtn = document.getElementById('printerSettingsBtn');
+  if(psBtn) psBtn.style.display = 'inline-block';
   document.getElementById('printModal').style.display = 'flex';
 }
 function closeChallan(){
@@ -2085,6 +2123,8 @@ function closeChallan(){
   document.getElementById('thermalPrintBtn').style.display = 'none';
   const modeBtn = document.getElementById('thermalModeBtn');
   if(modeBtn) modeBtn.style.display = 'none';
+  const psBtn = document.getElementById('printerSettingsBtn');
+  if(psBtn) psBtn.style.display = 'none';
   printModalFeeId = null;
 }
 
@@ -2124,9 +2164,9 @@ function printAdmissionForm(studentId){
   if(!s){ alert('Student record nahi mila.'); return; }
   document.getElementById('printModal').classList.remove('thermal-mode');
   document.getElementById('thermalPrintBtn').style.display = 'none';
-  const __tmBtn = document.getElementById('thermalModeBtn');
-  if(__tmBtn) __tmBtn.style.display = 'none';
-  printModalFeeId = null;
+  const __tm = document.getElementById('thermalModeBtn');
+  if(__tm) __tm.style.display = 'none';
+printModalFeeId = null;
   document.getElementById('printPage').innerHTML = admissionFormHTML(s);
   document.getElementById('printModal').style.display = 'flex';
 }
@@ -2168,9 +2208,9 @@ function printTC(studentId){
   if(!confirm('Transfer Certificate issue karna hai? TC No. is student ke record mein save ho jayega.')) return;
   document.getElementById('printModal').classList.remove('thermal-mode');
   document.getElementById('thermalPrintBtn').style.display = 'none';
-  const __tmBtn = document.getElementById('thermalModeBtn');
-  if(__tmBtn) __tmBtn.style.display = 'none';
-  printModalFeeId = null;
+  const __tm = document.getElementById('thermalModeBtn');
+  if(__tm) __tm.style.display = 'none';
+printModalFeeId = null;
   document.getElementById('printPage').innerHTML = tcFormHTML(s);
   document.getElementById('printModal').style.display = 'flex';
 }
@@ -2203,9 +2243,9 @@ function printIdCard(studentId){
   if(!s){ alert('Student record nahi mila.'); return; }
   document.getElementById('printModal').classList.remove('thermal-mode');
   document.getElementById('thermalPrintBtn').style.display = 'none';
-  const __tmBtn = document.getElementById('thermalModeBtn');
-  if(__tmBtn) __tmBtn.style.display = 'none';
-  printModalFeeId = null;
+  const __tm = document.getElementById('thermalModeBtn');
+  if(__tm) __tm.style.display = 'none';
+printModalFeeId = null;
   document.getElementById('printPage').innerHTML = idCardHTML(s);
   document.getElementById('printModal').style.display = 'flex';
 }
@@ -2215,6 +2255,7 @@ function thermalReceiptHTML(f, student){
   return `
     <div class="thermal-receipt">
       <div class="t-center">
+        <img src="data:image/jpeg;base64,${LOGO_B64}" alt="Logo" style="width:48px;height:48px;border-radius:50%;object-fit:cover;margin-bottom:4px;">
         <h4>${schoolSettings.name || 'The Smart Modern Public School'}</h4>
         <div>${schoolSettings.address || 'Qamber, Sindh'}</div>
         <div>${f.status === 'paid' ? 'FEE RECEIPT' : 'FEE CHALLAN'}</div>
@@ -2230,7 +2271,7 @@ function thermalReceiptHTML(f, student){
       <div class="t-line"></div>
       <div class="t-center">Printed: ${new Date().toLocaleString()}</div>
       <div class="t-center">Thank you!</div>
-      <div class="t-center" style="font-size:10px;margin-top:4px;">Software by Fazul Khan Chandio</div>
+      <div class="t-center" style="font-size:9px;margin-top:4px;color:#555;">Software by Fazul Khan Chandio</div>
     </div>`;
 }
 function openChallanThermal(feeId){
@@ -2249,6 +2290,8 @@ function openChallanThermal(feeId){
     modeBtn.textContent = '📄 Switch to Full-Page Receipt';
     modeBtn.onclick = () => openChallan(printModalFeeId);
   }
+  const psBtn = document.getElementById('printerSettingsBtn');
+  if(psBtn) psBtn.style.display = 'inline-block';
   document.getElementById('printModal').style.display = 'flex';
 }
 
@@ -2430,9 +2473,9 @@ function printStudentQr(){
   if(!s){ alert('Pehle koi student add karein.'); return; }
   document.getElementById('printModal').classList.remove('thermal-mode');
   document.getElementById('thermalPrintBtn').style.display = 'none';
-  const __tmBtn = document.getElementById('thermalModeBtn');
-  if(__tmBtn) __tmBtn.style.display = 'none';
-  document.getElementById('printPage').innerHTML = `
+  const __tm = document.getElementById('thermalModeBtn');
+  if(__tm) __tm.style.display = 'none';
+document.getElementById('printPage').innerHTML = `
     <div class="cert-wrap" style="text-align:center; border:2px solid var(--navy); border-radius:8px; padding:24px;">
       <h3 style="color:var(--navy); margin-bottom:4px;">${s.name}</h3>
       <div style="font-size:12px; color:var(--muted); margin-bottom:16px;">${s.adm} · Class ${s.cls || '—'} ${s.section || ''}</div>
@@ -3272,7 +3315,69 @@ window.addEventListener('offline', ()=>{
 
 
 
-/* ===================== BLUETOOTH THERMAL PRINTER ===================== */
+/* ===================== BLUETOOTH / USB THERMAL PRINTER ===================== */
+const PRINTER_SETTINGS_KEY = 'schoolPrinterSettings';
+
+function loadPrinterSettings(){
+  let s = { paperWidth: 58, feedBeforeCut: 0, usePartialCut: true, speed: 'normal' };
+  try {
+    const raw = localStorage.getItem(PRINTER_SETTINGS_KEY);
+    if(raw) s = Object.assign(s, JSON.parse(raw));
+  } catch(e){}
+  return s;
+}
+
+function applyPrinterSettings(s){
+  if(!window.schoolPrinter || !window.schoolPrinter.setSettings) return;
+  const speedMap = {
+    fast:   { chunkSize: 64, chunkDelay: 30 },
+    normal: { chunkSize: 48, chunkDelay: 40 },
+    safe:   { chunkSize: 32, chunkDelay: 60 }
+  };
+  const sp = speedMap[s.speed] || speedMap.normal;
+  window.schoolPrinter.setSettings({
+    paperWidth: Number(s.paperWidth) || 58,
+    feedBeforeCut: Number(s.feedBeforeCut) || 0,
+    usePartialCut: s.usePartialCut !== false,
+    chunkSize: sp.chunkSize,
+    chunkDelay: sp.chunkDelay
+  });
+}
+
+function openPrinterSettings(){
+  const s = loadPrinterSettings();
+  document.getElementById('psPaperWidth').value = String(s.paperWidth || 58);
+  document.getElementById('psFeed').value = String(s.feedBeforeCut != null ? s.feedBeforeCut : 0);
+  document.getElementById('psCut').value = s.usePartialCut === false ? 'full' : 'partial';
+  document.getElementById('psSpeed').value = s.speed || 'normal';
+  const m = document.getElementById('printerSettingsModal');
+  m.style.display = 'flex';
+}
+
+function closePrinterSettings(){
+  document.getElementById('printerSettingsModal').style.display = 'none';
+}
+
+function savePrinterSettings(){
+  const s = {
+    paperWidth: Number(document.getElementById('psPaperWidth').value) || 58,
+    feedBeforeCut: Number(document.getElementById('psFeed').value) || 0,
+    usePartialCut: document.getElementById('psCut').value !== 'full',
+    speed: document.getElementById('psSpeed').value || 'normal'
+  };
+  try { localStorage.setItem(PRINTER_SETTINGS_KEY, JSON.stringify(s)); } catch(e){}
+  applyPrinterSettings(s);
+  closePrinterSettings();
+  alert('✅ Printer settings save ho gayi!\nPaper: ' + s.paperWidth + 'mm · Feed: ' + s.feedBeforeCut + ' · Cut: ' + (s.usePartialCut ? 'Partial' : 'Full'));
+}
+
+// Page load pe saved settings apply
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(function(){
+    try { applyPrinterSettings(loadPrinterSettings()); } catch(e){}
+  }, 800);
+});
+
 async function printThermalBluetooth() {
   if (!printModalFeeId) {
     alert("Koi fee selected nahi hai");
@@ -3285,6 +3390,8 @@ async function printThermalBluetooth() {
   }
   const student = students.find(s => s.id === f.studentId);
   try {
+    // Apply latest settings before print
+    applyPrinterSettings(loadPrinterSettings());
     if (!window.schoolPrinter || !window.schoolPrinter.isConnected) {
       await window.schoolPrinter.connect();
     }
@@ -3294,7 +3401,8 @@ async function printThermalBluetooth() {
       amount: f.amount,
       receiptNo: f.id || "—",
       date: f.due || f.month || new Date().toLocaleDateString(),
-      status: f.status || "paid"
+      status: f.status || "paid",
+      logoBase64: (typeof LOGO_B64 !== 'undefined' ? LOGO_B64 : null)
     });
     const type = (window.schoolPrinter && window.schoolPrinter.connectionType === 'usb') ? 'USB' : 'Bluetooth';
     alert("✅ Receipt " + type + " printer pe print ho gayi!");
