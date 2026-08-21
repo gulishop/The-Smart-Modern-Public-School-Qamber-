@@ -348,19 +348,19 @@ export class ThermalPrinter {
     await this.printText('Qamber', { align: 'center' });
     await this.printText('------------------------', { align: 'center' });
     await this.printText('FEE RECEIPT', { align: 'center', bold: true, double: true });
-    await this.feed(1);
 
     await this.printText('Receipt #: ' + (data.receiptNo || '—'));
     await this.printText('Date     : ' + (data.date || new Date().toLocaleDateString()));
-    await this.printText('Student  : ' + (data.studentName || '—'));
+    await this.printText('Student  : ' + (data.studentName || '—'), { bold: true });
     await this.printText('Class    : ' + (data.className || '—'));
     await this.printText('Amount   : Rs. ' + (data.amount || 0), { bold: true });
     await this.printText('Status   : ' + (data.status || 'Paid').toUpperCase());
-    await this.feed(1);
     await this.printText('------------------------', { align: 'center' });
     await this.printText('Thank you!', { align: 'center' });
-    await this.feed(3);
-    await this.cut();
+    await this.printText('Software by Fazul Khan Chandio', { align: 'center' });
+    // Sirf 1 line feed — extra paper waste nahi hoga
+    await this.feed(1);
+    await this.partialCut();
   }
 
   async printTest() {
@@ -368,10 +368,9 @@ export class ThermalPrinter {
     await this.printText('=== SCHOOL PRINTER TEST ===', { align: 'center', bold: true });
     await this.printText('Generic ESC/POS', { align: 'center' });
     await this.printText(this.connectionType === 'usb' ? 'USB Connection' : 'Bluetooth Connection', { align: 'center' });
-    await this.feed(1);
     await this.printText(new Date().toLocaleString(), { align: 'center' });
-    await this.feed(3);
-    await this.cut();
+    await this.feed(1);
+    await this.partialCut();
   }
 }
 
