@@ -2257,21 +2257,19 @@ function thermalReceiptHTML(f, student){
       <div class="t-center">
         <img src="data:image/jpeg;base64,${LOGO_B64}" alt="Logo" style="width:48px;height:48px;border-radius:50%;object-fit:cover;margin-bottom:4px;">
         <h4>${schoolSettings.name || 'The Smart Modern Public School'}</h4>
-        <div>${schoolSettings.address || 'Qamber, Sindh'}</div>
-        <div>${f.status === 'paid' ? 'FEE RECEIPT' : 'FEE CHALLAN'}</div>
+        <div style="font-weight:700;letter-spacing:0.5px;">${f.status === 'paid' ? 'FEE RECEIPT' : 'FEE CHALLAN'} - QAMBER</div>
+        <div style="font-size:11px;margin-top:2px;">03362506588</div>
       </div>
       <div class="t-line"></div>
-      <div class="t-row"><span>Student</span><span style="font-weight:700;">${student ? student.name : '—'}</span></div>
-      <div class="t-row"><span>Adm No.</span><span>${student ? student.adm : '—'}</span></div>
-      <div class="t-row"><span>Class/Sec</span><span>${student ? (student.cls||'—')+'/'+(student.section||'—') : '—'}</span></div>
-      <div class="t-row"><span>Month</span><span>${f.month}</span></div>
+      <div class="t-row"><span>Student Name</span><span style="font-weight:700;">${student ? student.name : '—'}</span></div>
+      <div class="t-row"><span>Class / Section</span><span>${student ? (student.cls||'—')+' / '+(student.section||'—') : '—'}</span></div>
+      <div class="t-row"><span>Admission No.</span><span>${student ? student.adm : '—'}</span></div>
+      <div class="t-row"><span>Fee Month</span><span>${f.month || '—'}</span></div>
       <div class="t-row"><span>Due Date</span><span>${f.due || '—'}</span></div>
-      <div class="t-row"><span>Status</span><span>${f.status.toUpperCase()}</span></div>
-      <div class="t-total"><span>TOTAL</span><span>Rs. ${f.amount}</span></div>
+      <div class="t-row"><span>Status</span><span>${(f.status||'').toUpperCase()}</span></div>
+      <div class="t-total"><span>Total Amount</span><span>Rs. ${f.amount}</span></div>
       <div class="t-line"></div>
-      <div class="t-center">Printed: ${new Date().toLocaleString()}</div>
-      <div class="t-center">Thank you!</div>
-      <div class="t-center" style="font-size:9px;margin-top:4px;color:#555;">Software by Fazul Khan Chandio</div>
+      <div class="t-center" style="font-size:9px;color:#555;">Software by Fazul Khan Chandio</div>
     </div>`;
 }
 function openChallanThermal(feeId){
@@ -3397,7 +3395,9 @@ async function printThermalBluetooth() {
     }
     await window.schoolPrinter.printFeeReceipt({
       studentName: student ? student.name : "Unknown",
-      className: student ? ((student.cls || "") + (student.section ? "-" + student.section : "")) : "—",
+      className: student ? ((student.cls || "—") + (student.section ? " / " + student.section : "")) : "—",
+      admNo: student ? (student.adm || "—") : "—",
+      month: f.month || "—",
       amount: f.amount,
       receiptNo: f.id || "—",
       date: f.due || f.month || new Date().toLocaleDateString(),

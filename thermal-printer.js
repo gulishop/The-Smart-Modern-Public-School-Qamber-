@@ -455,27 +455,32 @@ export class ThermalPrinter {
     const line = this._line();
     await this.init();
 
-    // Logo (agar diya ho)
+    // Logo
     if (data.logoBase64) {
       await this.printLogo(data.logoBase64, this.paperWidth <= 58 ? 160 : 240);
     }
 
-    await this.printText('THE SMART MODERN', { align: 'center', bold: true });
-    await this.printText('PUBLIC SCHOOL', { align: 'center', bold: true });
-    await this.printText('Qamber', { align: 'center' });
+    // Header — same as on-screen fee receipt
+    await this.printText('The Smart Modern', { align: 'center', bold: true });
+    await this.printText('Public School', { align: 'center', bold: true });
+    await this.printText('FEE RECEIPT - QAMBER', { align: 'center', bold: true });
+    await this.printSmall('03362506588', { align: 'center' });
     await this.printText(line, { align: 'center' });
-    await this.printText('FEE RECEIPT', { align: 'center', bold: true, double: true });
 
-    await this.printText('Receipt #: ' + (data.receiptNo || '—'));
-    await this.printText('Date     : ' + (data.date || new Date().toLocaleDateString()));
-    await this.printText('Student  : ' + (data.studentName || '—'), { bold: true });
-    await this.printText('Class    : ' + (data.className || '—'));
-    await this.printText('Amount   : Rs. ' + (data.amount || 0), { bold: true });
-    await this.printText('Status   : ' + (data.status || 'Paid').toUpperCase());
+    // Body — same fields as screen design
+    await this.printText('Student Name', { align: 'left' });
+    await this.printText(data.studentName || '—', { align: 'left', bold: true });
+
+    await this.printText('Class / Section : ' + (data.className || '—'));
+    await this.printText('Admission No.  : ' + (data.admNo || '—'));
+    await this.printText('Fee Month      : ' + (data.month || '—'));
+    await this.printText('Due Date       : ' + (data.date || '—'));
+    await this.printText('Status         : ' + (data.status || 'Paid').toUpperCase());
 
     await this.printText(line, { align: 'center' });
-    await this.printText('Thank you!', { align: 'center' });
-    // Credit — chhota font
+    await this.printText('Total Amount: Rs. ' + (data.amount || 0), { align: 'center', bold: true });
+    await this.printText(line, { align: 'center' });
+
     await this.printSmall('Software by Fazul Khan Chandio', { align: 'center' });
 
     await this.feed(this.feedBeforeCut);

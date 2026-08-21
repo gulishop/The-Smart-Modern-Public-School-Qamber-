@@ -1,5 +1,5 @@
 ========================================
-FINAL — LOGO + SMALL CREDIT + ALL BUTTONS
+THERMAL = SAME AS SCREEN FEE RECEIPT
 The Smart Modern Public School Qamber
 ========================================
 
@@ -7,14 +7,22 @@ UPLOAD (repo ROOT):
 1. index.html
 2. thermal-printer.js
 
-RECEIPT:
-✓ School logo (top)
-✓ School name
-✓ Student name bold
-✓ "Software by Fazul Khan Chandio" (chhota font)
+THERMAL RECEIPT DESIGN:
+✓ Logo
+✓ The Smart Modern Public School
+✓ FEE RECEIPT - QAMBER
+✓ 03362506588
+✓ Student Name (bold)
+✓ Class / Section
+✓ Admission No.
+✓ Fee Month
+✓ Due Date
+✓ Status
+✓ Total Amount
+✓ Software by Fazul Khan Chandio (small)
 
-BUTTONS (Fees → Print):
+BUTTONS:
   🧾 Print on Thermal Printer
   🧾 Switch to Thermal Receipt
-  ⚙️ Paper Settings (58/80, feed, cut, speed)
+  ⚙️ Paper Settings
   🖨️ Print / Save as PDF
