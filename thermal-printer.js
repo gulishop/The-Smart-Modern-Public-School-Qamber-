@@ -451,7 +451,20 @@ export class ThermalPrinter {
 
   /* ===================== HIGH-LEVEL RECEIPTS ===================== */
 
+  /** Label left + value right, paper width ke hisaab se fit */
+  _row(label, value) {
+    const w = this.charsPerLine;
+    const L = String(label);
+    const V = String(value == null ? '—' : value);
+    const gap = w - L.length - V.length;
+    if (gap >= 1) return L + ' '.repeat(gap) + V;
+    // agar fit na ho to 2 lines
+    return L + '\n' + V;
+  }
+
   async printFeeReceipt(data) {
+    // Paper width se charsPerLine auto set
+    this.charsPerLine = this.paperWidth <= 58 ? 32 : 48;
     const line = this._line();
     await this.init();
 
@@ -460,27 +473,36 @@ export class ThermalPrinter {
       await this.printLogo(data.logoBase64, this.paperWidth <= 58 ? 160 : 240);
     }
 
-    // Header — same as on-screen fee receipt
+    // ===== SAME DESIGN AS SCREEN (Student Copy only) =====
+    await this.printText('STUDENT COPY', { align: 'center' });
     await this.printText('The Smart Modern', { align: 'center', bold: true });
     await this.printText('Public School', { align: 'center', bold: true });
     await this.printText('FEE RECEIPT - QAMBER', { align: 'center', bold: true });
     await this.printSmall('03362506588', { align: 'center' });
     await this.printText(line, { align: 'center' });
 
-    // Body — same fields as screen design
-    await this.printText('Student Name', { align: 'left' });
-    await this.printText(data.studentName || '—', { align: 'left', bold: true });
-
-    await this.printText('Class / Section : ' + (data.className || '—'));
-    await this.printText('Admission No.  : ' + (data.admNo || '—'));
-    await this.printText('Fee Month      : ' + (data.month || '—'));
-    await this.printText('Due Date       : ' + (data.date || '—'));
-    await this.printText('Status         : ' + (data.status || 'Paid').toUpperCase());
+    // Rows — screen jaisa label ... value
+    const rows = [
+      ['Student Name', data.studentName || '—'],
+      ['Class / Section', data.className || '—'],
+      ['Admission No.', data.admNo || '—'],
+      ['Fee Month', data.month || '—'],
+      ['Due Date', data.date || '—'],
+      ['Status', (data.status || 'Paid').toUpperCase()]
+    ];
+    for (const [lab, val] of rows) {
+      const text = this._row(lab, val);
+      if (text.includes('\n')) {
+        await this.printText(lab);
+        await this.printText(val, { bold: lab === 'Student Name' });
+      } else {
+        await this.printText(text, { bold: lab === 'Student Name' });
+      }
+    }
 
     await this.printText(line, { align: 'center' });
-    await this.printText('Total Amount: Rs. ' + (data.amount || 0), { align: 'center', bold: true });
+    await this.printText(this._row('Total Amount', 'Rs. ' + (data.amount || 0)), { bold: true });
     await this.printText(line, { align: 'center' });
-
     await this.printSmall('Software by Fazul Khan Chandio', { align: 'center' });
 
     await this.feed(this.feedBeforeCut);
