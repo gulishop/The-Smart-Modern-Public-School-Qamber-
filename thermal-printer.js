@@ -16,9 +16,17 @@ export class ThermalPrinter {
     this.usbEndpoint = null;
     this.connectionType = null;  // 'bluetooth' | 'usb'
     this.isConnected = false;
-    this.chunkSize = options.chunkSize || 64;   // safer default for USB
-    this.chunkDelay = options.chunkDelay || 30;
+
+    // ========== ADJUSTABLE SETTINGS ==========
+    // Paper: 58mm = 32 chars, 80mm = 48 chars
+    this.paperWidth = options.paperWidth || 58;       // 58 or 80
+    this.charsPerLine = this.paperWidth <= 58 ? 32 : 48;
+    this.chunkSize = options.chunkSize || 48;         // smaller = more reliable on BT
+    this.chunkDelay = options.chunkDelay || 40;       // ms between chunks (40-60 safe)
+    this.feedBeforeCut = options.feedBeforeCut || 1;  // lines before cut (1 = kam paper)
+    this.usePartialCut = options.usePartialCut !== false; // true = kam paper advance
     this.debug = options.debug || false;
+    // ========================================
 
     // Common Bluetooth Service UUIDs used by many Chinese thermal printers
     this.SERVICE_UUIDS = [
@@ -299,29 +307,52 @@ export class ThermalPrinter {
     }
   }
 
+  /* ===================== SETTINGS ===================== */
+
+  /** Runtime pe settings change karne ke liye */
+  setSettings(opts = {}) {
+    if (opts.paperWidth != null) {
+      this.paperWidth = opts.paperWidth;
+      this.charsPerLine = this.paperWidth <= 58 ? 32 : 48;
+    }
+    if (opts.chunkSize != null) this.chunkSize = opts.chunkSize;
+    if (opts.chunkDelay != null) this.chunkDelay = opts.chunkDelay;
+    if (opts.feedBeforeCut != null) this.feedBeforeCut = opts.feedBeforeCut;
+    if (opts.usePartialCut != null) this.usePartialCut = opts.usePartialCut;
+    if (opts.debug != null) this.debug = opts.debug;
+    this.log('Settings updated', {
+      paperWidth: this.paperWidth,
+      charsPerLine: this.charsPerLine,
+      chunkSize: this.chunkSize,
+      chunkDelay: this.chunkDelay,
+      feedBeforeCut: this.feedBeforeCut,
+      usePartialCut: this.usePartialCut
+    });
+  }
+
+  _line() {
+    return '-'.repeat(Math.min(this.charsPerLine, 32));
+  }
+
   /* ===================== ESC/POS COMMANDS ===================== */
 
   async init() {
-    await this.write(new Uint8Array([0x1b, 0x40])); // ESC @
+    await this.write(new Uint8Array([0x1b, 0x40])); // ESC @  reset
   }
 
   async printText(text, opts = {}) {
     const { align = 'left', bold = false, double = false } = opts;
 
-    // Alignment
     if (align === 'center') await this.write(new Uint8Array([0x1b, 0x61, 0x01]));
     else if (align === 'right') await this.write(new Uint8Array([0x1b, 0x61, 0x02]));
     else await this.write(new Uint8Array([0x1b, 0x61, 0x00]));
 
-    // Bold
     if (bold) await this.write(new Uint8Array([0x1b, 0x45, 0x01]));
+    if (double) await this.write(new Uint8Array([0x1d, 0x21, 0x11])); // double H+W
 
-    // Double height + width
-    if (double) await this.write(new Uint8Array([0x1d, 0x21, 0x11]));
+    await this.write(new TextEncoder().encode(String(text) + '\n'));
 
-    await this.write(new TextEncoder().encode(text + '\n'));
-
-    // Reset size + bold
+    // Always reset size + bold after each line
     await this.write(new Uint8Array([0x1d, 0x21, 0x00]));
     await this.write(new Uint8Array([0x1b, 0x45, 0x00]));
   }
@@ -331,22 +362,28 @@ export class ThermalPrinter {
   }
 
   async cut() {
-    // Full cut
-    await this.write(new Uint8Array([0x1d, 0x56, 0x00]));
+    await this.write(new Uint8Array([0x1d, 0x56, 0x00])); // full cut
   }
 
   async partialCut() {
-    await this.write(new Uint8Array([0x1d, 0x56, 0x01]));
+    await this.write(new Uint8Array([0x1d, 0x56, 0x01])); // partial cut
+  }
+
+  async doCut() {
+    if (this.usePartialCut) await this.partialCut();
+    else await this.cut();
   }
 
   /* ===================== HIGH-LEVEL RECEIPTS ===================== */
 
   async printFeeReceipt(data) {
+    const line = this._line();
     await this.init();
+
     await this.printText('THE SMART MODERN', { align: 'center', bold: true });
     await this.printText('PUBLIC SCHOOL', { align: 'center', bold: true });
     await this.printText('Qamber', { align: 'center' });
-    await this.printText('------------------------', { align: 'center' });
+    await this.printText(line, { align: 'center' });
     await this.printText('FEE RECEIPT', { align: 'center', bold: true, double: true });
 
     await this.printText('Receipt #: ' + (data.receiptNo || '—'));
@@ -355,25 +392,37 @@ export class ThermalPrinter {
     await this.printText('Class    : ' + (data.className || '—'));
     await this.printText('Amount   : Rs. ' + (data.amount || 0), { bold: true });
     await this.printText('Status   : ' + (data.status || 'Paid').toUpperCase());
-    await this.printText('------------------------', { align: 'center' });
+
+    await this.printText(line, { align: 'center' });
     await this.printText('Thank you!', { align: 'center' });
     await this.printText('Software by Fazul Khan Chandio', { align: 'center' });
-    // Sirf 1 line feed — extra paper waste nahi hoga
-    await this.feed(1);
-    await this.partialCut();
+
+    await this.feed(this.feedBeforeCut);
+    await this.doCut();
   }
 
   async printTest() {
+    const line = this._line();
     await this.init();
-    await this.printText('=== SCHOOL PRINTER TEST ===', { align: 'center', bold: true });
-    await this.printText('Generic ESC/POS', { align: 'center' });
-    await this.printText(this.connectionType === 'usb' ? 'USB Connection' : 'Bluetooth Connection', { align: 'center' });
+    await this.printText('=== PRINTER TEST ===', { align: 'center', bold: true });
+    await this.printText(line, { align: 'center' });
+    await this.printText('Paper: ' + this.paperWidth + 'mm', { align: 'center' });
+    await this.printText(this.connectionType === 'usb' ? 'USB Connection' : 'Bluetooth', { align: 'center' });
     await this.printText(new Date().toLocaleString(), { align: 'center' });
-    await this.feed(1);
-    await this.partialCut();
+    await this.printText(line, { align: 'center' });
+    await this.printText('Software by Fazul Khan Chandio', { align: 'center' });
+    await this.feed(this.feedBeforeCut);
+    await this.doCut();
   }
 }
 
-// Global access for the school PWA
+// Global access — default settings tuned for HiLabel 58mm
 window.ThermalPrinter = ThermalPrinter;
-window.schoolPrinter = new ThermalPrinter({ debug: true });
+window.schoolPrinter = new ThermalPrinter({
+  debug: true,
+  paperWidth: 58,        // 58mm paper (HiLabel)
+  chunkSize: 48,         // reliable on Bluetooth
+  chunkDelay: 40,        // ms
+  feedBeforeCut: 1,      // kam paper
+  usePartialCut: true    // kam advance
+});
