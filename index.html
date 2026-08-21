@@ -867,7 +867,8 @@
   <div class="print-wrap">
     <div class="modal-actions no-print" style="flex-wrap:wrap;">
       <button class="btn green" style="margin-top:0;" onclick="window.print()">🖨️ Print / Save as PDF</button>
-      <button class="btn" id="thermalPrintBtn" style="margin-top:0; background:#5b4636; color:#fff; display:none;" onclick="printThermalBluetooth()">🧾 Print on Bluetooth Printer</button>
+      <button class="btn" id="thermalPrintBtn" style="margin-top:0; background:#5b4636; color:#fff; display:none;" onclick="printThermalBluetooth()">🧾 Print on Thermal Printer</button>
+      <button class="btn" id="thermalModeBtn" style="margin-top:0; background:#3d5a80; color:#fff; display:none;"></button>
       <button class="btn" style="margin-top:0; background:var(--muted);" onclick="closeChallan()">Close</button>
     </div>
     <div id="printPage"></div>
@@ -2046,13 +2047,14 @@ function challanBlockHTML(label, f, student){
         <h3>${schoolSettings.name}</h3>
         <div class="s">${f.status === 'paid' ? 'FEE RECEIPT' : 'FEE CHALLAN'} — QAMBER</div>
       </div>
-      <div class="challan-row"><span class="k">Student Name</span><span class="v">${student ? student.name : '—'}</span></div>
+      <div class="challan-row"><span class="k">Student Name</span><span class="v" style="font-weight:700;">${student ? student.name : '—'}</span></div>
       <div class="challan-row"><span class="k">Class / Section</span><span class="v">${student ? (student.cls||'—')+' / '+(student.section||'—') : '—'}</span></div>
       <div class="challan-row"><span class="k">Admission No.</span><span class="v">${student ? student.adm : '—'}</span></div>
       <div class="challan-row"><span class="k">Fee Month</span><span class="v">${f.month}</span></div>
       <div class="challan-row"><span class="k">Due Date</span><span class="v">${f.due || '—'}</span></div>
       <div class="challan-row"><span class="k">Status</span><span class="v">${f.status.toUpperCase()}</span></div>
       <div class="challan-total"><span>Total Amount</span><span>Rs. ${f.amount}</span></div>
+      <div style="text-align:center;font-size:10px;margin-top:8px;color:#666;">Software by Fazul Khan Chandio</div>
     </div>`;
 }
 let printModalFeeId = null;
@@ -2065,16 +2067,24 @@ function openChallan(feeId){
     challanBlockHTML('SCHOOL COPY', f, student) +
     '<div class="cut-line no-print">✂ – – – – – – – – – – – – – – – – – – – – – – – – – – – – – – –</div>' +
     challanBlockHTML('STUDENT COPY', f, student);
-  const tBtn = document.getElementById('thermalPrintBtn');
-  tBtn.style.display = 'inline-block';
-  tBtn.textContent = '🧾 Switch to Thermal Receipt';
-  tBtn.onclick = () => openChallanThermal(printModalFeeId);
+  const btBtn = document.getElementById('thermalPrintBtn');
+  btBtn.style.display = 'inline-block';
+  btBtn.textContent = '🧾 Print on Thermal Printer';
+  btBtn.onclick = printThermalBluetooth;
+  const modeBtn = document.getElementById('thermalModeBtn');
+  if(modeBtn){
+    modeBtn.style.display = 'inline-block';
+    modeBtn.textContent = '🧾 Switch to Thermal Receipt';
+    modeBtn.onclick = () => openChallanThermal(printModalFeeId);
+  }
   document.getElementById('printModal').style.display = 'flex';
 }
 function closeChallan(){
   document.getElementById('printModal').style.display = 'none';
   document.getElementById('printModal').classList.remove('thermal-mode');
   document.getElementById('thermalPrintBtn').style.display = 'none';
+  const modeBtn = document.getElementById('thermalModeBtn');
+  if(modeBtn) modeBtn.style.display = 'none';
   printModalFeeId = null;
 }
 
@@ -2114,6 +2124,8 @@ function printAdmissionForm(studentId){
   if(!s){ alert('Student record nahi mila.'); return; }
   document.getElementById('printModal').classList.remove('thermal-mode');
   document.getElementById('thermalPrintBtn').style.display = 'none';
+  const __tmBtn = document.getElementById('thermalModeBtn');
+  if(__tmBtn) __tmBtn.style.display = 'none';
   printModalFeeId = null;
   document.getElementById('printPage').innerHTML = admissionFormHTML(s);
   document.getElementById('printModal').style.display = 'flex';
@@ -2156,6 +2168,8 @@ function printTC(studentId){
   if(!confirm('Transfer Certificate issue karna hai? TC No. is student ke record mein save ho jayega.')) return;
   document.getElementById('printModal').classList.remove('thermal-mode');
   document.getElementById('thermalPrintBtn').style.display = 'none';
+  const __tmBtn = document.getElementById('thermalModeBtn');
+  if(__tmBtn) __tmBtn.style.display = 'none';
   printModalFeeId = null;
   document.getElementById('printPage').innerHTML = tcFormHTML(s);
   document.getElementById('printModal').style.display = 'flex';
@@ -2189,6 +2203,8 @@ function printIdCard(studentId){
   if(!s){ alert('Student record nahi mila.'); return; }
   document.getElementById('printModal').classList.remove('thermal-mode');
   document.getElementById('thermalPrintBtn').style.display = 'none';
+  const __tmBtn = document.getElementById('thermalModeBtn');
+  if(__tmBtn) __tmBtn.style.display = 'none';
   printModalFeeId = null;
   document.getElementById('printPage').innerHTML = idCardHTML(s);
   document.getElementById('printModal').style.display = 'flex';
@@ -2204,7 +2220,7 @@ function thermalReceiptHTML(f, student){
         <div>${f.status === 'paid' ? 'FEE RECEIPT' : 'FEE CHALLAN'}</div>
       </div>
       <div class="t-line"></div>
-      <div class="t-row"><span>Student</span><span>${student ? student.name : '—'}</span></div>
+      <div class="t-row"><span>Student</span><span style="font-weight:700;">${student ? student.name : '—'}</span></div>
       <div class="t-row"><span>Adm No.</span><span>${student ? student.adm : '—'}</span></div>
       <div class="t-row"><span>Class/Sec</span><span>${student ? (student.cls||'—')+'/'+(student.section||'—') : '—'}</span></div>
       <div class="t-row"><span>Month</span><span>${f.month}</span></div>
@@ -2214,6 +2230,7 @@ function thermalReceiptHTML(f, student){
       <div class="t-line"></div>
       <div class="t-center">Printed: ${new Date().toLocaleString()}</div>
       <div class="t-center">Thank you!</div>
+      <div class="t-center" style="font-size:10px;margin-top:4px;">Software by Fazul Khan Chandio</div>
     </div>`;
 }
 function openChallanThermal(feeId){
@@ -2222,10 +2239,16 @@ function openChallanThermal(feeId){
   const student = students.find(s => s.id === f.studentId);
   document.getElementById('printModal').classList.add('thermal-mode');
   document.getElementById('printPage').innerHTML = thermalReceiptHTML(f, student);
-  const tBtn = document.getElementById('thermalPrintBtn');
-  tBtn.style.display = 'inline-block';
-  tBtn.textContent = '📄 Switch to Full-Page Receipt';
-  tBtn.onclick = () => openChallan(printModalFeeId);
+  const btBtn = document.getElementById('thermalPrintBtn');
+  btBtn.style.display = 'inline-block';
+  btBtn.textContent = '🧾 Print on Thermal Printer';
+  btBtn.onclick = printThermalBluetooth;
+  const modeBtn = document.getElementById('thermalModeBtn');
+  if(modeBtn){
+    modeBtn.style.display = 'inline-block';
+    modeBtn.textContent = '📄 Switch to Full-Page Receipt';
+    modeBtn.onclick = () => openChallan(printModalFeeId);
+  }
   document.getElementById('printModal').style.display = 'flex';
 }
 
@@ -2407,6 +2430,8 @@ function printStudentQr(){
   if(!s){ alert('Pehle koi student add karein.'); return; }
   document.getElementById('printModal').classList.remove('thermal-mode');
   document.getElementById('thermalPrintBtn').style.display = 'none';
+  const __tmBtn = document.getElementById('thermalModeBtn');
+  if(__tmBtn) __tmBtn.style.display = 'none';
   document.getElementById('printPage').innerHTML = `
     <div class="cert-wrap" style="text-align:center; border:2px solid var(--navy); border-radius:8px; padding:24px;">
       <h3 style="color:var(--navy); margin-bottom:4px;">${s.name}</h3>
@@ -3271,10 +3296,11 @@ async function printThermalBluetooth() {
       date: f.due || f.month || new Date().toLocaleDateString(),
       status: f.status || "paid"
     });
-    alert("✅ Receipt Bluetooth printer pe print ho gayi!");
+    const type = (window.schoolPrinter && window.schoolPrinter.connectionType === 'usb') ? 'USB' : 'Bluetooth';
+    alert("✅ Receipt " + type + " printer pe print ho gayi!");
   } catch (err) {
     console.error(err);
-    alert("❌ Print Failed:\n" + err.message + "\n\nChrome browser use karein aur Bluetooth on rakhein.");
+    alert("❌ Print Failed:\n" + err.message + "\n\nChrome/Edge use karein.\nBluetooth ON rakhein ya USB cable lagao.");
   }
 }
 
