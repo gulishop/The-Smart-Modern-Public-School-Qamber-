@@ -401,10 +401,24 @@
           </div>
           <div class="panel">
             <h3>Class Wise Students</h3>
+            <p class="hint">Aaj ki attendance ke saath. Filter se Absent / Not Marked classes nikaal sakte hain.</p>
+            <div class="form-grid" style="margin-bottom:12px; max-width:280px;">
+              <div class="field">
+                <label>Filter</label>
+                <select id="classWiseFilter" onchange="renderClassWiseCounts()">
+                  <option value="all">Sab Classes</option>
+                  <option value="absent">Sirf jahan Absent ho</option>
+                  <option value="unmarked">Sirf jahan Not Marked ho</option>
+                  <option value="incomplete">Absent ya Not Marked</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-scroll">
             <table>
-              <thead><tr><th>Class</th><th>Total Students</th></tr></thead>
+              <thead><tr><th>Class</th><th>Total</th><th>Present</th><th>Absent</th><th>Not Marked</th></tr></thead>
               <tbody id="classWiseBody"></tbody>
             </table>
+            </div>
             <div class="empty" id="classWiseEmpty" style="display:none;">Abhi tak koi student record nahi hai.</div>
           </div>
           <div class="panel admin-only">
@@ -3017,17 +3031,39 @@ function saveSettings(){
 function renderClassWiseCounts(){
   const body = document.getElementById('classWiseBody');
   if(!body) return;
+  const today = localDateStr();
+  const todayRec = attendanceRecords[today] || {};
   const counts = {};
-  const labels = {};
   students.forEach(s=>{
     const key = classKey(s.cls) || 'unassigned';
-    labels[key] = classKey(s.cls) ? classDisplay(s.cls) : 'Unassigned';
-    counts[key] = (counts[key] || 0) + 1;
+    const label = classKey(s.cls) ? classDisplay(s.cls) : 'Unassigned';
+    if(!counts[key]) counts[key] = { label, total:0, present:0, absent:0, unmarked:0 };
+    counts[key].total++;
+    const st = todayRec[attKey(s.id)] || todayRec[s.id] || '';
+    if(st === 'present') counts[key].present++;
+    else if(st === 'absent') counts[key].absent++;
+    else counts[key].unmarked++;
   });
-  const classes = Object.keys(counts).sort((a,b)=> labels[a].localeCompare(labels[b], undefined, {numeric:true}));
+  const filterEl = document.getElementById('classWiseFilter');
+  const filter = filterEl ? filterEl.value : 'all';
+  let classes = Object.keys(counts).sort((a,b)=> counts[a].label.localeCompare(counts[b].label, undefined, {numeric:true}));
+  if(filter === 'absent') classes = classes.filter(k => counts[k].absent > 0);
+  else if(filter === 'unmarked') classes = classes.filter(k => counts[k].unmarked > 0);
+  else if(filter === 'incomplete') classes = classes.filter(k => counts[k].absent > 0 || counts[k].unmarked > 0);
   const emptyEl = document.getElementById('classWiseEmpty');
   if(emptyEl) emptyEl.style.display = classes.length ? 'none' : 'block';
-  body.innerHTML = classes.map(c => `<tr><td>${labels[c]}</td><td>${counts[c]}</td></tr>`).join('');
+  body.innerHTML = classes.map(c => {
+    const x = counts[c];
+    const absCell = x.absent ? `<b style="color:var(--red);">${x.absent}</b>` : '0';
+    const unCell = x.unmarked ? `<b style="color:var(--maroon);">${x.unmarked}</b>` : '0';
+    return `<tr>
+      <td>${x.label}</td>
+      <td>${x.total}</td>
+      <td style="color:var(--green); font-weight:600;">${x.present}</td>
+      <td>${absCell}</td>
+      <td>${unCell}</td>
+    </tr>`;
+  }).join('');
 }
 function renderDashboard(){
   document.getElementById('statStudents').textContent = students.length;
