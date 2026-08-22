@@ -1057,7 +1057,6 @@ function startPresenceHeartbeat(){
   stopPresenceHeartbeat();
   const beat = ()=>{
     const now = Date.now();
-    // Optimistic local update — wait for cloud listener ke baghair turant Online dikhe
     presenceMap[String(currentStaffId)] = now;
     const idx = presence.findIndex(p => String(p.id) === String(currentStaffId));
     if(idx >= 0) presence[idx] = { id: currentStaffId, lastSeen: now };
@@ -1067,7 +1066,7 @@ function startPresenceHeartbeat(){
     if(typeof renderDashboard === 'function') renderDashboard();
   };
   beat();
-  presenceHeartbeatTimer = setInterval(beat, 12000); // 12 sec — fast online status
+  presenceHeartbeatTimer = setInterval(beat, 12000);
 }
 function stopPresenceHeartbeat(){
   if(presenceHeartbeatTimer){ clearInterval(presenceHeartbeatTimer); presenceHeartbeatTimer = null; }
@@ -3222,7 +3221,6 @@ const realtimeSaveStatus = () => {
 };
 studentsCol.listen(()=>students, v=>{ students=v; }, ()=>{ renderStudents(); renderDashboard(); renderFeeStudentOptions(); renderAttendanceForm(); realtimeSaveStatus(); });
 staffCol.listen(()=>staff, v=>{ staff=v; }, ()=>{ renderStaff(); renderDashboard(); realtimeSaveStatus(); });
-// Presence: custom listener — hasPendingWrites SKIP NAHI (warna heartbeat ke dauran doosron ka status miss ho jata hai)
 if(presenceCol.colRef){
   presenceCol.colRef.onSnapshot(function(snap){
     const arr = [];
@@ -3230,18 +3228,10 @@ if(presenceCol.colRef){
     presence = arr;
     presenceMap = {};
     presence.forEach(p=>{ if(p && p.id != null) presenceMap[String(p.id)] = p.lastSeen; });
-    // Apna optimistic heartbeat mat mitao agar server abhi thoda peeche hai
-    if(currentStaffId && presenceMap[String(currentStaffId)]){
-      /* server value already in map */
-    } else if(currentStaffId && presenceHeartbeatTimer){
-      // local beat recent hai to map mein rakho
-      presenceMap[String(currentStaffId)] = presenceMap[String(currentStaffId)] || Date.now();
-    }
     if(typeof renderStaff === 'function') renderStaff();
     if(typeof renderDashboard === 'function') renderDashboard();
   }, function(err){ console.warn('Presence realtime sync error:', err); });
 }
-// Har 10 second baad staff/dashboard refresh — offline threshold cross karne par turant Offline dikhe
 setInterval(()=>{ if(typeof renderStaff === 'function') renderStaff(); if(typeof renderDashboard === 'function') renderDashboard(); }, 10000);
 noticesCol.listen(()=>notices, v=>{ notices=v; }, ()=>{ renderNotices(); realtimeSaveStatus(); });
 eventsCol.listen(()=>events, v=>{ events=v; }, ()=>{ renderEvents(); realtimeSaveStatus(); });
@@ -3335,7 +3325,6 @@ window.addEventListener('online', ()=>{
   if(s) s.textContent = 'Online ho gaye — sync ho raha hai…';
   if(SCHOOL_DOC) saveData();
   try{
-    // Attendance dobara load (offline fail ho sakta tha)
     const today = localDateStr();
     loadedAttendanceDates.delete(today);
     ensureAttendanceDateLoaded(today);
@@ -3349,7 +3338,6 @@ window.addEventListener('online', ()=>{
         saveAttendanceDateToCloud(date);
       }
     });
-    // Presence heartbeat dobara start
     if(currentRole === 'user' && currentStaffId) startPresenceHeartbeat();
   }catch(e){ console.warn('Online resync failed:', e); }
 });
@@ -3359,9 +3347,8 @@ window.addEventListener('offline', ()=>{
 });
 </script>
     <script>
-  // ===== AUTO HARD-REFRESH — deploy ke baad sab devices ~5 sec mein khud update =====
   window.__APP_BUILD__ = '20260822-sync-presence-2';
-  (function autoHardRefresh(){
+  (function(){
     var reloading = false;
     function forceReload(){
       if(reloading) return;
