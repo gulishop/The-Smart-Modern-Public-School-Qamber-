@@ -1051,13 +1051,23 @@ let currentStaffId = null;
 // presence/online heartbeat sahi staff ke naam se dobara shuru ho sake.
 const STAFF_SESSION_KEY = 'smp_qamber_current_staff_id';
 let presenceHeartbeatTimer = null;
-const PRESENCE_ONLINE_THRESHOLD_MS = 40000; // 40 sec — is se zyada purana lastSeen ho to "Offline" (fast update)
+const PRESENCE_ONLINE_THRESHOLD_MS = 45000; // 45 sec — 12s heartbeat + network lag buffer
 function startPresenceHeartbeat(){
   if(!presenceCol.colRef || !currentStaffId) return;
   stopPresenceHeartbeat();
-  const beat = ()=> presenceCol.add({ id: currentStaffId, lastSeen: Date.now() });
+  const beat = ()=>{
+    const now = Date.now();
+    // Optimistic local update — wait for cloud listener ke baghair turant Online dikhe
+    presenceMap[String(currentStaffId)] = now;
+    const idx = presence.findIndex(p => String(p.id) === String(currentStaffId));
+    if(idx >= 0) presence[idx] = { id: currentStaffId, lastSeen: now };
+    else presence.push({ id: currentStaffId, lastSeen: now });
+    presenceCol.add({ id: currentStaffId, lastSeen: now });
+    if(typeof renderStaff === 'function') renderStaff();
+    if(typeof renderDashboard === 'function') renderDashboard();
+  };
   beat();
-  presenceHeartbeatTimer = setInterval(beat, 20000); // 20 sec heartbeat (fast online/offline update)
+  presenceHeartbeatTimer = setInterval(beat, 12000); // 12 sec — fast online status
 }
 function stopPresenceHeartbeat(){
   if(presenceHeartbeatTimer){ clearInterval(presenceHeartbeatTimer); presenceHeartbeatTimer = null; }
@@ -1077,12 +1087,19 @@ function attendanceDateRef(date){
 function subscribeAttendanceDate(date){
   if(!db || !date || attendanceDateUnsubs[date]) return;
   attendanceDateUnsubs[date] = attendanceDateRef(date).onSnapshot({ includeMetadataChanges:true }, function(doc){
-    if(!doc.exists || doc.metadata.hasPendingWrites) return;
-    // Server data merge (replace mat) taake local recent marks na mitain. Keys string normalize.
+    if(doc.metadata.hasPendingWrites) return;
+    if(!doc.exists) return;
     const serverData = doc.data() || {};
     const merged = Object.assign({}, attendanceRecords[date] || {});
     Object.keys(serverData).forEach(k => { merged[attKey(k)] = serverData[k]; });
     attendanceRecords[date] = merged;
+    loadedAttendanceDates.add(date);
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const existing = raw ? JSON.parse(raw) : {};
+      existing.attendanceRecords = attendanceRecords;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+    }catch(e){}
     const attDateEl = document.getElementById('attDate');
     const activeDate = (attDateEl && attDateEl.value) || localDateStr();
     if(activeDate === date && typeof renderAttendanceForm === 'function') renderAttendanceForm();
@@ -1090,8 +1107,9 @@ function subscribeAttendanceDate(date){
   }, function(err){ console.warn('Attendance realtime sync error (' + date + '):', err); });
 }
 function ensureAttendanceDateLoaded(date){
-  if(!db || !date || loadedAttendanceDates.has(date)) return Promise.resolve();
-  loadedAttendanceDates.add(date);
+  if(!db || !date) return Promise.resolve();
+  subscribeAttendanceDate(date);
+  if(loadedAttendanceDates.has(date)) return Promise.resolve();
   return attendanceDateRef(date).get().then(doc=>{
     if(doc.exists){
       const serverData = doc.data() || {};
@@ -1099,9 +1117,23 @@ function ensureAttendanceDateLoaded(date){
       const normalized = {};
       Object.keys(merged).forEach(k => { normalized[attKey(k)] = merged[k]; });
       attendanceRecords[date] = normalized;
+      loadedAttendanceDates.add(date);
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const existing = raw ? JSON.parse(raw) : {};
+        existing.attendanceRecords = attendanceRecords;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+      }catch(e){}
+      const attDateEl = document.getElementById('attDate');
+      const activeDate = (attDateEl && attDateEl.value) || localDateStr();
+      if(activeDate === date && typeof renderAttendanceForm === 'function') renderAttendanceForm();
+      if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
+    } else if(attendanceRecords[date] && Object.keys(attendanceRecords[date]).length){
+      loadedAttendanceDates.add(date);
     }
-    subscribeAttendanceDate(date);
-  }).catch(err=>{ console.warn('Attendance load failed for ' + date + ':', err); });
+  }).catch(err=>{
+    console.warn('Attendance load failed for ' + date + ':', err);
+  });
 }
 function saveAttendanceDateToCloud(date){
   const ref = attendanceDateRef(date);
@@ -1338,6 +1370,11 @@ function loadData(){
     quoteLogCol.loadAll().then(arr=>{ quoteLog = arr; }),
     loginLogCol.loadAll().then(arr=>{ loginLog = arr; }),
     qrScanLogCol.loadAll().then(arr=>{ qrScanLog = arr; }),
+    presenceCol.loadAll().then(arr=>{
+      presence = arr || [];
+      presenceMap = {};
+      presence.forEach(p=>{ if(p && p.id != null) presenceMap[String(p.id)] = p.lastSeen; });
+    }),
     ensureAttendanceDateLoaded(today)
   ];
   return Promise.all([corePromise].concat(collectionPromises)).then(()=>{
@@ -3185,15 +3222,27 @@ const realtimeSaveStatus = () => {
 };
 studentsCol.listen(()=>students, v=>{ students=v; }, ()=>{ renderStudents(); renderDashboard(); renderFeeStudentOptions(); renderAttendanceForm(); realtimeSaveStatus(); });
 staffCol.listen(()=>staff, v=>{ staff=v; }, ()=>{ renderStaff(); renderDashboard(); realtimeSaveStatus(); });
-presenceCol.listen(()=>presence, v=>{
-  presence = v;
-  presenceMap = {};
-  presence.forEach(p=>{ if(p && p.id != null) presenceMap[String(p.id)] = p.lastSeen; });
-}, ()=>{ renderStaff(); renderDashboard(); });
-// Har 30 second baad staff list aur dashboard dobara render karo — taake koi staff
-// jiska heartbeat purana ho chuka hai (jaise browser band kar diya bina Logout kiye)
-// khud-ba-khud "Offline" dikhne lag jaye, na ke sirf tab jab koi naya cloud update aaye.
-setInterval(()=>{ if(typeof renderStaff === 'function') renderStaff(); if(typeof renderDashboard === 'function') renderDashboard(); }, 15000); // 15 sec — staff online/offline status jaldi refresh ho
+// Presence: custom listener — hasPendingWrites SKIP NAHI (warna heartbeat ke dauran doosron ka status miss ho jata hai)
+if(presenceCol.colRef){
+  presenceCol.colRef.onSnapshot(function(snap){
+    const arr = [];
+    snap.forEach(d => { const data = d.data(); if(data) arr.push(data); });
+    presence = arr;
+    presenceMap = {};
+    presence.forEach(p=>{ if(p && p.id != null) presenceMap[String(p.id)] = p.lastSeen; });
+    // Apna optimistic heartbeat mat mitao agar server abhi thoda peeche hai
+    if(currentStaffId && presenceMap[String(currentStaffId)]){
+      /* server value already in map */
+    } else if(currentStaffId && presenceHeartbeatTimer){
+      // local beat recent hai to map mein rakho
+      presenceMap[String(currentStaffId)] = presenceMap[String(currentStaffId)] || Date.now();
+    }
+    if(typeof renderStaff === 'function') renderStaff();
+    if(typeof renderDashboard === 'function') renderDashboard();
+  }, function(err){ console.warn('Presence realtime sync error:', err); });
+}
+// Har 10 second baad staff/dashboard refresh — offline threshold cross karne par turant Offline dikhe
+setInterval(()=>{ if(typeof renderStaff === 'function') renderStaff(); if(typeof renderDashboard === 'function') renderDashboard(); }, 10000);
 noticesCol.listen(()=>notices, v=>{ notices=v; }, ()=>{ renderNotices(); realtimeSaveStatus(); });
 eventsCol.listen(()=>events, v=>{ events=v; }, ()=>{ renderEvents(); realtimeSaveStatus(); });
 examResultsCol.listen(()=>examResults, v=>{ examResults=v; }, ()=>{ renderResults(); realtimeSaveStatus(); });
@@ -3285,6 +3334,24 @@ window.addEventListener('online', ()=>{
   const s = document.getElementById('saveStatus');
   if(s) s.textContent = 'Online ho gaye — sync ho raha hai…';
   if(SCHOOL_DOC) saveData();
+  try{
+    // Attendance dobara load (offline fail ho sakta tha)
+    const today = localDateStr();
+    loadedAttendanceDates.delete(today);
+    ensureAttendanceDateLoaded(today);
+    const attDateEl = document.getElementById('attDate');
+    if(attDateEl && attDateEl.value && attDateEl.value !== today){
+      loadedAttendanceDates.delete(attDateEl.value);
+      ensureAttendanceDateLoaded(attDateEl.value);
+    }
+    Object.keys(attendanceRecords||{}).forEach(date=>{
+      if(attendanceRecords[date] && Object.keys(attendanceRecords[date]).length){
+        saveAttendanceDateToCloud(date);
+      }
+    });
+    // Presence heartbeat dobara start
+    if(currentRole === 'user' && currentStaffId) startPresenceHeartbeat();
+  }catch(e){ console.warn('Online resync failed:', e); }
 });
 window.addEventListener('offline', ()=>{
   const s = document.getElementById('saveStatus');
@@ -3292,11 +3359,10 @@ window.addEventListener('offline', ()=>{
 });
 </script>
     <script>
-  // ===== AUTO HARD-REFRESH (sab devices) =====
-  // Har deploy par yeh build id badlein — purani open apps ~5 sec mein khud reload ho jayengi.
-  window.__APP_BUILD__ = '20260822-att-sync-1';
+  // ===== AUTO HARD-REFRESH — deploy ke baad sab devices ~5 sec mein khud update =====
+  window.__APP_BUILD__ = '20260822-sync-presence-2';
   (function autoHardRefresh(){
-    let reloading = false;
+    var reloading = false;
     function forceReload(){
       if(reloading) return;
       reloading = true;
@@ -3307,7 +3373,6 @@ window.addEventListener('offline', ()=>{
           }).catch(function(){});
         }
       }catch(e){}
-      // Cache bypass reload
       var u = location.href.split('#')[0];
       u += (u.indexOf('?') >= 0 ? '&' : '?') + '_r=' + Date.now();
       location.replace(u);
@@ -3326,7 +3391,6 @@ window.addEventListener('offline', ()=>{
         }
       }).catch(function(){});
     }
-    // Pehli check 4s baad, phir har 5s — taake deploy ke baad sab devices auto update
     setTimeout(checkPageVersion, 4000);
     setInterval(checkPageVersion, 5000);
     document.addEventListener('visibilitychange', function(){
@@ -3337,17 +3401,12 @@ window.addEventListener('offline', ()=>{
 
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/The-Smart-Modern-Public-School-Qamber-/sw.js', { updateViaCache: 'none' }).then(function(reg){
-      // Har 3 second baad khud check karo ke naya version server par hai ya nahi —
-      // taake installed/khula hua PWA bohat jald (~3 sec) update ko detect kar le,
-      // sirf manual refresh ya visibility change ka intezaar na kare.
       function checkForUpdate(){ reg.update().catch(function(){}); }
       document.addEventListener('visibilitychange', function(){
         if(document.visibilityState === 'visible') checkForUpdate();
       });
       setInterval(checkForUpdate, 3 * 1000);
     });
-    // Jab naya service worker (naya update) control le le, to khula hua tab
-    // khud-ba-khud ek dafa refresh ho jaye — taake user ko manually kuch na karna paray.
     let swRefreshed = false;
     navigator.serviceWorker.addEventListener('controllerchange', function(){
       if(swRefreshed) return;
