@@ -999,6 +999,11 @@ function localDateStr(d){
 }
 // Attendance record keys hamesha string — number vs string mismatch se status "miss" na ho.
 function attKey(id){ return String(id); }
+// Student contact: staff list/print par hide; Admin ko full number
+function contactDisplayForRole(contact){
+  if(session && session.role === 'admin') return contact || '—';
+  return contact ? '••••••••' : '—';
+}
 // ===== FIRESTORE DATA SPLIT — HAR CHEEZ APNI ALAG DOCUMENT/COLLECTION MEIN =====
 // Firestore ki EK document sirf 1MB tak ho sakti hai. Pehle poora school ka data
 // (students, staff, fees, attendance, quoteLog, loginLog, waghera) ek hi
@@ -1769,7 +1774,14 @@ function addStudent(){
     s.cls = document.getElementById('stuClass').value.trim();
     s.section = document.getElementById('stuSection').value.trim();
     s.roll = document.getElementById('stuRoll').value.trim();
-    s.contact = document.getElementById('stuContact').value.trim();
+    const newContact = document.getElementById('stuContact').value.trim();
+    // Staff agar contact khali chhore to purana number mat mitao; Admin hamesha jo likhe woh save
+    if(session && session.role === 'admin'){
+      s.contact = newContact;
+    } else if(newContact){
+      s.contact = newContact;
+    }
+    // else staff left blank → keep s.contact as-is
     s.dob = document.getElementById('stuDOB').value;
     s.gender = document.getElementById('stuGender').value;
     s.admDate = document.getElementById('stuAdmDate').value || s.admDate;
@@ -1809,7 +1821,15 @@ function editStudent(id){
   document.getElementById('stuClass').value = s.cls || '';
   document.getElementById('stuSection').value = s.section || '';
   document.getElementById('stuRoll').value = s.roll || '';
-  document.getElementById('stuContact').value = s.contact || '';
+  const contactInput = document.getElementById('stuContact');
+  if(session && session.role === 'admin'){
+    contactInput.value = s.contact || '';
+    contactInput.placeholder = '';
+  } else {
+    // Staff ko purana number mat dikhao — naya likhein to update, khali chhoren to purana save rahe
+    contactInput.value = '';
+    contactInput.placeholder = s.contact ? '•••• saved (change ke liye naya number)' : 'Contact No.';
+  }
   document.getElementById('stuDOB').value = s.dob || '';
   document.getElementById('stuGender').value = s.gender || 'Male';
   document.getElementById('stuAdmDate').value = s.admDate || '';
@@ -1823,6 +1843,8 @@ function editStudent(id){
 function cancelEditStudent(){
   editingStudentId = null;
   ['stuName','stuFather','stuClass','stuSection','stuRoll','stuContact','stuDOB','stuAddress'].forEach(id => document.getElementById(id).value = '');
+  const ci = document.getElementById('stuContact');
+  if(ci) ci.placeholder = 'Contact No.';
   document.getElementById('stuAdmDate').value = new Date().toISOString().slice(0,10);
   document.getElementById('stuFormTitle').textContent = 'New Admission / Student Entry';
   document.getElementById('stuSubmitBtn').textContent = '+ Add Student';
@@ -1862,7 +1884,12 @@ function renderStudents(){
   document.getElementById('studentEmpty').style.display = filtered.length ? 'none' : 'block';
   filtered.forEach(s => {
     const canDelete = session && session.role === 'admin';
-    tbody.innerHTML += `<tr><td>${s.adm}</td><td>${s.name}</td><td>${s.father||'—'}</td><td>${s.cls||'—'}</td><td>${s.section||'—'}</td><td>${s.roll||'—'}</td><td>${s.contact||'—'}</td><td style="display:flex; gap:6px; flex-wrap:wrap;">
+    const isAdmin = session && session.role === 'admin';
+    // Staff se contact hide — sirf Admin ko number dikhe
+    const contactCell = isAdmin
+      ? (s.contact || '—')
+      : (s.contact ? '<span style="color:var(--muted); letter-spacing:1px;" title="Contact saved (sirf Admin dekh sakta hai)">••••••••</span>' : '—');
+    tbody.innerHTML += `<tr><td>${s.adm}</td><td>${s.name}</td><td>${s.father||'—'}</td><td>${s.cls||'—'}</td><td>${s.section||'—'}</td><td>${s.roll||'—'}</td><td>${contactCell}</td><td style="display:flex; gap:6px; flex-wrap:wrap;">
       <button class="btn small" style="background:var(--navy);" onclick="editStudent(${s.id})">✏️ Edit</button>
       <button class="btn small gold" onclick="printAdmissionForm(${s.id})">🖨️ Form</button>
       <button class="btn small" style="background:#5b4636; color:#fff;" onclick="printIdCard(${s.id})">🪪 ID Card</button>
@@ -2208,7 +2235,7 @@ function admissionFormHTML(s){
         <div class="adm-row"><span class="k">Class</span><span class="v">${s.cls || '—'}</span></div>
         <div class="adm-row"><span class="k">Section</span><span class="v">${s.section || '—'}</span></div>
         <div class="adm-row"><span class="k">Roll No.</span><span class="v">${s.roll || '—'}</span></div>
-        <div class="adm-row"><span class="k">Contact No.</span><span class="v">${s.contact || '—'}</span></div>
+        <div class="adm-row"><span class="k">Contact No.</span><span class="v">${contactDisplayForRole(s.contact)}</span></div>
         <div class="adm-row full"><span class="k">Address</span><span class="v">${s.address || '—'}</span></div>
       </div>
       <div class="adm-declaration">
@@ -2293,7 +2320,7 @@ function idCardHTML(s){
         <div class="idcard-row"><span class="k">Father Name</span><span class="v">${s.father || '—'}</span></div>
         <div class="idcard-row"><span class="k">Class / Section</span><span class="v">${(s.cls||'—')+' / '+(s.section||'—')}</span></div>
         <div class="idcard-row"><span class="k">Roll No.</span><span class="v">${s.roll || '—'}</span></div>
-        <div class="idcard-row"><span class="k">Contact No.</span><span class="v">${s.contact || '—'}</span></div>
+        <div class="idcard-row"><span class="k">Contact No.</span><span class="v">${contactDisplayForRole(s.contact)}</span></div>
         <div class="idcard-row"><span class="k">Valid For</span><span class="v">Academic Year ${new Date().getFullYear()}</span></div>
       </div>
       <div class="idcard-foot">${schoolSettings.address || 'Qamber, Sindh'}</div>
