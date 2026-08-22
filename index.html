@@ -3292,6 +3292,49 @@ window.addEventListener('offline', ()=>{
 });
 </script>
     <script>
+  // ===== AUTO HARD-REFRESH (sab devices) =====
+  // Har deploy par yeh build id badlein — purani open apps ~5 sec mein khud reload ho jayengi.
+  window.__APP_BUILD__ = '20260822-att-sync-1';
+  (function autoHardRefresh(){
+    let reloading = false;
+    function forceReload(){
+      if(reloading) return;
+      reloading = true;
+      try{
+        if('serviceWorker' in navigator){
+          navigator.serviceWorker.getRegistrations().then(function(regs){
+            regs.forEach(function(r){ r.update().catch(function(){}); });
+          }).catch(function(){});
+        }
+      }catch(e){}
+      // Cache bypass reload
+      var u = location.href.split('#')[0];
+      u += (u.indexOf('?') >= 0 ? '&' : '?') + '_r=' + Date.now();
+      location.replace(u);
+    }
+    function checkPageVersion(){
+      if(reloading || document.hidden) return;
+      var url = location.pathname + (location.search || '') + (location.search ? '&' : '?') + '_vcheck=' + Date.now();
+      fetch(url, { cache: 'no-store', credentials: 'same-origin' }).then(function(res){
+        if(!res.ok) return;
+        return res.text();
+      }).then(function(html){
+        if(!html || reloading) return;
+        var m = html.match(/window\.__APP_BUILD__\s*=\s*['"]([^'"]+)['"]/);
+        if(m && m[1] && m[1] !== window.__APP_BUILD__){
+          forceReload();
+        }
+      }).catch(function(){});
+    }
+    // Pehli check 4s baad, phir har 5s — taake deploy ke baad sab devices auto update
+    setTimeout(checkPageVersion, 4000);
+    setInterval(checkPageVersion, 5000);
+    document.addEventListener('visibilitychange', function(){
+      if(document.visibilityState === 'visible') setTimeout(checkPageVersion, 500);
+    });
+    window.addEventListener('online', function(){ setTimeout(checkPageVersion, 800); });
+  })();
+
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/The-Smart-Modern-Public-School-Qamber-/sw.js', { updateViaCache: 'none' }).then(function(reg){
       // Har 3 second baad khud check karo ke naya version server par hai ya nahi —
