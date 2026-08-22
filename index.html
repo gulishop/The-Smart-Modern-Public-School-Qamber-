@@ -561,6 +561,16 @@
             <div class="form-grid">
               <div class="field"><label>Date</label><input id="attDate" type="date"></div>
               <div class="field"><label>Class</label><select id="attClassFilter"><option value="">Sab Classes</option></select></div>
+              <div class="field"><label>Status Filter</label><select id="attStatusFilter">
+                <option value="">Sab Status</option>
+                <option value="present">Present</option>
+                <option value="absent">Absent</option>
+                <option value="unmarked">Not Marked</option>
+              </select></div>
+            </div>
+            <div id="attStatusBanner" style="display:none; margin-bottom:10px; padding:8px 12px; background:var(--gold); color:#1a1a1a; border-radius:6px; font-size:13px; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+              <span id="attStatusBannerText"></span>
+              <button class="btn small" style="background:var(--navy); margin:0;" onclick="clearAttStatusFilter()">Clear Filter</button>
             </div>
             <table>
               <thead><tr><th>Adm #</th><th>Name</th><th>Class</th><th>Status</th><th>WhatsApp</th></tr></thead>
@@ -2377,9 +2387,28 @@ function renderAttendanceForm(){
   const tbody = document.getElementById('attTable');
   populateAttClassFilter();
   const clsFilter = (document.getElementById('attClassFilter')||{}).value || '';
-  const list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : students;
-  document.getElementById('attEmpty').style.display = list.length ? 'none' : 'block';
+  const statusFilter = (document.getElementById('attStatusFilter')||{}).value || '';
   const dayRecord = attendanceRecords[date] || {};
+  let list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : students.slice();
+  if(statusFilter === 'present') list = list.filter(s => (dayRecord[attKey(s.id)] || dayRecord[s.id] || '') === 'present');
+  else if(statusFilter === 'absent') list = list.filter(s => (dayRecord[attKey(s.id)] || dayRecord[s.id] || '') === 'absent');
+  else if(statusFilter === 'unmarked') list = list.filter(s => !(dayRecord[attKey(s.id)] || dayRecord[s.id] || ''));
+  const banner = document.getElementById('attStatusBanner');
+  const bannerText = document.getElementById('attStatusBannerText');
+  if(banner && bannerText){
+    if(statusFilter || clsFilter){
+      const parts = [];
+      if(clsFilter) parts.push('Class: ' + (document.getElementById('attClassFilter').selectedOptions[0]?.text || clsFilter));
+      if(statusFilter === 'absent') parts.push('Absent students');
+      else if(statusFilter === 'unmarked') parts.push('Not Marked students');
+      else if(statusFilter === 'present') parts.push('Present students');
+      bannerText.textContent = parts.join(' · ') + ' (' + list.length + ')';
+      banner.style.display = 'flex';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+  document.getElementById('attEmpty').style.display = list.length ? 'none' : 'block';
   // Fast render: ek hi baar innerHTML set (loop mein += bohat slow hota hai 200+ students par)
   const rows = list.map(s => {
     const status = dayRecord[attKey(s.id)] || dayRecord[s.id] || '';
@@ -2448,7 +2477,7 @@ function saveAttendance(){
   alert('Attendance save ho gayi is date k liye: ' + date);
   renderAll();
 }
-document.addEventListener('change', function(e){ if(e.target.id === 'attDate' || e.target.id === 'attClassFilter') renderAttendanceForm(); });
+document.addEventListener('change', function(e){ if(e.target.id === 'attDate' || e.target.id === 'attClassFilter' || e.target.id === 'attStatusFilter') renderAttendanceForm(); });
 
 /* ===================== QR CODE ATTENDANCE ===================== */
 let qrScannerInstance = null;
@@ -3028,6 +3057,33 @@ function saveSettings(){
 }
 
 /* ===================== DASHBOARD / REPORTS ===================== */
+function openClassAttendance(clsKey, status){
+  const dateEl = document.getElementById('attDate');
+  if(dateEl) dateEl.value = localDateStr();
+  populateAttClassFilter();
+  const clsEl = document.getElementById('attClassFilter');
+  if(clsEl){
+    // ensure option exists
+    if(clsKey && ![...clsEl.options].some(o => o.value === clsKey)){
+      const opt = document.createElement('option');
+      opt.value = clsKey;
+      opt.textContent = classDisplay(clsKey) || clsKey;
+      clsEl.appendChild(opt);
+    }
+    clsEl.value = clsKey || '';
+  }
+  const stEl = document.getElementById('attStatusFilter');
+  if(stEl) stEl.value = status || '';
+  showView('attendance');
+  renderAttendanceForm();
+}
+function clearAttStatusFilter(){
+  const stEl = document.getElementById('attStatusFilter');
+  if(stEl) stEl.value = '';
+  const clsEl = document.getElementById('attClassFilter');
+  if(clsEl) clsEl.value = '';
+  renderAttendanceForm();
+}
 function renderClassWiseCounts(){
   const body = document.getElementById('classWiseBody');
   if(!body) return;
@@ -3054,12 +3110,20 @@ function renderClassWiseCounts(){
   if(emptyEl) emptyEl.style.display = classes.length ? 'none' : 'block';
   body.innerHTML = classes.map(c => {
     const x = counts[c];
-    const absCell = x.absent ? `<b style="color:var(--red);">${x.absent}</b>` : '0';
-    const unCell = x.unmarked ? `<b style="color:var(--maroon);">${x.unmarked}</b>` : '0';
+    const keyJs = JSON.stringify(c);
+    const absCell = x.absent
+      ? `<span style="color:var(--red); font-weight:700; cursor:pointer; text-decoration:underline;" onclick='openClassAttendance(${keyJs},"absent")' title="Absent students dekhein">${x.absent}</span>`
+      : '0';
+    const unCell = x.unmarked
+      ? `<span style="color:var(--maroon); font-weight:700; cursor:pointer; text-decoration:underline;" onclick='openClassAttendance(${keyJs},"unmarked")' title="Not marked students dekhein">${x.unmarked}</span>`
+      : '0';
+    const presentCell = x.present
+      ? `<span style="color:var(--green); font-weight:600; cursor:pointer; text-decoration:underline;" onclick='openClassAttendance(${keyJs},"present")' title="Present students dekhein">${x.present}</span>`
+      : `<span style="color:var(--green); font-weight:600;">0</span>`;
     return `<tr>
       <td>${x.label}</td>
-      <td>${x.total}</td>
-      <td style="color:var(--green); font-weight:600;">${x.present}</td>
+      <td style="cursor:pointer; text-decoration:underline;" onclick='openClassAttendance(${keyJs},"")' title="Is class ki attendance">${x.total}</td>
+      <td>${presentCell}</td>
       <td>${absCell}</td>
       <td>${unCell}</td>
     </tr>`;
