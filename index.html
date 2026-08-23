@@ -356,8 +356,12 @@
         <li><button data-view="students" onclick="showView('students')">👨‍🎓 Student Management</button></li>
         <li><button data-view="staff" onclick="showView('staff')">👩‍🏫 Teachers &amp; Staff</button></li>
         <li class="admin-only"><button data-view="fees" onclick="showView('fees')">💰 Fees &amp; Challan</button></li>
+        <li class="admin-only"><button data-view="expenses" onclick="showView('expenses')">🧾 School Expenses</button></li>
+        <li class="admin-only"><button data-view="salary" onclick="showView('salary')">💵 Staff Salary</button></li>
         <li><button data-view="attendance" onclick="showView('attendance')">📅 Attendance</button></li>
+        <li class="admin-only"><button data-view="staffattendance" onclick="showView('staffattendance')">👤 Staff Attendance</button></li>
         <li><button data-view="qrattendance" onclick="showView('qrattendance')">🔳 QR Attendance</button></li>
+
         <li><button data-view="timetable" onclick="showView('timetable')">🗓️ Timetable</button></li>
         <li><button data-view="homework" onclick="showView('homework')">📚 Homework / Assignments</button></li>
         <li><button data-view="notices" onclick="showView('notices')">📢 Notice Board</button></li>
@@ -546,8 +550,95 @@
           </div>
         </div>
 
+        <!-- SCHOOL EXPENSES -->
+        <div class="view" id="view-expenses">
+          <div class="panel admin-only">
+            <h3>Add School Expense</h3>
+            <div class="form-grid">
+              <div class="field"><label>Date</label><input id="expDate" type="date"></div>
+              <div class="field"><label>Category</label>
+                <select id="expCategory">
+                  <option value="Utilities">Utilities (Bijli / Gas / Water)</option>
+                  <option value="Stationery">Stationery / Books</option>
+                  <option value="Maintenance">Maintenance / Repair</option>
+                  <option value="Transport">Transport / Fuel</option>
+                  <option value="Events">Events / Functions</option>
+                  <option value="Staff Salary">Staff Salary Payment</option>
+                  <option value="Misc">Miscellaneous</option>
+                </select>
+              </div>
+              <div class="field"><label>Amount (Rs.)</label><input id="expAmount" type="number" min="0" step="1"></div>
+              <div class="field"><label>Note / Description</label><input id="expNote" type="text" placeholder="e.g. August electricity bill"></div>
+            </div>
+            <button class="btn green" onclick="addExpense()">+ Add Expense</button>
+          </div>
+          <div class="panel">
+            <h3>Expense Records</h3>
+            <div class="form-grid" style="margin-bottom:12px;">
+              <div class="field"><label>Filter Month</label><input id="expFilterMonth" type="month" onchange="renderExpenses()"></div>
+              <div class="field"><label>Category</label>
+                <select id="expFilterCat" onchange="renderExpenses()">
+                  <option value="">All Categories</option>
+                  <option value="Utilities">Utilities</option>
+                  <option value="Stationery">Stationery</option>
+                  <option value="Maintenance">Maintenance</option>
+                  <option value="Transport">Transport</option>
+                  <option value="Events">Events</option>
+                  <option value="Staff Salary">Staff Salary</option>
+                  <option value="Misc">Misc</option>
+                </select>
+              </div>
+            </div>
+            <p class="hint" id="expTotalHint">Total: Rs. 0</p>
+            <table>
+              <thead><tr><th>Date</th><th>Category</th><th>Amount</th><th>Note</th><th></th></tr></thead>
+              <tbody id="expTable"></tbody>
+            </table>
+            <div class="empty" id="expEmpty">Abhi koi expense record nahi hai.</div>
+          </div>
+        </div>
+
+        <!-- STAFF ATTENDANCE -->
+        <div class="view" id="view-staffattendance">
+          <div class="panel admin-only">
+            <h3>Mark Staff Attendance</h3>
+            <div class="form-grid">
+              <div class="field"><label>Date</label><input id="staffAttDate" type="date" onchange="renderStaffAttendanceForm()"></div>
+            </div>
+            <p class="hint">Har staff ke liye Present / Absent mark karein. Salary is attendance se automatic calculate hoti hai.</p>
+            <table>
+              <thead><tr><th>Staff ID</th><th>Name</th><th>Designation</th><th>Status</th></tr></thead>
+              <tbody id="staffAttTable"></tbody>
+            </table>
+            <div class="empty" id="staffAttEmpty">Pehle Teachers &amp; Staff section se staff add karein.</div>
+            <button class="btn green" style="margin-top:12px;" onclick="saveStaffAttendanceDay()">💾 Save Attendance</button>
+          </div>
+        </div>
+
+        <!-- STAFF SALARY -->
+        <div class="view" id="view-salary">
+          <div class="panel admin-only">
+            <h3>Staff Salary (Attendance-based)</h3>
+            <div class="form-grid">
+              <div class="field"><label>Month</label><input id="salMonth" type="month" onchange="renderSalarySheet()"></div>
+            </div>
+            <p class="hint">Formula: <b>Payable = (Monthly Salary ÷ Working Days) × Present Days</b>. <b>Sunday = Leave</b> (count nahi hota). Absent din automatic kam. Full working days present = full salary.</p>
+            <div style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn green" onclick="printAllSalarySlips()">🖨️ Print All Salary Slips</button>
+            </div>
+            <table>
+              <thead><tr><th>Staff</th><th>Designation</th><th>Monthly Salary</th><th>Working Days</th><th>Present</th><th>Absent</th><th>Not Marked</th><th>Payable</th><th></th></tr></thead>
+              <tbody id="salaryTable"></tbody>
+            </table>
+            <div class="empty" id="salaryEmpty">Staff ya attendance data nahi mila.</div>
+            <p class="hint" id="salaryTotalHint" style="margin-top:10px; font-weight:600;"></p>
+          </div>
+        </div>
+
+
         <!-- ATTENDANCE -->
         <div class="view" id="view-attendance">
+
           <div class="panel">
             <h3>Class-wise Attendance Summary</h3>
             <table>
@@ -1063,6 +1154,7 @@ const timetableCol    = makeRecordCollection('timetable');
 const homeworkCol     = makeRecordCollection('homework');
 const galleryCol      = makeRecordCollection('gallery');
 const feesCol         = makeRecordCollection('fees');
+const expensesCol     = makeRecordCollection('expenses');
 const quoteLogCol     = makeRecordCollection('quoteLog');
 const loginLogCol     = makeRecordCollection('loginLog');
 const qrScanLogCol    = makeRecordCollection('qrScanLog');
@@ -1071,6 +1163,7 @@ const qrScanLogCol    = makeRecordCollection('qrScanLog');
 // har ~45 second baad yahan update karta hai (heartbeat). Ye chhota/temporary
 // data hai, is liye alag collection mein rakha gaya hai (backup/local storage mein nahi jaata).
 const presenceCol     = makeRecordCollection('presence');
+
 let presence = [];
 let presenceMap = {}; // { staffId: lastSeenMillis }
 let currentStaffId = null;
@@ -1188,12 +1281,15 @@ const LOGO_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw
 let students = [];
 let staff = [];
 let fees = [];
+let expenses = [];
 let feeFilterClass = null;
 let feeFilterStatus = null;
 let attendanceRecords = {};
+let staffAttendanceRecords = {}; // { "YYYY-MM-DD": { staffId: "present"|"absent", ... } }
 let notices = [];
 let loginLog = [];
 let idCounter = 1;
+
 let schoolSettings = { name:'The Smart Modern Public School', address:'Qamber, Sindh', principal:'', contact:'' };
 let events = [];
 let galleryPhotos = [];
@@ -1214,8 +1310,9 @@ function saveData(){
   // dahaiyon (10-15+ saal) tak chalta rahe.
   const s = document.getElementById('saveStatus');
   try{
-    const full = { students, staff, fees, attendanceRecords, notices, loginLog, idCounter, schoolSettings, events, examResults, waSettings, quoteLog, timetable, homework, qrScanLog, galleryPhotos, savedAt: new Date().toISOString() };
+    const full = { students, staff, fees, expenses, attendanceRecords, staffAttendanceRecords, notices, loginLog, idCounter, schoolSettings, events, examResults, waSettings, quoteLog, timetable, homework, qrScanLog, galleryPhotos, savedAt: new Date().toISOString() };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(full));
+
   }catch(e){
     if(s) s.textContent = 'Save failed — storage full/blocked';
     return;
@@ -1266,6 +1363,7 @@ function applyData(data){
   students = data.students || [];
   staff = data.staff || [];
   fees = data.fees || [];
+  expenses = data.expenses || [];
   // Attendance keys normalize (string) — purane number keys se miss na ho
   const rawAtt = data.attendanceRecords || {};
   attendanceRecords = {};
@@ -1274,6 +1372,14 @@ function applyData(data){
     const normalized = {};
     Object.keys(day).forEach(k => { normalized[String(k)] = day[k]; });
     attendanceRecords[date] = normalized;
+  });
+  const rawStaffAtt = data.staffAttendanceRecords || {};
+  staffAttendanceRecords = {};
+  Object.keys(rawStaffAtt).forEach(date => {
+    const day = rawStaffAtt[date] || {};
+    const normalized = {};
+    Object.keys(day).forEach(k => { normalized[String(k)] = day[k]; });
+    staffAttendanceRecords[date] = normalized;
   });
   notices = data.notices || [];
   loginLog = data.loginLog || [];
@@ -1286,6 +1392,7 @@ function applyData(data){
   qrScanLog = data.qrScanLog || [];
   applyScalars(data);
 }
+
 // ===== PURANE (LEGACY) DATA KI AUTOMATIC MIGRATION =====
 // Agar is school ka data pehle (update se pehle) single "school/main" document (aur
 // purani "school/gallery" document) mein tha, to app khud-ba-khud usay dhoondh kar
@@ -1298,7 +1405,8 @@ function migrateLegacyData(legacyCore){
   const recordFields = {
     students: studentsCol, staff: staffCol, notices: noticesCol, events: eventsCol,
     examResults: examResultsCol, timetable: timetableCol, homework: homeworkCol,
-    fees: feesCol
+    fees: feesCol, expenses: expensesCol
+
   };
   Object.keys(recordFields).forEach(field=>{
     const arr = legacyCore && legacyCore[field];
@@ -1361,12 +1469,15 @@ function pushAllRecordsToCloud(){
   timetable.forEach(x=>timetableCol.add(x));
   homework.forEach(x=>homeworkCol.add(x));
   fees.forEach(x=>feesCol.add(x));
+  expenses.forEach(x=>expensesCol.add(x));
   quoteLog.forEach(x=>quoteLogCol.add(x.id != null ? x : Object.assign({ id:newId() }, x)));
   loginLog.forEach(x=>loginLogCol.add(x.id != null ? x : Object.assign({ id:newId() }, x)));
   qrScanLog.forEach(x=>qrScanLogCol.add(x));
   galleryPhotos.forEach(x=>galleryCol.add(x));
   Object.keys(attendanceRecords||{}).forEach(date=>{ attendanceDateRef(date).set(attendanceRecords[date] || {}).catch(()=>{}); });
+  Object.keys(staffAttendanceRecords||{}).forEach(date=>{ staffAttendanceDateRef(date).set(staffAttendanceRecords[date] || {}).catch(()=>{}); });
 }
+
 function loadData(){
   const raw = localStorage.getItem(STORAGE_KEY);
   if(raw){
@@ -1395,6 +1506,7 @@ function loadData(){
     homeworkCol.loadAll().then(arr=>{ homework = arr; }),
     galleryCol.loadAll().then(arr=>{ if(arr.length) galleryPhotos = arr; }),
     feesCol.loadAll().then(arr=>{ fees = arr; }),
+    expensesCol.loadAll().then(arr=>{ expenses = arr; }),
     quoteLogCol.loadAll().then(arr=>{ quoteLog = arr; }),
     loginLogCol.loadAll().then(arr=>{ loginLog = arr; }),
     qrScanLogCol.loadAll().then(arr=>{ qrScanLog = arr; }),
@@ -1403,15 +1515,17 @@ function loadData(){
       presenceMap = {};
       presence.forEach(p=>{ if(p && p.id != null) presenceMap[String(p.id)] = p.lastSeen; });
     }),
-    ensureAttendanceDateLoaded(today)
+    ensureAttendanceDateLoaded(today),
+    loadAllStaffAttendanceFromCloud()
   ];
   return Promise.all([corePromise].concat(collectionPromises)).then(()=>{
-    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({ students, staff, fees, attendanceRecords, notices, loginLog, idCounter, schoolSettings, events, examResults, waSettings, quoteLog, timetable, homework, qrScanLog, galleryPhotos })); }catch(e){}
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({ students, staff, fees, expenses, attendanceRecords, staffAttendanceRecords, notices, loginLog, idCounter, schoolSettings, events, examResults, waSettings, quoteLog, timetable, homework, qrScanLog, galleryPhotos })); }catch(e){}
   });
 }
 
 function backupData(){
-  const data = { students, staff, fees, attendanceRecords, notices, idCounter, schoolSettings, events, galleryPhotos, examResults, waSettings, quoteLog, exportedAt: new Date().toISOString() };
+  const data = { students, staff, fees, expenses, attendanceRecords, staffAttendanceRecords, notices, idCounter, schoolSettings, events, galleryPhotos, examResults, waSettings, quoteLog, exportedAt: new Date().toISOString() };
+
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1742,13 +1856,24 @@ function doLogout(){
 /* ===================== NAVIGATION ===================== */
 function showView(name){
   if(name==='fees' && (!session || session.role !== 'admin')){ alert('Sirf Admin Fees section dekh sakta hai.'); return; }
+  if((name==='expenses' || name==='salary' || name==='staffattendance') && (!session || session.role !== 'admin')){
+    alert('Sirf Admin is section ko dekh sakta hai.'); return;
+  }
+
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.querySelectorAll('.nav-list button').forEach(b => b.classList.toggle('active', b.dataset.view === name));
-  const titles = {dashboard:'Dashboard', students:'Student Management', staff:'Teachers & Staff', fees:'Fees & Challan', attendance:'Attendance', qrattendance:'QR Code Attendance', timetable:'Timetable', homework:'Homework / Assignments', notices:'Notice Board', events:'Events & Vacations', gallery:'Photo Gallery', results:'Results / Exam Reports', quotes:'WhatsApp Awareness', reports:'Reports', settings:'Settings & Backup', loginlog:'Login Activity'};
-  document.getElementById('viewTitle').textContent = titles[name];
+  const titles = {dashboard:'Dashboard', students:'Student Management', staff:'Teachers & Staff', fees:'Fees & Challan', expenses:'School Expenses', salary:'Staff Salary', attendance:'Attendance', staffattendance:'Staff Attendance', qrattendance:'QR Code Attendance', timetable:'Timetable', homework:'Homework / Assignments', notices:'Notice Board', events:'Events & Vacations', gallery:'Photo Gallery', results:'Results / Exam Reports', quotes:'WhatsApp Awareness', reports:'Reports', settings:'Settings & Backup', loginlog:'Login Activity'};
+  document.getElementById('viewTitle').textContent = titles[name] || name;
   if(name==='dashboard') renderDashboard();
   if(name==='attendance') renderAttendanceForm();
+  if(name==='staffattendance') renderStaffAttendanceForm();
+  if(name==='salary') renderSalarySheet();
+  if(name==='expenses') {
+    const d = document.getElementById('expDate');
+    if(d && !d.value) d.value = localDateStr();
+    renderExpenses();
+  }
   if(name==='fees') renderFeeStudentOptions();
   if(name==='reports') renderReports();
   if(name==='settings') fillSettingsForm();
@@ -1759,6 +1884,7 @@ function showView(name){
   if(name==='timetable') renderTimetableView();
   if(name==='homework') renderHomework();
 }
+
 
 /* ===================== STUDENTS ===================== */
 let editingStudentId = null;
@@ -2383,8 +2509,350 @@ function openChallanThermal(feeId){
   document.getElementById('printModal').style.display = 'flex';
 }
 
+/* ===================== SCHOOL EXPENSES ===================== */
+function addExpense(){
+  if(!session || session.role !== 'admin'){ alert('Sirf Admin expense add kar sakta hai.'); return; }
+  const date = document.getElementById('expDate').value || localDateStr();
+  const category = document.getElementById('expCategory').value || 'Misc';
+  const amount = Number(document.getElementById('expAmount').value);
+  const note = (document.getElementById('expNote').value || '').trim();
+  if(!amount || amount <= 0){ alert('Sahi amount likhein.'); return; }
+  const item = { id: newId(), date, category, amount, note, createdAt: new Date().toISOString() };
+  expenses.push(item);
+  expensesCol.add(item);
+  document.getElementById('expAmount').value = '';
+  document.getElementById('expNote').value = '';
+  renderExpenses();
+  saveData();
+  alert('Expense add ho gaya: Rs. ' + amount);
+}
+function deleteExpense(id){
+  if(!session || session.role !== 'admin'){ alert('Sirf Admin delete kar sakta hai.'); return; }
+  if(!confirm('Yeh expense delete karein?')) return;
+  expenses = expenses.filter(e => e.id !== id);
+  expensesCol.remove(id);
+  renderExpenses();
+  saveData();
+}
+function renderExpenses(){
+  const tbody = document.getElementById('expTable');
+  const empty = document.getElementById('expEmpty');
+  const hint = document.getElementById('expTotalHint');
+  if(!tbody) return;
+  const monthFilter = (document.getElementById('expFilterMonth') || {}).value || '';
+  const catFilter = (document.getElementById('expFilterCat') || {}).value || '';
+  let list = expenses.slice().sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  if(monthFilter) list = list.filter(e => (e.date||'').startsWith(monthFilter));
+  if(catFilter) list = list.filter(e => e.category === catFilter);
+  tbody.innerHTML = '';
+  let total = 0;
+  list.forEach(e => {
+    total += Number(e.amount) || 0;
+    tbody.innerHTML += `<tr>
+      <td>${e.date||'—'}</td>
+      <td>${e.category||'—'}</td>
+      <td>Rs. ${Number(e.amount)||0}</td>
+      <td>${e.note||'—'}</td>
+      <td>${session && session.role==='admin' ? '<button class="btn small red" onclick="deleteExpense('+e.id+')">Delete</button>' : ''}</td>
+    </tr>`;
+  });
+  if(empty) empty.style.display = list.length ? 'none' : 'block';
+  if(hint) hint.textContent = 'Total (filter ke hisaab se): Rs. ' + total.toLocaleString();
+}
+
+/* ===================== STAFF ATTENDANCE ===================== */
+function staffAttendanceDateRef(date){
+  return db ? db.collection('staffAttendance').doc(date) : null;
+}
+function loadAllStaffAttendanceFromCloud(){
+  if(!db) return Promise.resolve();
+  return db.collection('staffAttendance').get().then(snap=>{
+    snap.forEach(doc=>{
+      const data = doc.data() || {};
+      const normalized = {};
+      Object.keys(data).forEach(k => { normalized[String(k)] = data[k]; });
+      staffAttendanceRecords[doc.id] = normalized;
+    });
+  }).catch(err=>console.warn('Staff attendance load failed:', err));
+}
+function saveStaffAttendanceDateToCloud(date){
+  const ref = staffAttendanceDateRef(date);
+  if(!ref) return;
+  const raw = staffAttendanceRecords[date] || {};
+  ref.set(raw, { merge:true }).catch(err=>console.warn('Staff att save failed:', err));
+}
+function renderStaffAttendanceForm(){
+  const tbody = document.getElementById('staffAttTable');
+  const empty = document.getElementById('staffAttEmpty');
+  const dateEl = document.getElementById('staffAttDate');
+  if(!tbody || !dateEl) return;
+  if(!dateEl.value) dateEl.value = localDateStr();
+  const date = dateEl.value;
+  const day = staffAttendanceRecords[date] || {};
+  tbody.innerHTML = '';
+  // Sunday notice
+  let sunNote = document.getElementById('staffAttSundayNote');
+  if(!sunNote){
+    sunNote = document.createElement('p');
+    sunNote.id = 'staffAttSundayNote';
+    sunNote.className = 'hint';
+    if(dateEl.parentElement && dateEl.parentElement.parentElement){
+      dateEl.parentElement.parentElement.appendChild(sunNote);
+    }
+  }
+  if(isSunday(date)){
+    sunNote.style.display = 'block';
+    sunNote.style.color = 'var(--red)';
+    sunNote.innerHTML = '⛔ <b>Sunday = Leave</b> — is din attendance salary mein count nahi hoti. Mark karne ki zaroorat nahi.';
+  } else {
+    sunNote.style.display = 'none';
+    sunNote.textContent = '';
+  }
+  if(!staff.length){
+    if(empty) empty.style.display = 'block';
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+  staff.forEach(s => {
+    const status = day[String(s.id)] || '';
+    tbody.innerHTML += `<tr>
+      <td>STF-${s.staffCode || s.id}</td>
+      <td>${s.name}</td>
+      <td>${s.desg||'—'}</td>
+      <td>
+        <select data-staff-id="${s.id}" class="staff-att-select" ${isSunday(date) ? 'disabled' : ''}>
+          <option value="" ${status===''?'selected':''}>— Not Marked —</option>
+          <option value="present" ${status==='present'?'selected':''}>✅ Present</option>
+          <option value="absent" ${status==='absent'?'selected':''}>❌ Absent</option>
+        </select>
+      </td>
+    </tr>`;
+  });
+}
+function saveStaffAttendanceDay(){
+  if(!session || session.role !== 'admin'){ alert('Sirf Admin staff attendance mark kar sakta hai.'); return; }
+  const dateEl = document.getElementById('staffAttDate');
+  const date = dateEl && dateEl.value ? dateEl.value : localDateStr();
+  if(isSunday(date)){
+    alert('Sunday leave hai — attendance save nahi hogi / salary mein count nahi hoti.');
+    return;
+  }
+  if(!staffAttendanceRecords[date]) staffAttendanceRecords[date] = {};
+  document.querySelectorAll('.staff-att-select').forEach(sel => {
+    const sid = String(sel.getAttribute('data-staff-id'));
+    const val = sel.value;
+    if(val) staffAttendanceRecords[date][sid] = val;
+    else delete staffAttendanceRecords[date][sid];
+  });
+  saveStaffAttendanceDateToCloud(date);
+  saveData();
+  alert('Staff attendance save ho gayi: ' + date);
+  if(typeof renderSalarySheet === 'function') renderSalarySheet();
+}
+
+
+/* ===================== STAFF SALARY (auto with attendance) ===================== */
+/** Sunday = leave. Working day = Mon–Sat only. */
+function isSunday(dateStr){
+  if(!dateStr || dateStr.length < 10) return false;
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.getDay() === 0;
+}
+function daysInMonth(year, month){
+  return new Date(year, month, 0).getDate();
+}
+/** Count Mon–Sat days in a month (Sunday excluded). */
+function workingDaysInMonth(year, month){
+  const dim = daysInMonth(year, month);
+  let n = 0;
+  for(let day = 1; day <= dim; day++){
+    const d = new Date(year, month - 1, day);
+    if(d.getDay() !== 0) n++;
+  }
+  return n;
+}
+function countStaffPresentInMonth(staffId, yearMonth){
+  let present = 0, absent = 0, marked = 0;
+  if(!yearMonth) return { present, absent, marked };
+  Object.keys(staffAttendanceRecords || {}).forEach(date => {
+    if(!date.startsWith(yearMonth)) return;
+    if(isSunday(date)) return; // Sunday leave — count nahi
+    const day = staffAttendanceRecords[date] || {};
+    const st = day[String(staffId)];
+    if(st === 'present'){ present++; marked++; }
+    else if(st === 'absent'){ absent++; marked++; }
+  });
+  return { present, absent, marked };
+}
+
+function calcStaffPayable(monthlySalary, yearMonth, presentDays){
+  const parts = (yearMonth || '').split('-');
+  const y = Number(parts[0]) || new Date().getFullYear();
+  const m = Number(parts[1]) || (new Date().getMonth()+1);
+  const workDays = workingDaysInMonth(y, m);
+  const salary = Number(monthlySalary) || 0;
+  if(!salary || !workDays) return { workingDays: workDays, daily: 0, payable: 0 };
+  const daily = salary / workDays;
+  // Cap present at working days so over-marking Sunday doesn't inflate pay
+  const effectivePresent = Math.min(presentDays, workDays);
+  const payable = Math.round(daily * effectivePresent);
+  return { workingDays: workDays, daily, payable, present: effectivePresent };
+}
+function getStaffSalaryRow(s, ym){
+  const counts = countStaffPresentInMonth(s.id, ym);
+  const calc = calcStaffPayable(s.salary, ym, counts.present);
+  const notMarked = Math.max(0, calc.workingDays - counts.marked);
+  return {
+    staff: s,
+    monthly: Number(s.salary) || 0,
+    workingDays: calc.workingDays,
+    present: counts.present,
+    absent: counts.absent,
+    notMarked,
+    daily: calc.daily,
+    payable: calc.payable
+  };
+}
+function renderSalarySheet(){
+  const tbody = document.getElementById('salaryTable');
+  const empty = document.getElementById('salaryEmpty');
+  const hint = document.getElementById('salaryTotalHint');
+  const monthEl = document.getElementById('salMonth');
+  if(!tbody) return;
+  if(monthEl && !monthEl.value){
+    const now = new Date();
+    monthEl.value = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  }
+  const ym = monthEl ? monthEl.value : '';
+  tbody.innerHTML = '';
+  if(!staff.length || !ym){
+    if(empty) empty.style.display = 'block';
+    if(hint) hint.textContent = '';
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+  let totalPayable = 0;
+  staff.forEach(s => {
+    const row = getStaffSalaryRow(s, ym);
+    totalPayable += row.payable;
+    tbody.innerHTML += `<tr>
+      <td>${s.name}<br><small>STF-${s.staffCode||s.id}</small></td>
+      <td>${s.desg||'—'}</td>
+      <td>Rs. ${row.monthly.toLocaleString()}</td>
+      <td>${row.workingDays} <small>(Sun leave)</small></td>
+      <td style="color:var(--green); font-weight:600;">${row.present}</td>
+      <td style="color:var(--red);">${row.absent}</td>
+      <td>${row.notMarked}</td>
+      <td style="font-weight:700;">Rs. ${row.payable.toLocaleString()}</td>
+      <td style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button class="btn small" style="background:var(--navy);" onclick="printSalarySlip(${s.id}, '${ym}')">📄 Slip</button>
+        <button class="btn small green" onclick="payStaffSalary(${s.id}, '${ym}', ${row.payable})">💰 Paid</button>
+      </td>
+    </tr>`;
+  });
+  if(hint) hint.textContent = 'Is month ka total payable: Rs. ' + totalPayable.toLocaleString() + ' · Sunday leave (working days only)';
+}
+function payStaffSalary(staffId, yearMonth, amount){
+  if(!session || session.role !== 'admin'){ alert('Sirf Admin salary mark kar sakta hai.'); return; }
+  const s = staff.find(x => x.id === staffId);
+  if(!s) return;
+  if(!confirm(s.name + ' ki salary Rs. ' + amount + ' (' + yearMonth + ') paid mark karein?\nYeh School Expenses mein bhi record ho jayegi.')) return;
+  const item = {
+    id: newId(),
+    date: yearMonth + '-28',
+    category: 'Staff Salary',
+    amount: Number(amount) || 0,
+    note: 'Salary paid: ' + s.name + ' (STF-' + (s.staffCode||s.id) + ') — ' + yearMonth + ' · Present-based (Sun leave)',
+    staffId: staffId,
+    salaryMonth: yearMonth,
+    createdAt: new Date().toISOString()
+  };
+  expenses.push(item);
+  expensesCol.add(item);
+  saveData();
+  alert('Salary paid record save ho gaya (Expenses mein).');
+  if(typeof renderExpenses === 'function') renderExpenses();
+}
+function buildSalarySlipHtml(row, ym){
+  const s = row.staff;
+  const schoolName = (schoolSettings && schoolSettings.name) || 'The Smart Modern Public School';
+  const schoolAddr = (schoolSettings && schoolSettings.address) || 'Qamber, Sindh';
+  const monthLabel = ym ? new Date(ym + '-01T12:00:00').toLocaleString('en', { month:'long', year:'numeric' }) : ym;
+  return `
+  <div class="salary-slip" style="page-break-after:always; max-width:700px; margin:0 auto 24px; padding:20px; border:2px solid #1a3a5c; font-family:Arial,sans-serif; color:#111;">
+    <div style="text-align:center; border-bottom:2px solid #1a3a5c; padding-bottom:10px; margin-bottom:14px;">
+      <div style="font-size:20px; font-weight:700;">${schoolName}</div>
+      <div style="font-size:13px;">${schoolAddr}</div>
+      <div style="font-size:16px; font-weight:600; margin-top:8px;">SALARY SLIP — ${monthLabel}</div>
+    </div>
+    <table style="width:100%; border-collapse:collapse; font-size:14px;">
+      <tr><td style="padding:6px 0; width:40%;"><b>Staff Name</b></td><td>${s.name || '—'}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Staff ID</b></td><td>STF-${s.staffCode || s.id}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Designation</b></td><td>${s.desg || '—'}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Contact</b></td><td>${s.contact || '—'}</td></tr>
+    </table>
+    <hr style="border:none; border-top:1px dashed #999; margin:14px 0;">
+    <table style="width:100%; border-collapse:collapse; font-size:14px;">
+      <tr><td style="padding:6px 0; width:40%;"><b>Monthly Salary</b></td><td>Rs. ${row.monthly.toLocaleString()}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Working Days</b> (Sun leave)</td><td>${row.workingDays}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Present Days</b></td><td>${row.present}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Absent Days</b></td><td>${row.absent}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Not Marked</b></td><td>${row.notMarked}</td></tr>
+      <tr><td style="padding:6px 0;"><b>Daily Rate</b></td><td>Rs. ${Math.round(row.daily).toLocaleString()}</td></tr>
+    </table>
+    <div style="margin-top:16px; padding:12px; background:#f0f4f8; border:1px solid #1a3a5c; text-align:center;">
+      <div style="font-size:13px;">Net Payable Amount</div>
+      <div style="font-size:22px; font-weight:700;">Rs. ${row.payable.toLocaleString()}</div>
+    </div>
+    <div style="margin-top:28px; display:flex; justify-content:space-between; font-size:12px;">
+      <div style="text-align:center; width:40%; border-top:1px solid #333; padding-top:4px;">Staff Signature</div>
+      <div style="text-align:center; width:40%; border-top:1px solid #333; padding-top:4px;">Admin / Principal</div>
+    </div>
+    <div style="margin-top:12px; font-size:11px; color:#666; text-align:center;">Generated: ${new Date().toLocaleString()} · Software by Fazul Khan Chandio</div>
+  </div>`;
+}
+function printSalarySlip(staffId, yearMonth){
+  const s = staff.find(x => x.id === staffId);
+  if(!s){ alert('Staff nahi mila'); return; }
+  const ym = yearMonth || (document.getElementById('salMonth') || {}).value;
+  if(!ym){ alert('Month select karein'); return; }
+  const row = getStaffSalaryRow(s, ym);
+  const html = `<!DOCTYPE html><html><head><title>Salary Slip - ${s.name}</title>
+    <style>@media print { body { margin:0; } .no-print { display:none; } }</style></head>
+    <body>${buildSalarySlipHtml(row, ym)}
+    <div class="no-print" style="text-align:center; margin:16px;"><button onclick="window.print()">Print</button></div>
+    <script>window.onload=function(){ setTimeout(function(){ window.print(); }, 300); }<\/script>
+    </body></html>`;
+  const w = window.open('', '_blank');
+  if(!w){ alert('Popup blocked — allow popups for salary slip.'); return; }
+  w.document.write(html);
+  w.document.close();
+}
+function printAllSalarySlips(){
+  if(!session || session.role !== 'admin'){ alert('Sirf Admin'); return; }
+  const ym = (document.getElementById('salMonth') || {}).value;
+  if(!ym){ alert('Month select karein'); return; }
+  if(!staff.length){ alert('Koi staff nahi'); return; }
+  let body = '';
+  staff.forEach(s => {
+    body += buildSalarySlipHtml(getStaffSalaryRow(s, ym), ym);
+  });
+  const html = `<!DOCTYPE html><html><head><title>All Salary Slips - ${ym}</title>
+    <style>@media print { body { margin:0; } .no-print { display:none; } .salary-slip { page-break-after: always; } }</style></head>
+    <body>${body}
+    <div class="no-print" style="text-align:center; margin:16px;"><button onclick="window.print()">Print All</button></div>
+    <script>window.onload=function(){ setTimeout(function(){ window.print(); }, 400); }<\/script>
+    </body></html>`;
+  const w = window.open('', '_blank');
+  if(!w){ alert('Popup blocked — allow popups.'); return; }
+  w.document.write(html);
+  w.document.close();
+}
+
+
 /* ===================== ATTENDANCE ===================== */
 function populateAttClassFilter(){
+
   const sel = document.getElementById('attClassFilter');
   if(!sel) return;
   const prev = sel.value;
@@ -3286,6 +3754,9 @@ function renderOnly(){
   renderStudents();
   renderStaff();
   renderFees();
+  renderExpenses();
+  renderStaffAttendanceForm();
+  renderSalarySheet();
   renderNotices();
   renderEvents();
   renderGallery();
@@ -3294,6 +3765,7 @@ function renderOnly(){
   renderDashboard();
   renderFeeStudentOptions();
 }
+
 function renderAll(){
   renderOnly();
   saveData();
@@ -3367,7 +3839,9 @@ timetableCol.listen(()=>timetable, v=>{ timetable=v; }, ()=>{ if(typeof renderTi
 homeworkCol.listen(()=>homework, v=>{ homework=v; }, ()=>{ if(typeof renderHomework === 'function') renderHomework(); realtimeSaveStatus(); });
 galleryCol.listen(()=>galleryPhotos, v=>{ galleryPhotos=v; }, ()=>{ renderGallery(); saveGalleryData(); realtimeSaveStatus(); });
 feesCol.listen(()=>fees, v=>{ fees=v; }, ()=>{ renderFees(); renderDashboard(); realtimeSaveStatus(); });
+expensesCol.listen(()=>expenses, v=>{ expenses=v; }, ()=>{ if(typeof renderExpenses === 'function') renderExpenses(); realtimeSaveStatus(); });
 quoteLogCol.listen(()=>quoteLog, v=>{ quoteLog=v; }, ()=>{ if(typeof renderQuoteLog === 'function') renderQuoteLog(); });
+
 loginLogCol.listen(()=>loginLog, v=>{ loginLog=v; }, ()=>{ if(typeof renderLoginLog === 'function') renderLoginLog(); });
 qrScanLogCol.listen(()=>qrScanLog, v=>{ qrScanLog=v; }, ()=>{ if(typeof renderQrScanLog === 'function') renderQrScanLog(); });
 
