@@ -644,7 +644,7 @@
           <div class="panel">
             <h3>Class-wise Attendance Summary</h3>
             <table>
-              <thead><tr><th>Class</th><th>Total</th><th>Present</th><th>Absent</th><th>Late/Half/Leave</th><th>Not Marked</th></tr></thead>
+              <thead><tr><th>Class</th><th>Total</th><th>Present</th><th>Absent</th><th>Not Marked</th></tr></thead>
               <tbody id="attClassSummaryBody"></tbody>
             </table>
             <div class="empty" id="attClassSummaryEmpty">Abhi koi student nahi hai.</div>
@@ -658,9 +658,6 @@
                 <option value="">Sab Status</option>
                 <option value="present">Present</option>
                 <option value="absent">Absent</option>
-                <option value="late">Late</option>
-                <option value="half">Half-day</option>
-                <option value="leave">Leave</option>
                 <option value="unmarked">Not Marked</option>
               </select></div>
             </div>
@@ -677,7 +674,6 @@
               <button class="btn red" style="flex:1; min-width:140px; padding:12px 14px; font-size:15px; font-weight:700;" onclick="markAllFiltered('absent')">❌ Absent (All)</button>
             </div>
             <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-              <button class="btn small" style="background:#f9a825;color:#1a1a1a;" onclick="markAllFiltered('late')">⏰ Mark All Late</button>
               <button class="btn small" style="background:var(--muted);" onclick="markAllFiltered('')">↺ Clear All</button>
               <button class="btn small whatsapp" onclick="batchAbsentWhatsApp()">📱 All Absentees WhatsApp</button>
             </div>
@@ -1142,11 +1138,24 @@ function isHolidayDate(dateStr){
   return null;
 }
 /* ---- Staff assigned class lock ---- */
+function isStaffUser(){
+  return (session && session.role === 'user') || currentRole === 'user';
+}
+/** Optional preferred class (info only) — attendance lock NAHI hai. Staff kisi bhi class ki hazri laga sakta hai. */
 function currentStaffAssignedClass(){
-  if(!session || session.role === 'admin') return '';
-  if(!currentStaffId) return '';
-  const s = staff.find(x => String(x.id) === String(currentStaffId));
-  return s && s.assignedClass ? classKey(s.assignedClass) : '';
+  return ''; // lock disabled: all staff can mark any class
+}
+function staffPreferredClass(){
+  if(!isStaffUser()) return '';
+  const sid = currentStaffId || (session && session.staffId) || null;
+  if(!sid) return '';
+  const s = staff.find(x => String(x.id) === String(sid));
+  if(!s) return '';
+  const raw = s.assignedClass || s.assignedClassLabel || '';
+  return raw ? classKey(raw) : '';
+}
+function staffMustHaveClass(){
+  return false; // never block attendance for staff
 }
 /* ---- Offline attendance queue ---- */
 const ATT_OFFLINE_QUEUE_KEY = 'smp_att_offline_queue_v1';
@@ -3239,31 +3248,18 @@ function populateAttClassFilter(){
   const sel = document.getElementById('attClassFilter');
   if(!sel) return;
   const prev = sel.value;
-  const locked = currentStaffAssignedClass();
   const seen = {};
   students.forEach(s => {
     const key = classKey(s.cls);
     if(key && !seen[key]) seen[key] = classDisplay(s.cls);
   });
-  // Staff: sirf apni assigned class — "Sab Classes" option bilkul nahi
-  if(locked){
-    const label = seen[locked] || classDisplay(locked);
-    sel.innerHTML = `<option value="${locked}">${label}</option>`;
-    sel.value = locked;
-    sel.disabled = true;
-    return;
-  }
-  if(isStaffUser()){
-    // Staff hai lekin class assign nahi — koi class mat dikhao
-    sel.innerHTML = '<option value="">— Class assign nahi —</option>';
-    sel.value = '';
-    sel.disabled = true;
-    return;
-  }
   const keys = Object.keys(seen).sort((a,b)=> seen[a].localeCompare(seen[b], undefined, {numeric:true}));
+  // Admin + Staff dono: sab classes — koi lock nahi
   sel.innerHTML = '<option value="">Sab Classes</option>' + keys.map(k => `<option value="${k}">${seen[k]}</option>`).join('');
   sel.disabled = false;
+  const pref = staffPreferredClass();
   if(keys.includes(prev)) sel.value = prev;
+  else if(pref && keys.includes(pref)) sel.value = pref; // optional default preferred class
 }
 function waNumberFor(contact){
   // Contact number ko WhatsApp link ke liye saaf karta hai (sirf digits, agar 0 se shuru ho to Pakistan code 92 lagata hai)
@@ -3293,24 +3289,12 @@ function renderAttendanceForm(skipLoad){
   if(!tbody) return;
   populateAttClassFilter();
   updateAttOfflineBadge();
-  // Teacher class lock
-  const lockedCls = currentStaffAssignedClass();
   const clsFilterEl = document.getElementById('attClassFilter');
-  // Holiday / staff-class banner
+  // Holiday / Sunday banner
   const hol = isHolidayDate(date);
   const holEl = document.getElementById('attHolidayBanner');
   if(holEl){
-    if(staffMustHaveClass()){
-      holEl.style.display = 'block';
-      holEl.style.background = '#fce4ec';
-      holEl.style.color = '#880e4f';
-      holEl.innerHTML = '🔒 <b>Aapki class assign nahi hai.</b> Admin se kaho Teachers & Staff mein aapke account par <b>Assigned Class</b> set karein — tabhi attendance mark ho sakti hai. Doosri classes nahi dikhengi.';
-    } else if(lockedCls){
-      holEl.style.display = 'block';
-      holEl.style.background = '#e8f5e9';
-      holEl.style.color = '#1b5e20';
-      holEl.innerHTML = '🔒 <b>Sirf aapki class:</b> ' + classDisplay(lockedCls) + ' — doosri classes aapko nahi dikhengi.';
-    } else if(hol){
+    if(hol){
       holEl.style.display = 'block';
       holEl.style.background = '#fff3e0';
       holEl.style.color = '#e65100';
@@ -3325,23 +3309,11 @@ function renderAttendanceForm(skipLoad){
       holEl.innerHTML = '';
     }
   }
-  // Staff: hamesha locked class; agar class nahi to empty list
-  let clsFilter = '';
-  if(isStaffUser()){
-    clsFilter = lockedCls; // empty if not assigned → no students
-  } else {
-    clsFilter = (clsFilterEl && clsFilterEl.value) || '';
-  }
+  // Admin + Staff: filter by selected class (optional). Koi class lock nahi.
+  const clsFilter = (clsFilterEl && clsFilterEl.value) || '';
   const statusFilter = (document.getElementById('attStatusFilter')||{}).value || '';
   const dayRecord = attendanceRecords[date] || {};
-  let list = [];
-  if(isStaffUser() && !lockedCls){
-    list = []; // force empty until admin assigns class
-  } else if(clsFilter){
-    list = students.filter(s => classKey(s.cls) === clsFilter);
-  } else {
-    list = students.slice();
-  }
+  let list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : students.slice();
   if(statusFilter === 'present') list = list.filter(s => getAttStatus(dayRecord, s.id) === 'present');
   else if(statusFilter === 'absent') list = list.filter(s => getAttStatus(dayRecord, s.id) === 'absent');
   else if(statusFilter === 'late') list = list.filter(s => getAttStatus(dayRecord, s.id) === 'late');
@@ -3372,29 +3344,28 @@ function renderAttendanceForm(skipLoad){
     const bg = active ? bgActive : bgIdle;
     const col = color || '#fff';
     const ring = active ? 'box-shadow:0 0 0 2px #fff,0 0 0 4px '+bgActive+'; font-weight:700;' : '';
-    return `flex:1; min-width:0; padding:10px 6px; font-size:13px; border:none; border-radius:8px; cursor:pointer; background:${bg}; color:${col}; ${ring}`;
+    return `flex:1; min-width:0; padding:12px 8px; font-size:14px; border:none; border-radius:8px; cursor:pointer; background:${bg}; color:${col}; ${ring}`;
   };
   const rows = list.map(s => {
     const status = getAttStatus(dayRecord, s.id);
-    const waBtn = status === 'absent'
+    // sirf present/absent UI — purane late/half/leave ko absent jaisa treat nahi, clear dikhao option
+    const st = (status === 'present' || status === 'absent') ? status : (status ? status : '');
+    const waBtn = st === 'absent'
       ? (waNumberFor(s.contact)
           ? `<button class="btn whatsapp small" onclick="sendAbsentWhatsApp(${s.id})">📱 Message</button>`
           : `<span class="hint">Contact # nahi hai</span>`)
-      : (status ? '—' : '—');
-    const notMarkedTag = status ? '' : '<div style="font-size:11px; color:var(--red); margin-top:6px; text-align:center;">⚠ Not marked</div>';
-    const statusLabel = status === 'present' ? '✅ Present' : status === 'absent' ? '❌ Absent' : status === 'late' ? '⏰ Late' : status === 'half' ? '½ Half' : status === 'leave' ? '🏖 Leave' : '';
+      : '—';
+    const notMarkedTag = (st === 'present' || st === 'absent') ? '' : '<div style="font-size:11px; color:var(--red); margin-top:6px; text-align:center;">⚠ Not marked</div>';
+    const statusLabel = st === 'present' ? '✅ Present' : st === 'absent' ? '❌ Absent' : '';
     return `<tr><td>${s.adm}</td><td>${s.name}</td><td>${s.cls||'—'}</td>
       <td style="white-space:normal; min-width:160px;">
         ${statusLabel ? `<div style="font-size:12px; font-weight:700; margin-bottom:6px; color:#333;">${statusLabel}</div>` : ''}
-        <div style="display:flex; gap:6px; margin-bottom:6px;">
-          <button type="button" style="${attBtnStyle(status==='present','#2e7d32','#c8e6c9','#1b5e20')}" onclick="setAttStatus(${s.id},'present')">✅ Present</button>
-          <button type="button" style="${attBtnStyle(status==='absent','#c62828','#ffcdd2','#b71c1c')}" onclick="setAttStatus(${s.id},'absent')">❌ Absent</button>
+        <div style="display:flex; gap:8px; margin-bottom:6px;">
+          <button type="button" style="${attBtnStyle(st==='present','#2e7d32','#c8e6c9','#1b5e20')}" onclick="setAttStatus(${s.id},'present')">✅ Present</button>
+          <button type="button" style="${attBtnStyle(st==='absent','#c62828','#ffcdd2','#b71c1c')}" onclick="setAttStatus(${s.id},'absent')">❌ Absent</button>
         </div>
-        <div style="display:flex; gap:4px; flex-wrap:wrap;">
-          <button type="button" style="${attBtnStyle(status==='late','#f9a825','#fff8e1','#e65100')}" onclick="setAttStatus(${s.id},'late')">Late</button>
-          <button type="button" style="${attBtnStyle(status==='half','#7e57c2','#ede7f6','#4527a0')}" onclick="setAttStatus(${s.id},'half')">Half</button>
-          <button type="button" style="${attBtnStyle(status==='leave','#546e7a','#eceff1','#37474f')}" onclick="setAttStatus(${s.id},'leave')">Leave</button>
-          <button type="button" style="padding:8px 10px; font-size:12px; border:none; border-radius:8px; background:#eee; color:#333; cursor:pointer;" onclick="setAttStatus(${s.id},'')" title="Clear">↺</button>
+        <div style="text-align:center;">
+          <button type="button" style="padding:6px 12px; font-size:12px; border:none; border-radius:8px; background:#eee; color:#333; cursor:pointer;" onclick="setAttStatus(${s.id},'')" title="Clear">↺ Clear</button>
         </div>
         ${notMarkedTag}
       </td>
@@ -3416,27 +3387,18 @@ function renderAttClassSummary(date){
     const status = getAttStatus(attendanceRecords[date] || {}, s.id);
     if(status === 'absent') counts[key].absent++;
     else if(status === 'present') counts[key].present++;
-    else if(status === 'late' || status === 'half' || status === 'leave') counts[key].other++;
-    else counts[key].unmarked++;
+    else counts[key].unmarked++; // late/half/leave legacy → not marked for UI
   });
   const keys = Object.keys(counts).sort((a,b)=> counts[a].label.localeCompare(counts[b].label, undefined, {numeric:true}));
   const emptyEl = document.getElementById('attClassSummaryEmpty');
   if(emptyEl) emptyEl.style.display = keys.length ? 'none' : 'block';
-  body.innerHTML = keys.map(k => `<tr><td>${counts[k].label}</td><td>${counts[k].total}</td><td>${counts[k].present}</td><td>${counts[k].absent}</td><td>${counts[k].other}</td><td>${counts[k].unmarked ? '<b style="color:var(--red);">'+counts[k].unmarked+'</b>' : '0'}</td></tr>`).join('');
+  body.innerHTML = keys.map(k => `<tr><td>${counts[k].label}</td><td>${counts[k].total}</td><td>${counts[k].present}</td><td>${counts[k].absent}</td><td>${counts[k].unmarked ? '<b style="color:var(--red);">'+counts[k].unmarked+'</b>' : '0'}</td></tr>`).join('');
 }
 function setAttStatus(studentId, status){
   const date = document.getElementById('attDate').value || localDateStr();
-  if(staffMustHaveClass()){
-    alert('Pehle Admin aapki Assigned Class set karein.');
-    return;
-  }
-  const lockedCls = currentStaffAssignedClass();
-  if(lockedCls){
-    const stu = students.find(x => x.id === studentId || String(x.id) === String(studentId));
-    if(!stu || classKey(stu.cls) !== lockedCls){
-      alert('Aap sirf apni class (' + classDisplay(lockedCls) + ') ki attendance mark kar sakte hain.');
-      return;
-    }
+  // Only present / absent / clear
+  if(status && status !== 'present' && status !== 'absent'){
+    status = status === '' ? '' : 'present';
   }
   if(!attendanceRecords[date]) attendanceRecords[date] = {};
   if(!attendanceLocalOverrides[date]) attendanceLocalOverrides[date] = {};
@@ -3462,16 +3424,14 @@ function setAttStatus(studentId, status){
 }
 function markAllFiltered(status){
   const date = document.getElementById('attDate').value || localDateStr();
-  if(staffMustHaveClass()){
-    alert('Pehle Admin aapki Assigned Class set karein.');
+  if(status && status !== 'present' && status !== 'absent'){
+    alert('Sirf Present ya Absent mark ho sakta hai.');
     return;
   }
-  const lockedCls = currentStaffAssignedClass();
-  const clsFilter = lockedCls || (document.getElementById('attClassFilter')||{}).value || '';
+  const clsFilter = (document.getElementById('attClassFilter')||{}).value || '';
   const statusFilter = (document.getElementById('attStatusFilter')||{}).value || '';
   if(!attendanceRecords[date]) attendanceRecords[date] = {};
-  // Staff kabhi bhi cross-class mark nahi kar sakta
-  let list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : (isStaffUser() ? [] : students.slice());
+  let list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : students.slice();
   const dayRecord = attendanceRecords[date] || {};
   if(statusFilter === 'present') list = list.filter(s => getAttStatus(dayRecord, s.id) === 'present');
   else if(statusFilter === 'absent') list = list.filter(s => getAttStatus(dayRecord, s.id) === 'absent');
@@ -3534,8 +3494,7 @@ let batchWaQueue = [];
 let batchWaIndex = 0;
 function batchAbsentWhatsApp(){
   const date = document.getElementById('attDate').value || localDateStr();
-  const lockedCls = currentStaffAssignedClass();
-  const clsFilter = lockedCls || (document.getElementById('attClassFilter')||{}).value || '';
+  const clsFilter = (document.getElementById('attClassFilter')||{}).value || '';
   const dayRecord = attendanceRecords[date] || {};
   let list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : students.slice();
   list = list.filter(s => getAttStatus(dayRecord, s.id) === 'absent');
@@ -4761,7 +4720,7 @@ window.addEventListener('offline', ()=>{
 });
 </script>
     <script>
-  window.__APP_BUILD__ = '20260826-assign-class-btn-v8';
+  window.__APP_BUILD__ = '20260826-staff-any-class-v11';
   (function(){
     var reloading = false;
     function forceReload(){
