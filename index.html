@@ -376,7 +376,11 @@
 
       <button class="logout-btn" onclick="doLogout()">⎋ Logout</button>
       <div class="save-indicator"><span class="save-dot"></span><span id="saveStatus">Data saved locally</span></div>
-      <div style="margin-top:12px; font-size:9.5px; color:rgba(237,231,214,0.35); font-family:'JetBrains Mono',monospace;">Software by Fazul Khan Chandio<br>+92 333 3909816</div>
+      <div style="margin-top:14px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08); font-size:10px; color:rgba(237,231,214,0.55); line-height:1.45; font-family:'JetBrains Mono',monospace;">
+        <div style="color:rgba(237,231,214,0.85); font-weight:600;">Software by Fazul Khan Chandio</div>
+        <div>+92 333 3909816</div>
+        <div style="margin-top:6px; opacity:0.75;">Build <span id="sidebarBuildVersion">—</span></div>
+      </div>
     </aside>
 
     <div class="sidebar-overlay no-print" id="sidebarOverlay" onclick="toggleSidebar(false)"></div>
@@ -3215,6 +3219,13 @@ function printSalarySlip(staffId, yearMonth){
   </div>
 </div>
 
+
+<!-- App build version (corner) + credit -->
+<div id="appBuildBadge" style="position:fixed; right:10px; bottom:10px; z-index:150; background:rgba(15,23,42,0.88); color:#e2e8f0; font-size:10px; font-family:ui-monospace,monospace; padding:6px 10px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.25); line-height:1.35; pointer-events:none; max-width:90vw;">
+  <div style="opacity:0.9;">By <b style="color:#f8fafc;">Fazul Khan Chandio</b></div>
+  <div style="opacity:0.7; margin-top:2px;">Build <span id="cornerBuildVersion">—</span></div>
+</div>
+
 </body></html>`;
   const w = window.open('', '_blank');
   if(!w){ alert('Popup blocked — allow popups for salary slip.'); return; }
@@ -4720,7 +4731,17 @@ window.addEventListener('offline', ()=>{
 });
 </script>
     <script>
-  window.__APP_BUILD__ = '20260826-staff-any-class-v11';
+  window.__APP_BUILD__ = '20260826-v11-stable';
+function applyAppBuildLabels(){
+  var v = (typeof window.__APP_BUILD__ !== 'undefined' && window.__APP_BUILD__) ? window.__APP_BUILD__ : 'dev';
+  var a = document.getElementById('sidebarBuildVersion');
+  var b = document.getElementById('cornerBuildVersion');
+  if(a) a.textContent = v;
+  if(b) b.textContent = v;
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyAppBuildLabels);
+else applyAppBuildLabels();
+
   (function(){
     var reloading = false;
     function forceReload(){
