@@ -642,7 +642,7 @@
           <div class="panel">
             <h3>Class-wise Attendance Summary</h3>
             <table>
-              <thead><tr><th>Class</th><th>Total Students</th><th>Present</th><th>Absent</th><th>Not Marked</th></tr></thead>
+              <thead><tr><th>Class</th><th>Total</th><th>Present</th><th>Absent</th><th>Late/Half/Leave</th><th>Not Marked</th></tr></thead>
               <tbody id="attClassSummaryBody"></tbody>
             </table>
             <div class="empty" id="attClassSummaryEmpty">Abhi koi student nahi hai.</div>
@@ -656,19 +656,30 @@
                 <option value="">Sab Status</option>
                 <option value="present">Present</option>
                 <option value="absent">Absent</option>
+                <option value="late">Late</option>
+                <option value="half">Half-day</option>
+                <option value="leave">Leave</option>
                 <option value="unmarked">Not Marked</option>
               </select></div>
             </div>
+            <div id="attLoadStatus" style="display:none; margin-bottom:10px; padding:8px 12px; background:#e8f0fe; color:#1a73e8; border-radius:6px; font-size:13px;">⏳ Attendance load ho rahi hai…</div>
+            <div id="attSaveStatus" style="display:none; margin-bottom:10px; padding:8px 12px; border-radius:6px; font-size:13px;"></div>
             <div id="attStatusBanner" style="display:none; margin-bottom:10px; padding:8px 12px; background:var(--gold); color:#1a1a1a; border-radius:6px; font-size:13px; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
               <span id="attStatusBannerText"></span>
               <button class="btn small" style="background:var(--navy); margin:0;" onclick="clearAttStatusFilter()">Clear Filter</button>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+              <button class="btn small green" onclick="markAllFiltered('present')">✅ Mark All Present</button>
+              <button class="btn small red" onclick="markAllFiltered('absent')">❌ Mark All Absent</button>
+              <button class="btn small" style="background:#f9a825;color:#1a1a1a;" onclick="markAllFiltered('late')">⏰ Mark All Late</button>
+              <button class="btn small" style="background:var(--muted);" onclick="markAllFiltered('')">↺ Clear All (Unmark)</button>
             </div>
             <table>
               <thead><tr><th>Adm #</th><th>Name</th><th>Class</th><th>Status</th><th>WhatsApp</th></tr></thead>
               <tbody id="attTable"></tbody>
             </table>
             <div class="empty" id="attEmpty">Pehle Student Management mein students add karein.</div>
-            <button class="btn green" onclick="saveAttendance()">Save Attendance</button>
+            <button class="btn green" onclick="saveAttendance()">💾 Save Attendance</button>
           </div>
         </div>
 
@@ -934,8 +945,26 @@
             <div class="stat-grid">
               <div class="stat-card"><div class="n" id="repPresent">0</div><div class="l">Present</div></div>
               <div class="stat-card"><div class="n" id="repAbsent">0</div><div class="l">Absent</div></div>
+              <div class="stat-card"><div class="n" id="repLate">0</div><div class="l">Late / Half / Leave</div></div>
               <div class="stat-card"><div class="n" id="repNotMarked">0</div><div class="l">Not Marked</div></div>
             </div>
+          </div>
+          <div class="panel">
+            <h3>📅 Monthly Attendance Register</h3>
+            <p class="hint">Mahine ka attendance % student-wise. Date range select karke Load dabayein — cloud se past days load honge.</p>
+            <div class="form-grid">
+              <div class="field"><label>From</label><input id="attRepFrom" type="date"></div>
+              <div class="field"><label>To</label><input id="attRepTo" type="date"></div>
+              <div class="field"><label>Class</label><select id="attRepClass"><option value="">Sab Classes</option></select></div>
+            </div>
+            <button class="btn" onclick="loadMonthlyAttendanceReport()">📊 Load Report</button>
+            <button class="btn small" style="margin-left:8px;" onclick="exportMonthlyAttendanceCSV()">⬇ CSV Export</button>
+            <div id="attRepLoadNote" class="hint" style="margin-top:8px;"></div>
+            <table style="margin-top:12px;">
+              <thead><tr><th>Adm #</th><th>Name</th><th>Class</th><th>Present</th><th>Absent</th><th>Late</th><th>Half</th><th>Leave</th><th>Working Days</th><th>%</th></tr></thead>
+              <tbody id="attRepBody"></tbody>
+            </table>
+            <div class="empty" id="attRepEmpty">Report load karne ke liye date range select karein.</div>
           </div>
         </div>
 
@@ -1200,8 +1229,36 @@ function stopPresenceHeartbeat(){
 // apni alag chhoti document hai jismein sirf usi din ka { studentId: status } record hai.
 const loadedAttendanceDates = new Set();
 const attendanceDateUnsubs = {};
+const attendancePendingDeletes = {}; // date -> { studentId: true } — cloud se FieldValue.delete ke liye
 function attendanceDateRef(date){
   return db ? db.collection('attendance').doc(date) : null;
+}
+function showAttSaveStatus(msg, ok){
+  const el = document.getElementById('attSaveStatus');
+  if(!el) return;
+  el.style.display = msg ? 'block' : 'none';
+  el.textContent = msg || '';
+  el.style.background = ok === true ? '#e2f5e7' : (ok === false ? '#fbe4e2' : '#fff8e1');
+  el.style.color = ok === true ? '#1b5e20' : (ok === false ? '#b71c1c' : '#5d4037');
+}
+// Consistent merge: server + local, local pending marks jeet-te hain overlapping keys par
+// (kyunke user abhi mark kar raha ho sakta hai). Server-only keys hamesha rahti hain.
+function mergeAttendanceDay(localDay, serverDay){
+  const merged = {};
+  const srv = serverDay || {};
+  const loc = localDay || {};
+  Object.keys(srv).forEach(k => { merged[attKey(k)] = srv[k]; });
+  Object.keys(loc).forEach(k => {
+    const key = attKey(k);
+    // empty string = intentional unmark — local jeete
+    if(loc[k] === '' || loc[k] == null){
+      // unmark: server se hatao (local pending delete)
+      delete merged[key];
+    } else {
+      merged[key] = loc[k];
+    }
+  });
+  return merged;
 }
 // Us tareekh ke liye ek realtime listener laga deta hai — taake agar koi doosra
 // device usi din ki attendance badle (jaise QR scan se), to ye device bhi turant update ho jaye.
@@ -1209,10 +1266,11 @@ function subscribeAttendanceDate(date){
   if(!db || !date || attendanceDateUnsubs[date]) return;
   attendanceDateUnsubs[date] = attendanceDateRef(date).onSnapshot({ includeMetadataChanges:true }, function(doc){
     if(doc.metadata.hasPendingWrites) return;
-    if(!doc.exists) return;
-    const serverData = doc.data() || {};
-    const merged = Object.assign({}, attendanceRecords[date] || {});
-    Object.keys(serverData).forEach(k => { merged[attKey(k)] = serverData[k]; });
+    const serverData = doc.exists ? (doc.data() || {}) : {};
+    const merged = mergeAttendanceDay(attendanceRecords[date] || {}, serverData);
+    // pending deletes apply (local intentional unmarks jo abhi cloud tak nahi gaye)
+    const pend = attendancePendingDeletes[date] || {};
+    Object.keys(pend).forEach(k => { delete merged[attKey(k)]; });
     attendanceRecords[date] = merged;
     loadedAttendanceDates.add(date);
     try{
@@ -1223,7 +1281,7 @@ function subscribeAttendanceDate(date){
     }catch(e){}
     const attDateEl = document.getElementById('attDate');
     const activeDate = (attDateEl && attDateEl.value) || localDateStr();
-    if(activeDate === date && typeof renderAttendanceForm === 'function') renderAttendanceForm();
+    if(activeDate === date && typeof renderAttendanceForm === 'function') renderAttendanceForm(true);
     if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
   }, function(err){ console.warn('Attendance realtime sync error (' + date + '):', err); });
 }
@@ -1232,43 +1290,75 @@ function ensureAttendanceDateLoaded(date){
   subscribeAttendanceDate(date);
   if(loadedAttendanceDates.has(date)) return Promise.resolve();
   return attendanceDateRef(date).get().then(doc=>{
-    if(doc.exists){
-      const serverData = doc.data() || {};
-      const merged = Object.assign({}, serverData, attendanceRecords[date] || {});
-      const normalized = {};
-      Object.keys(merged).forEach(k => { normalized[attKey(k)] = merged[k]; });
-      attendanceRecords[date] = normalized;
-      loadedAttendanceDates.add(date);
-      try{
-        const raw = localStorage.getItem(STORAGE_KEY);
-        const existing = raw ? JSON.parse(raw) : {};
-        existing.attendanceRecords = attendanceRecords;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
-      }catch(e){}
-      const attDateEl = document.getElementById('attDate');
-      const activeDate = (attDateEl && attDateEl.value) || localDateStr();
-      if(activeDate === date && typeof renderAttendanceForm === 'function') renderAttendanceForm();
-      if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
-    } else if(attendanceRecords[date] && Object.keys(attendanceRecords[date]).length){
-      loadedAttendanceDates.add(date);
-    }
+    const serverData = doc.exists ? (doc.data() || {}) : {};
+    const merged = mergeAttendanceDay(attendanceRecords[date] || {}, serverData);
+    const pend = attendancePendingDeletes[date] || {};
+    Object.keys(pend).forEach(k => { delete merged[attKey(k)]; });
+    attendanceRecords[date] = merged;
+    loadedAttendanceDates.add(date);
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const existing = raw ? JSON.parse(raw) : {};
+      existing.attendanceRecords = attendanceRecords;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+    }catch(e){}
+    const attDateEl = document.getElementById('attDate');
+    const activeDate = (attDateEl && attDateEl.value) || localDateStr();
+    if(activeDate === date && typeof renderAttendanceForm === 'function') renderAttendanceForm(true);
+    if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
   }).catch(err=>{
     console.warn('Attendance load failed for ' + date + ':', err);
   });
 }
 function saveAttendanceDateToCloud(date){
   const ref = attendanceDateRef(date);
-  if(!ref) return;
-  // merge:true zaroori hai — warna jab 2 staff members ek hi date ki attendance
-  // alag-alag classes/students ke liye saath save karein, to jis ka save baad mein
-  // pohnche wo poori document ko apni local copy se overwrite kar dega aur doosre
-  // staff ki entries mit jayengi. merge:true sirf changed studentId keys update
-  // karta hai, baaki sab (doosron ka data) mehfooz rehta hai.
+  if(!ref){
+    showAttSaveStatus('📴 Offline / cloud nahi — sirf is device par save', null);
+    return Promise.resolve();
+  }
   const raw = attendanceRecords[date] || {};
   const toSave = {};
-  Object.keys(raw).forEach(k => { toSave[attKey(k)] = raw[k]; });
-  attendanceRecords[date] = toSave;
-  ref.set(toSave, { merge:true }).catch(err=>console.warn('Attendance cloud save failed:', err));
+  Object.keys(raw).forEach(k => {
+    const v = raw[k];
+    if(v !== '' && v != null) toSave[attKey(k)] = v;
+  });
+  // Intentional unmarks → FieldValue.delete so merge:true bhi keys hata de
+  const pend = attendancePendingDeletes[date] || {};
+  Object.keys(pend).forEach(k => {
+    toSave[attKey(k)] = firebase.firestore.FieldValue.delete();
+  });
+  attendanceRecords[date] = {};
+  Object.keys(raw).forEach(k => {
+    if(raw[k] !== '' && raw[k] != null) attendanceRecords[date][attKey(k)] = raw[k];
+  });
+  showAttSaveStatus('☁️ Cloud pe sync ho raha hai…', null);
+  return ref.set(toSave, { merge:true }).then(()=>{
+    attendancePendingDeletes[date] = {};
+    showAttSaveStatus('✅ Attendance cloud par save ho gayi · ' + new Date().toLocaleTimeString(), true);
+    setTimeout(()=>showAttSaveStatus('', null), 4000);
+  }).catch(err=>{
+    console.warn('Attendance cloud save failed:', err);
+    showAttSaveStatus('❌ Cloud save fail — local mein hai, net aane par dubara try hoga', false);
+  });
+}
+function datesBetween(fromStr, toStr){
+  const out = [];
+  if(!fromStr || !toStr) return out;
+  const a = new Date(fromStr + 'T12:00:00');
+  const b = new Date(toStr + 'T12:00:00');
+  if(isNaN(a) || isNaN(b) || a > b) return out;
+  const cur = new Date(a);
+  let guard = 0;
+  while(cur <= b && guard < 400){
+    out.push(localDateStr(cur));
+    cur.setDate(cur.getDate() + 1);
+    guard++;
+  }
+  return out;
+}
+function ensureAttendanceRangeLoaded(fromStr, toStr){
+  const dates = datesBetween(fromStr, toStr);
+  return Promise.all(dates.map(d => ensureAttendanceDateLoaded(d)));
 }
 </script>
 
@@ -2564,6 +2654,31 @@ function renderExpenses(){
 function staffAttendanceDateRef(date){
   return db ? db.collection('staffAttendance').doc(date) : null;
 }
+const staffAttendanceUnsubs = {};
+const staffAttendancePendingDeletes = {};
+function subscribeStaffAttendanceDate(date){
+  if(!db || !date || staffAttendanceUnsubs[date]) return;
+  staffAttendanceUnsubs[date] = staffAttendanceDateRef(date).onSnapshot({ includeMetadataChanges:true }, function(doc){
+    if(doc.metadata.hasPendingWrites) return;
+    const serverData = doc.exists ? (doc.data() || {}) : {};
+    const merged = {};
+    Object.keys(serverData).forEach(k => { merged[String(k)] = serverData[k]; });
+    // local pending deletes
+    const pend = staffAttendancePendingDeletes[date] || {};
+    Object.keys(pend).forEach(k => { delete merged[String(k)]; });
+    // keep any local-only marks not yet on server? merge local non-empty
+    const loc = staffAttendanceRecords[date] || {};
+    Object.keys(loc).forEach(k => {
+      if(loc[k]) merged[String(k)] = loc[k];
+    });
+    staffAttendanceRecords[date] = merged;
+    if(typeof renderStaffAttendanceForm === 'function'){
+      const el = document.getElementById('staffAttDate');
+      if(el && el.value === date) renderStaffAttendanceForm();
+    }
+    if(typeof renderSalarySheet === 'function') renderSalarySheet();
+  }, function(err){ console.warn('Staff attendance realtime error:', err); });
+}
 function loadAllStaffAttendanceFromCloud(){
   if(!db) return Promise.resolve();
   return db.collection('staffAttendance').get().then(snap=>{
@@ -2572,14 +2687,26 @@ function loadAllStaffAttendanceFromCloud(){
       const normalized = {};
       Object.keys(data).forEach(k => { normalized[String(k)] = data[k]; });
       staffAttendanceRecords[doc.id] = normalized;
+      subscribeStaffAttendanceDate(doc.id);
     });
   }).catch(err=>console.warn('Staff attendance load failed:', err));
 }
 function saveStaffAttendanceDateToCloud(date){
   const ref = staffAttendanceDateRef(date);
-  if(!ref) return;
+  if(!ref) return Promise.resolve();
+  subscribeStaffAttendanceDate(date);
   const raw = staffAttendanceRecords[date] || {};
-  ref.set(raw, { merge:true }).catch(err=>console.warn('Staff att save failed:', err));
+  const toSave = {};
+  Object.keys(raw).forEach(k => {
+    if(raw[k]) toSave[String(k)] = raw[k];
+  });
+  const pend = staffAttendancePendingDeletes[date] || {};
+  Object.keys(pend).forEach(k => {
+    toSave[String(k)] = firebase.firestore.FieldValue.delete();
+  });
+  return ref.set(toSave, { merge:true }).then(()=>{
+    staffAttendancePendingDeletes[date] = {};
+  }).catch(err=>console.warn('Staff att save failed:', err));
 }
 function renderStaffAttendanceForm(){
   const tbody = document.getElementById('staffAttTable');
@@ -2588,6 +2715,7 @@ function renderStaffAttendanceForm(){
   if(!tbody || !dateEl) return;
   if(!dateEl.value) dateEl.value = localDateStr();
   const date = dateEl.value;
+  subscribeStaffAttendanceDate(date);
   const day = staffAttendanceRecords[date] || {};
   tbody.innerHTML = '';
   // Sunday notice
@@ -2638,16 +2766,23 @@ function saveStaffAttendanceDay(){
     return;
   }
   if(!staffAttendanceRecords[date]) staffAttendanceRecords[date] = {};
+  if(!staffAttendancePendingDeletes[date]) staffAttendancePendingDeletes[date] = {};
   document.querySelectorAll('.staff-att-select').forEach(sel => {
     const sid = String(sel.getAttribute('data-staff-id'));
     const val = sel.value;
-    if(val) staffAttendanceRecords[date][sid] = val;
-    else delete staffAttendanceRecords[date][sid];
+    if(val){
+      staffAttendanceRecords[date][sid] = val;
+      delete staffAttendancePendingDeletes[date][sid];
+    } else {
+      delete staffAttendanceRecords[date][sid];
+      staffAttendancePendingDeletes[date][sid] = true;
+    }
   });
-  saveStaffAttendanceDateToCloud(date);
-  saveData();
-  alert('Staff attendance save ho gayi: ' + date);
-  if(typeof renderSalarySheet === 'function') renderSalarySheet();
+  saveStaffAttendanceDateToCloud(date).then(()=>{
+    saveData();
+    alert('Staff attendance save ho gayi: ' + date);
+    if(typeof renderSalarySheet === 'function') renderSalarySheet();
+  });
 }
 
 
@@ -2876,35 +3011,60 @@ function waNumberFor(contact){
   else if(!digits.startsWith('92') && digits.length === 10) digits = '92' + digits;
   return digits;
 }
-function renderAttendanceForm(){
-  const date = document.getElementById('attDate').value || localDateStr();
-  ensureAttendanceDateLoaded(date); // pehli baar is date par aane par cloud se load ho kar khud dobara render karega
+function renderAttendanceForm(skipLoad){
+  const dateEl = document.getElementById('attDate');
+  const date = (dateEl && dateEl.value) || localDateStr();
+  if(dateEl && !dateEl.value) dateEl.value = date;
+  const loadEl = document.getElementById('attLoadStatus');
+  if(!skipLoad && db && !loadedAttendanceDates.has(date)){
+    if(loadEl){ loadEl.style.display = 'block'; loadEl.textContent = '⏳ ' + date + ' ki attendance cloud se load ho rahi hai…'; }
+    ensureAttendanceDateLoaded(date).finally(()=>{
+      if(loadEl) loadEl.style.display = 'none';
+      renderAttendanceForm(true);
+    });
+    // pehle local/cache se bhi dikhao (agar hai)
+  } else {
+    if(loadEl) loadEl.style.display = 'none';
+    if(!skipLoad) ensureAttendanceDateLoaded(date); // subscribe ensure
+  }
   const tbody = document.getElementById('attTable');
+  if(!tbody) return;
   populateAttClassFilter();
   const clsFilter = (document.getElementById('attClassFilter')||{}).value || '';
   const statusFilter = (document.getElementById('attStatusFilter')||{}).value || '';
   const dayRecord = attendanceRecords[date] || {};
   let list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : students.slice();
-  if(statusFilter === 'present') list = list.filter(s => (dayRecord[attKey(s.id)] || dayRecord[s.id] || '') === 'present');
-  else if(statusFilter === 'absent') list = list.filter(s => (dayRecord[attKey(s.id)] || dayRecord[s.id] || '') === 'absent');
-  else if(statusFilter === 'unmarked') list = list.filter(s => !(dayRecord[attKey(s.id)] || dayRecord[s.id] || ''));
+  if(statusFilter === 'present') list = list.filter(s => (dayRecord[attKey(s.id)] || '') === 'present');
+  else if(statusFilter === 'absent') list = list.filter(s => (dayRecord[attKey(s.id)] || '') === 'absent');
+  else if(statusFilter === 'late') list = list.filter(s => (dayRecord[attKey(s.id)] || '') === 'late');
+  else if(statusFilter === 'half') list = list.filter(s => (dayRecord[attKey(s.id)] || '') === 'half');
+  else if(statusFilter === 'leave') list = list.filter(s => (dayRecord[attKey(s.id)] || '') === 'leave');
+  else if(statusFilter === 'unmarked') list = list.filter(s => !(dayRecord[attKey(s.id)] || ''));
   const banner = document.getElementById('attStatusBanner');
   const bannerText = document.getElementById('attStatusBannerText');
   if(banner && bannerText){
     if(statusFilter || clsFilter){
       const parts = [];
       if(clsFilter) parts.push('Class: ' + (document.getElementById('attClassFilter').selectedOptions[0]?.text || clsFilter));
-      if(statusFilter === 'absent') parts.push('Absent students');
-      else if(statusFilter === 'unmarked') parts.push('Not Marked students');
-      else if(statusFilter === 'present') parts.push('Present students');
+      if(statusFilter === 'absent') parts.push('Absent');
+      else if(statusFilter === 'unmarked') parts.push('Not Marked');
+      else if(statusFilter === 'present') parts.push('Present');
+      else if(statusFilter === 'late') parts.push('Late');
+      else if(statusFilter === 'half') parts.push('Half-day');
+      else if(statusFilter === 'leave') parts.push('Leave');
       bannerText.textContent = parts.join(' · ') + ' (' + list.length + ')';
       banner.style.display = 'flex';
     } else {
       banner.style.display = 'none';
     }
   }
-  document.getElementById('attEmpty').style.display = list.length ? 'none' : 'block';
-  // Fast render: ek hi baar innerHTML set (loop mein += bohat slow hota hai 200+ students par)
+  const emptyEl = document.getElementById('attEmpty');
+  if(emptyEl) emptyEl.style.display = list.length ? 'none' : 'block';
+  const statusBtn = (sid, st, label, activeCls, extraStyle) => {
+    const active = (dayRecord[attKey(sid)] || '') === st;
+    const bg = active ? '' : 'background:var(--muted);';
+    return `<button class="btn small ${active ? activeCls : ''}" style="${bg}${extraStyle||''}" onclick="setAttStatus(${sid},'${st}')">${label}</button>`;
+  };
   const rows = list.map(s => {
     const status = dayRecord[attKey(s.id)] || dayRecord[s.id] || '';
     const waBtn = status === 'absent'
@@ -2914,9 +3074,13 @@ function renderAttendanceForm(){
       : '—';
     const notMarkedTag = status ? '' : '<div style="font-size:11px; color:var(--red); margin-top:3px;">⚠ Not marked</div>';
     return `<tr><td>${s.adm}</td><td>${s.name}</td><td>${s.cls||'—'}</td>
-      <td>
-        <button class="btn small ${status==='present'?'green':''}" style="${status==='present'?'':'background:var(--muted);'}" onclick="setAttStatus(${s.id},'present')">Present</button>
-        <button class="btn small ${status==='absent'?'red':''}" style="${status==='absent'?'':'background:var(--muted);'} margin-left:6px;" onclick="setAttStatus(${s.id},'absent')">Absent</button>
+      <td style="white-space:normal;">
+        ${statusBtn(s.id,'present','Present','green','')}
+        ${statusBtn(s.id,'absent','Absent','red','margin-left:4px;')}
+        ${statusBtn(s.id,'late','Late','','margin-left:4px;background:'+(status==='late'?'#f9a825':'var(--muted)')+';color:#1a1a1a;')}
+        ${statusBtn(s.id,'half','Half','','margin-left:4px;background:'+(status==='half'?'#7e57c2':'var(--muted)')+';color:#fff;')}
+        ${statusBtn(s.id,'leave','Leave','','margin-left:4px;background:'+(status==='leave'?'#546e7a':'var(--muted)')+';color:#fff;')}
+        <button class="btn small" style="margin-left:4px;background:#eee;color:#333;" onclick="setAttStatus(${s.id},'')" title="Clear / Unmark">↺</button>
         ${notMarkedTag}
       </td>
       <td>${waBtn}</td></tr>`;
@@ -2933,27 +3097,67 @@ function renderAttClassSummary(date){
   students.forEach(s => {
     const key = classKey(s.cls) || 'unassigned';
     const label = classKey(s.cls) ? classDisplay(s.cls) : 'Unassigned';
-    if(!counts[key]) counts[key] = { label, total:0, present:0, absent:0, unmarked:0 };
+    if(!counts[key]) counts[key] = { label, total:0, present:0, absent:0, other:0, unmarked:0 };
     counts[key].total++;
     const status = dayRecord[attKey(s.id)] || dayRecord[s.id] || '';
     if(status === 'absent') counts[key].absent++;
     else if(status === 'present') counts[key].present++;
+    else if(status === 'late' || status === 'half' || status === 'leave') counts[key].other++;
     else counts[key].unmarked++;
   });
   const keys = Object.keys(counts).sort((a,b)=> counts[a].label.localeCompare(counts[b].label, undefined, {numeric:true}));
   const emptyEl = document.getElementById('attClassSummaryEmpty');
   if(emptyEl) emptyEl.style.display = keys.length ? 'none' : 'block';
-  body.innerHTML = keys.map(k => `<tr><td>${counts[k].label}</td><td>${counts[k].total}</td><td>${counts[k].present}</td><td>${counts[k].absent}</td><td>${counts[k].unmarked ? '<b style="color:var(--red);">'+counts[k].unmarked+'</b>' : '0'}</td></tr>`).join('');
+  body.innerHTML = keys.map(k => `<tr><td>${counts[k].label}</td><td>${counts[k].total}</td><td>${counts[k].present}</td><td>${counts[k].absent}</td><td>${counts[k].other}</td><td>${counts[k].unmarked ? '<b style="color:var(--red);">'+counts[k].unmarked+'</b>' : '0'}</td></tr>`).join('');
 }
 function setAttStatus(studentId, status){
   const date = document.getElementById('attDate').value || localDateStr();
   if(!attendanceRecords[date]) attendanceRecords[date] = {};
-  // Key hamesha string — miss na ho dashboard/summary mein
-  attendanceRecords[date][attKey(studentId)] = status;
+  const key = attKey(studentId);
+  if(!status){
+    // Unmark — local se hatao + cloud delete queue
+    delete attendanceRecords[date][key];
+    if(!attendancePendingDeletes[date]) attendancePendingDeletes[date] = {};
+    attendancePendingDeletes[date][key] = true;
+  } else {
+    attendanceRecords[date][key] = status;
+    if(attendancePendingDeletes[date]) delete attendancePendingDeletes[date][key];
+  }
   saveAttendanceDateToCloud(date);
   saveData();
-  renderAttendanceForm();
-  // Dashboard turant update — warna mark ke baad dashboard par purana count dikhta tha
+  renderAttendanceForm(true);
+  if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
+}
+function markAllFiltered(status){
+  const date = document.getElementById('attDate').value || localDateStr();
+  const clsFilter = (document.getElementById('attClassFilter')||{}).value || '';
+  const statusFilter = (document.getElementById('attStatusFilter')||{}).value || '';
+  if(!attendanceRecords[date]) attendanceRecords[date] = {};
+  let list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : students.slice();
+  const dayRecord = attendanceRecords[date] || {};
+  if(statusFilter === 'present') list = list.filter(s => (dayRecord[attKey(s.id)] || '') === 'present');
+  else if(statusFilter === 'absent') list = list.filter(s => (dayRecord[attKey(s.id)] || '') === 'absent');
+  else if(statusFilter === 'late') list = list.filter(s => (dayRecord[attKey(s.id)] || '') === 'late');
+  else if(statusFilter === 'half') list = list.filter(s => (dayRecord[attKey(s.id)] || '') === 'half');
+  else if(statusFilter === 'leave') list = list.filter(s => (dayRecord[attKey(s.id)] || '') === 'leave');
+  else if(statusFilter === 'unmarked') list = list.filter(s => !(dayRecord[attKey(s.id)] || ''));
+  if(!list.length){ alert('Is filter mein koi student nahi.'); return; }
+  const label = status === 'present' ? 'Present' : status === 'absent' ? 'Absent' : status === 'late' ? 'Late' : status === '' ? 'Clear/Unmark' : status;
+  if(!confirm(list.length + ' students ko "' + label + '" mark karein?')) return;
+  if(!attendancePendingDeletes[date]) attendancePendingDeletes[date] = {};
+  list.forEach(s => {
+    const key = attKey(s.id);
+    if(!status){
+      delete attendanceRecords[date][key];
+      attendancePendingDeletes[date][key] = true;
+    } else {
+      attendanceRecords[date][key] = status;
+      delete attendancePendingDeletes[date][key];
+    }
+  });
+  saveAttendanceDateToCloud(date);
+  saveData();
+  renderAttendanceForm(true);
   if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
 }
 function sendAbsentWhatsApp(studentId){
@@ -2967,12 +3171,17 @@ function sendAbsentWhatsApp(studentId){
 }
 function saveAttendance(){
   const date = document.getElementById('attDate').value || localDateStr();
-  saveAttendanceDateToCloud(date);
-  saveData();
-  alert('Attendance save ho gayi is date k liye: ' + date);
-  renderAll();
+  saveAttendanceDateToCloud(date).then(()=>{
+    saveData();
+    alert('Attendance save ho gayi is date k liye: ' + date);
+    renderAll();
+  });
 }
-document.addEventListener('change', function(e){ if(e.target.id === 'attDate' || e.target.id === 'attClassFilter' || e.target.id === 'attStatusFilter') renderAttendanceForm(); });
+document.addEventListener('change', function(e){
+  if(e.target.id === 'attDate' || e.target.id === 'attClassFilter' || e.target.id === 'attStatusFilter'){
+    renderAttendanceForm(e.target.id !== 'attDate' ? true : false);
+  }
+});
 
 /* ===================== QR CODE ATTENDANCE ===================== */
 let qrScannerInstance = null;
@@ -3583,6 +3792,7 @@ function renderClassWiseCounts(){
   const body = document.getElementById('classWiseBody');
   if(!body) return;
   const today = localDateStr();
+  ensureAttendanceDateLoaded(today);
   const todayRec = attendanceRecords[today] || {};
   const counts = {};
   students.forEach(s=>{
@@ -3636,6 +3846,7 @@ function renderDashboard(){
     staffOnlineEl.innerHTML = '<span style="color:var(--green);">🟢 ' + onlineCount + ' Online</span> · <span style="color:#888;">⚪ ' + (staff.length - onlineCount) + ' Offline</span>';
   }
   const today = localDateStr();
+  ensureAttendanceDateLoaded(today);
   const todayRec = attendanceRecords[today] || {};
   const present = students.filter(s => {
     const st = todayRec[attKey(s.id)] || todayRec[s.id] || '';
@@ -3707,19 +3918,113 @@ function renderReports(){
   document.getElementById('repAmount').textContent = 'Rs. ' + fees.filter(f=>f.status==='paid').reduce((s,f)=>s+f.amount,0);
   renderClassFeeSummary();
   const today = localDateStr();
+  ensureAttendanceDateLoaded(today);
   const todayRec = attendanceRecords[today] || {};
-  const present = students.filter(s => {
-    const st = todayRec[attKey(s.id)] || todayRec[s.id] || '';
-    return st === 'present';
-  }).length;
-  const absent = students.filter(s => {
-    const st = todayRec[attKey(s.id)] || todayRec[s.id] || '';
-    return st === 'absent';
+  const present = students.filter(s => (todayRec[attKey(s.id)] || '') === 'present').length;
+  const absent = students.filter(s => (todayRec[attKey(s.id)] || '') === 'absent').length;
+  const lateish = students.filter(s => {
+    const st = todayRec[attKey(s.id)] || '';
+    return st === 'late' || st === 'half' || st === 'leave';
   }).length;
   document.getElementById('repPresent').textContent = present;
   document.getElementById('repAbsent').textContent = absent;
+  const repLateEl = document.getElementById('repLate');
+  if(repLateEl) repLateEl.textContent = lateish;
   const repNotMarkedEl = document.getElementById('repNotMarked');
-  if(repNotMarkedEl) repNotMarkedEl.textContent = students.length - present - absent;
+  if(repNotMarkedEl) repNotMarkedEl.textContent = students.length - present - absent - lateish;
+  // Monthly report defaults
+  const fromEl = document.getElementById('attRepFrom');
+  const toEl = document.getElementById('attRepTo');
+  if(fromEl && !fromEl.value){
+    const d = new Date();
+    fromEl.value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-01';
+  }
+  if(toEl && !toEl.value) toEl.value = today;
+  const clsSel = document.getElementById('attRepClass');
+  if(clsSel && clsSel.options.length <= 1){
+    const keys = {};
+    students.forEach(s => { const k = classKey(s.cls); if(k) keys[k] = classDisplay(s.cls); });
+    Object.keys(keys).sort((a,b)=>keys[a].localeCompare(keys[b], undefined, {numeric:true})).forEach(k=>{
+      const opt = document.createElement('option');
+      opt.value = k; opt.textContent = keys[k];
+      clsSel.appendChild(opt);
+    });
+  }
+}
+function loadMonthlyAttendanceReport(){
+  const fromStr = (document.getElementById('attRepFrom')||{}).value;
+  const toStr = (document.getElementById('attRepTo')||{}).value;
+  const clsFilter = (document.getElementById('attRepClass')||{}).value || '';
+  const note = document.getElementById('attRepLoadNote');
+  const body = document.getElementById('attRepBody');
+  const empty = document.getElementById('attRepEmpty');
+  if(!fromStr || !toStr){ alert('From aur To date select karein.'); return; }
+  const dates = datesBetween(fromStr, toStr);
+  if(!dates.length){ alert('Invalid date range.'); return; }
+  if(note) note.textContent = '⏳ ' + dates.length + ' din cloud se load ho rahe hain…';
+  ensureAttendanceRangeLoaded(fromStr, toStr).then(()=>{
+    let list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : students.slice();
+    list = list.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    // working days = non-Sunday in range
+    const workingDates = dates.filter(d => !isSunday(d));
+    const rows = list.map(s => {
+      let p=0,a=0,l=0,h=0,lv=0,marked=0;
+      workingDates.forEach(d => {
+        const st = (attendanceRecords[d]||{})[attKey(s.id)] || '';
+        if(st === 'present'){ p++; marked++; }
+        else if(st === 'absent'){ a++; marked++; }
+        else if(st === 'late'){ l++; marked++; }
+        else if(st === 'half'){ h++; marked++; }
+        else if(st === 'leave'){ lv++; marked++; }
+      });
+      const wd = workingDates.length;
+      // % = (present + late + half*0.5) / working days * 100  (leave optional count as present for %? treat leave as neither)
+      const score = p + l + (h * 0.5);
+      const pct = wd ? ((score / wd) * 100).toFixed(1) : '0.0';
+      return `<tr>
+        <td>${s.adm||'—'}</td><td>${s.name}</td><td>${s.cls||'—'}</td>
+        <td>${p}</td><td>${a}</td><td>${l}</td><td>${h}</td><td>${lv}</td>
+        <td>${wd}</td><td><b>${pct}%</b></td>
+      </tr>`;
+    });
+    if(body) body.innerHTML = rows.join('');
+    if(empty) empty.style.display = list.length ? 'none' : 'block';
+    if(note) note.textContent = '✅ ' + dates.length + ' din · ' + workingDates.length + ' working days (Sunday exclude) · ' + list.length + ' students';
+  }).catch(err=>{
+    if(note) note.textContent = '❌ Load fail: ' + (err && err.message ? err.message : err);
+  });
+}
+function exportMonthlyAttendanceCSV(){
+  const fromStr = (document.getElementById('attRepFrom')||{}).value;
+  const toStr = (document.getElementById('attRepTo')||{}).value;
+  const clsFilter = (document.getElementById('attRepClass')||{}).value || '';
+  if(!fromStr || !toStr){ alert('Pehle report load karein (From/To).'); return; }
+  const dates = datesBetween(fromStr, toStr);
+  const workingDates = dates.filter(d => !isSunday(d));
+  let list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : students.slice();
+  const lines = ['Adm,Name,Class,Present,Absent,Late,Half,Leave,WorkingDays,Percentage'];
+  list.forEach(s => {
+    let p=0,a=0,l=0,h=0,lv=0;
+    workingDates.forEach(d => {
+      const st = (attendanceRecords[d]||{})[attKey(s.id)] || '';
+      if(st==='present') p++;
+      else if(st==='absent') a++;
+      else if(st==='late') l++;
+      else if(st==='half') h++;
+      else if(st==='leave') lv++;
+    });
+    const wd = workingDates.length;
+    const pct = wd ? (((p + l + h*0.5) / wd) * 100).toFixed(1) : '0.0';
+    const esc = (v) => '"' + String(v||'').replace(/"/g,'""') + '"';
+    lines.push([esc(s.adm),esc(s.name),esc(s.cls),p,a,l,h,lv,wd,pct].join(','));
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'attendance_' + fromStr + '_to_' + toStr + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function renderClassFeeSummary(){
@@ -3948,7 +4253,7 @@ window.addEventListener('offline', ()=>{
 });
 </script>
     <script>
-  window.__APP_BUILD__ = '20260822-sync-presence-2';
+  window.__APP_BUILD__ = '20260826-attendance-fix-v3';
   (function(){
     var reloading = false;
     function forceReload(){
