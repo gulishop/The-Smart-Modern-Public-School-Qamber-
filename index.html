@@ -78,6 +78,19 @@
   .login-hint{margin-top:16px; font-size:12px; color:var(--navy); background:var(--cream); border-left:3px solid var(--gold); border-radius:6px; padding:12px 13px; line-height:1.6; font-family:'Lora',serif; font-style:italic; text-align:center;}
   .login-error{color:var(--red); font-size:12px; margin-top:8px; display:none; font-weight:600;}
   .offline-note{margin-top:12px; text-align:center; font-size:10.5px; color:#8892AC;}
+  #parentPortalScreen{display:none; min-height:100vh; background:var(--cream); padding:20px 14px 40px;}
+  .parent-wrap{max-width:520px; margin:0 auto;}
+  .parent-card{background:var(--paper); border:1px solid var(--rule); border-radius:12px; padding:22px 20px; margin-bottom:16px;}
+  .parent-card h2{font-size:18px; color:var(--navy); margin-bottom:6px;}
+  .parent-card .sub{font-size:12px; color:var(--muted); margin-bottom:16px;}
+  .parent-stat{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0;}
+  .parent-stat .box{background:var(--cream); border-radius:8px; padding:12px; text-align:center;}
+  .parent-stat .box .n{font-size:20px; font-weight:700; color:var(--navy); font-family:'JetBrains Mono',monospace;}
+  .parent-stat .box .l{font-size:11px; color:var(--muted); margin-top:2px;}
+  .parent-row{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--rule); font-size:13px;}
+  .parent-row .k{color:var(--muted);}
+  .parent-row .v{font-weight:600; text-align:right;}
+
   .dev-credit{margin-top:14px; padding-top:12px; border-top:1px solid var(--rule); text-align:center; font-size:10px; color:var(--muted); font-family:'JetBrains Mono',monospace; letter-spacing:0.3px;}
   .dev-credit b{color:var(--navy);}
 
@@ -257,25 +270,13 @@
   .thermal-receipt .t-total{border-top:1px solid #000; margin-top:6px; padding-top:6px; font-weight:700; display:flex; justify-content:space-between;}
   #printModal.thermal-mode .print-wrap{max-width:300px;}
 
-  .bulk-challan-grid{display:grid; gap:10px; width:100%;}
-  .bulk-challan-grid.cols-2{grid-template-columns:1fr 1fr;}
-  .bulk-challan-grid.cols-4{grid-template-columns:1fr 1fr;}
-  .bulk-challan-grid.cols-6{grid-template-columns:1fr 1fr;}
-  .bulk-challan-grid .challan-copy{margin-bottom:0; padding:12px 14px; page-break-inside:avoid; break-inside:avoid;}
-  .bulk-challan-grid .challan-head h3{font-size:13px;}
-  .bulk-challan-grid .challan-head img{width:36px;height:36px;}
-  .bulk-challan-grid .challan-row{font-size:11px; padding:3px 0;}
-  .bulk-challan-grid .challan-total{font-size:13px; padding-top:6px;}
-  .bulk-page-break{page-break-after:always; break-after:page; height:0; margin:0; padding:0; border:none;}
-
   @media print{
-    @page{ size:A4; margin:10mm; }
+    @page{ size:A4; margin:14mm; }
     body *{visibility:hidden;}
     #printModal, #printModal *{visibility:visible;}
     #printModal{position:absolute; inset:auto; background:#fff; padding:0; display:block;}
-    .print-wrap{max-width:100%; padding:0; box-shadow:none;}
+    .print-wrap{max-width:100%; padding:0;}
     .no-print{display:none !important;}
-    .bulk-challan-grid{gap:8px;}
   }
 
   /* ===================== RESPONSIVE / MOBILE MODE ===================== */
@@ -349,7 +350,65 @@
       <span id="quoteText">Loading…</span>
     </div>
     <div class="offline-note" id="cloudStatusNote">☁️ Cloud database se connect ho raha hai…</div>
+    <div style="margin-top:14px; text-align:center;">
+      <button type="button" onclick="openParentPortalFromLogin()" style="background:none; border:none; color:var(--gold); font-size:12px; text-decoration:underline; cursor:pointer; font-family:inherit;">👨‍👩‍👧 Parent Portal — apne bache ka data dekhein</button>
+    </div>
     <div class="dev-credit">Software by <b>Fazul Khan Chandio</b> · +92 333 3909816</div>
+  </div>
+</div>
+
+<!-- ===================== PARENT PORTAL ===================== -->
+<div id="parentPortalScreen">
+  <div class="parent-wrap">
+    <div class="parent-card" id="parentLoginCard">
+      <div style="text-align:center; margin-bottom:12px;">
+        <h2 id="parentSchoolTitle">Parent Portal</h2>
+        <div class="sub">Sirf apne bache ki attendance, fee aur result dekhein</div>
+      </div>
+      <div class="field"><label>Admission No.</label><input id="parentAdm" type="text" placeholder="e.g. ADM-0001" autocomplete="username"></div>
+      <div class="field"><label>Parent PIN</label><input id="parentPinInput" type="password" placeholder="4-digit PIN" maxlength="8" autocomplete="current-password" onkeydown="if(event.key==='Enter')parentPortalLogin()"></div>
+      <button class="btn green" style="width:100%; margin-top:8px;" onclick="parentPortalLogin()">View My Child</button>
+      <div id="parentLoginError" class="login-error" style="display:none; margin-top:10px;"></div>
+      <p style="font-size:11px; color:var(--muted); text-align:center; margin-top:14px; line-height:1.5;">PIN school office se milta hai. Link se open karein — software install ki zaroorat nahi.</p>
+    </div>
+    <div id="parentDashCard" style="display:none;">
+      <div class="parent-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+          <div>
+            <h2 id="parentChildName">—</h2>
+            <div class="sub" id="parentChildMeta">—</div>
+          </div>
+          <button class="btn small" style="background:var(--muted); margin:0;" onclick="parentPortalLogout()">Logout</button>
+        </div>
+        <div class="parent-stat">
+          <div class="box"><div class="n" id="parentAttPresent">0</div><div class="l">Present (month)</div></div>
+          <div class="box"><div class="n" id="parentAttAbsent">0</div><div class="l">Absent (month)</div></div>
+          <div class="box"><div class="n" id="parentFeePaid">0</div><div class="l">Fees Paid</div></div>
+          <div class="box"><div class="n" id="parentFeePending">0</div><div class="l">Fees Pending</div></div>
+        </div>
+      </div>
+      <div class="parent-card">
+        <h3 style="font-size:15px; margin-bottom:10px;">📋 Fee Status</h3>
+        <div id="parentFeeList"></div>
+        <div id="parentFeeEmpty" class="empty" style="display:none;">Koi fee record nahi.</div>
+      </div>
+      <div class="parent-card">
+        <h3 style="font-size:15px; margin-bottom:10px;">📅 This Month Attendance</h3>
+        <div id="parentAttList" style="max-height:220px; overflow-y:auto;"></div>
+        <div id="parentAttEmpty" class="empty" style="display:none;">Is mahine ki attendance abhi nahi.</div>
+      </div>
+      <div class="parent-card">
+        <h3 style="font-size:15px; margin-bottom:10px;">📝 Latest Results</h3>
+        <div id="parentResultList"></div>
+        <div id="parentResultEmpty" class="empty" style="display:none;">Koi result nahi.</div>
+      </div>
+      <div class="parent-card">
+        <h3 style="font-size:15px; margin-bottom:10px;">📢 School Notices</h3>
+        <div id="parentNoticeList"></div>
+        <div id="parentNoticeEmpty" class="empty" style="display:none;">Koi notice nahi.</div>
+      </div>
+      <p style="text-align:center; font-size:11px; color:var(--muted); margin-top:8px;">Parent Portal · The Smart Modern Public School, Qamber</p>
+    </div>
   </div>
 </div>
 
@@ -477,6 +536,10 @@
               </div>
               <div class="field"><label>Date of Admission</label><input id="stuAdmDate" type="date"></div>
               <div class="field" style="grid-column:1/-1;"><label>Address</label><input id="stuAddress" type="text"></div>
+              <div class="field"><label>Parent PIN (4 digit)</label><input id="stuParentPin" type="text" placeholder="e.g. 4821" maxlength="8" inputmode="numeric"></div>
+              <div class="field" style="display:flex; align-items:flex-end;">
+                <button type="button" class="btn small" style="background:var(--navy); margin:0; width:100%;" onclick="document.getElementById('stuParentPin').value = String(Math.floor(1000+Math.random()*9000))">🎲 Random PIN</button>
+              </div>
             </div>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
               <button class="btn green" id="stuSubmitBtn" onclick="addStudent()">+ Add Student</button>
@@ -485,6 +548,10 @@
           </div>
           <div class="panel">
             <h3>Student List</h3>
+            <div style="margin-bottom:10px; display:flex; flex-wrap:wrap; gap:8px;" class="admin-only">
+              <button class="btn small green" style="margin:0;" onclick="generatePinsForAllStudents()">🔐 Generate PIN for All (without PIN)</button>
+              <button class="btn small" style="margin:0; background:var(--navy);" onclick="copyParentPortalBaseLink()">📋 Copy Parent Portal Link</button>
+            </div>
             <div class="form-grid" style="margin-bottom:10px;">
               <div class="field"><label>Search (Name / Adm # / Roll)</label><input id="stuSearch" type="text" placeholder="Type to filter…" oninput="renderStudents()"></div>
               <div class="field"><label>Filter by Class</label><select id="stuSearchClass" onchange="renderStudents()"><option value="">Sab Classes</option></select></div>
@@ -551,30 +618,6 @@
             </div>
             <button class="btn green" onclick="addFee()">+ Generate Challan</button>
           </div>
-
-          <div class="panel admin-only">
-            <h3>Generate All Unpaid Challans</h3>
-            <p class="hint">Month select karein (jaise September 2026). Jin students ki is month ki challan abhi nahi bani, un sab ke liye automatic pending challan ban jayegi. Online/offline dono mein kaam karega. A4 pe 2 / 4 / 6 challans per page print.</p>
-            <div class="form-grid">
-              <div class="field"><label>Month</label><input id="bulkFeeMonth" type="text" placeholder="e.g. September 2026"></div>
-              <div class="field"><label>Amount (Rs.)</label><input id="bulkFeeAmount" type="number" placeholder="e.g. 1000"></div>
-              <div class="field"><label>Due Date</label><input id="bulkFeeDue" type="date"></div>
-              <div class="field"><label>Class</label><select id="bulkFeeClass"><option value="">Sab Classes</option></select></div>
-              <div class="field"><label>Challans per A4 page</label>
-                <select id="bulkPerPage">
-                  <option value="2">2 per page</option>
-                  <option value="4" selected>4 per page</option>
-                  <option value="6">6 per page</option>
-                </select>
-              </div>
-            </div>
-            <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:8px;">
-              <button class="btn green" style="margin-top:0;" onclick="generateAllUnpaidChallans()">⚡ Generate All Unpaid</button>
-              <button class="btn gold" style="margin-top:0;" onclick="printAllUnpaidChallans()">🖨️ Print Unpaid (A4)</button>
-            </div>
-            <div id="bulkFeeResult" style="margin-top:12px; font-size:13px; color:var(--muted);"></div>
-          </div>
-
           <div class="panel">
             <h3>Fee Records</h3>
             <p class="hint">Print button se School Copy + Student Copy — dono ek hi A4 page par print hongi. Filter se pehle mahine ki paid/pending fees dekh sakte hain.</p>
@@ -1971,7 +2014,7 @@ function showView(name){
     if(d && !d.value) d.value = localDateStr();
     renderExpenses();
   }
-  if(name==='fees'){ renderFeeStudentOptions(); if(typeof populateBulkFeeClass==='function') populateBulkFeeClass(); }
+  if(name==='fees') renderFeeStudentOptions();
   if(name==='reports') renderReports();
   if(name==='settings') fillSettingsForm();
   if(name==='loginlog') renderLoginLog();
@@ -2009,6 +2052,8 @@ function addStudent(){
     s.gender = document.getElementById('stuGender').value;
     s.admDate = document.getElementById('stuAdmDate').value || s.admDate;
     s.address = document.getElementById('stuAddress').value.trim();
+    const pinEl = document.getElementById('stuParentPin');
+    if(pinEl) s.parentPin = String(pinEl.value || '').trim();
     studentsCol.update(Object.assign({}, s));
     cancelEditStudent();
     saveData();
@@ -2027,11 +2072,12 @@ function addStudent(){
     dob: document.getElementById('stuDOB').value,
     gender: document.getElementById('stuGender').value,
     admDate: document.getElementById('stuAdmDate').value || new Date().toISOString().slice(0,10),
-    address: document.getElementById('stuAddress').value.trim()
+    address: document.getElementById('stuAddress').value.trim(),
+    parentPin: ((document.getElementById('stuParentPin')||{}).value || '').trim()
   };
   students.push(newStudent);
   studentsCol.add(newStudent);
-  ['stuName','stuFather','stuClass','stuSection','stuRoll','stuContact','stuDOB','stuAddress'].forEach(id => document.getElementById(id).value = '');
+  ['stuName','stuFather','stuClass','stuSection','stuRoll','stuContact','stuDOB','stuAddress','stuParentPin'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('stuAdmDate').value = new Date().toISOString().slice(0,10);
   renderAll();
 }
@@ -2057,6 +2103,8 @@ function editStudent(id){
   document.getElementById('stuGender').value = s.gender || 'Male';
   document.getElementById('stuAdmDate').value = s.admDate || '';
   document.getElementById('stuAddress').value = s.address || '';
+  const _pinEl = document.getElementById('stuParentPin');
+  if(_pinEl) _pinEl.value = s.parentPin || '';
   document.getElementById('stuFormTitle').textContent = 'Edit Student — ' + s.adm;
   document.getElementById('stuSubmitBtn').textContent = '✔ Update Student';
   document.getElementById('stuCancelBtn').style.display = 'inline-block';
@@ -2112,8 +2160,11 @@ function renderStudents(){
     const contactCell = isAdmin
       ? (s.contact || '—')
       : (s.contact ? '<span style="color:var(--muted); letter-spacing:1px;" title="Contact saved (sirf Admin dekh sakta hai)">••••••••</span>' : '—');
-    tbody.innerHTML += `<tr><td>${s.adm}</td><td>${s.name}</td><td>${s.father||'—'}</td><td>${s.cls||'—'}</td><td>${s.section||'—'}</td><td>${s.roll||'—'}</td><td>${contactCell}</td><td style="display:flex; gap:6px; flex-wrap:wrap;">
+    const pinBadge = s.parentPin ? '<span style="font-size:10px; color:var(--green);">PIN✓</span>' : '<span style="font-size:10px; color:var(--red);">No PIN</span>';
+    tbody.innerHTML += `<tr><td>${s.adm}<div>${pinBadge}</div></td><td>${s.name}</td><td>${s.father||'—'}</td><td>${s.cls||'—'}</td><td>${s.section||'—'}</td><td>${s.roll||'—'}</td><td>${contactCell}</td><td style="display:flex; gap:6px; flex-wrap:wrap;">
       <button class="btn small" style="background:var(--navy);" onclick="editStudent(${s.id})">✏️ Edit</button>
+      ${isAdmin ? `<button class="btn small" style="background:#5b4636; color:#fff;" onclick="shareParentLink(${s.id})">🔗 Parent Link</button>` : ''}
+      ${isAdmin ? `<button class="btn small gold" onclick="setStudentParentPin(${s.id})">PIN</button>` : ''}
       <button class="btn small gold" onclick="printAdmissionForm(${s.id})">🖨️ Form</button>
       <button class="btn small" style="background:#5b4636; color:#fff;" onclick="printIdCard(${s.id})">🪪 ID Card</button>
       <button class="btn small" style="background:#7a5230; color:#fff;" onclick="printTC(${s.id})">📜 TC</button>
@@ -2308,131 +2359,7 @@ function addFee(){
   feesCol.add(newFee);
   ['feeMonth','feeAmount','feeDue'].forEach(id => document.getElementById(id).value = '');
   renderAll();
-  if(typeof showStudentFeeHistory === 'function') showStudentFeeHistory();
-}
-function populateBulkFeeClass(){
-  const sel = document.getElementById('bulkFeeClass');
-  if(!sel) return;
-  const prev = sel.value;
-  const seen = {};
-  (students||[]).forEach(s => {
-    const k = classKey(s.cls);
-    if(k && !seen[k]) seen[k] = classDisplay(s.cls);
-  });
-  const keys = Object.keys(seen).sort((a,b)=> seen[a].localeCompare(seen[b], undefined, {numeric:true}));
-  sel.innerHTML = '<option value="">Sab Classes</option>' + keys.map(k => '<option value="'+k+'">'+seen[k]+'</option>').join('');
-  if(prev) sel.value = prev;
-}
-function feeMonthKey(m){
-  return String(m||'').trim().toLowerCase().replace(/\s+/g,' ');
-}
-function studentHasFeeForMonth(studentId, month){
-  const key = feeMonthKey(month);
-  if(!key) return false;
-  return (fees||[]).some(f => Number(f.studentId) === Number(studentId) && feeMonthKey(f.month) === key);
-}
-function generateAllUnpaidChallans(){
-  if(session && session.role !== 'admin'){ alert('Sirf Admin bulk generate kar sakta hai.'); return; }
-  const month = (document.getElementById('bulkFeeMonth').value || '').trim();
-  const amount = Number(document.getElementById('bulkFeeAmount').value);
-  const due = document.getElementById('bulkFeeDue').value || '';
-  const cls = (document.getElementById('bulkFeeClass').value || '').trim();
-  const result = document.getElementById('bulkFeeResult');
-  if(!month){ alert('Month likhein (jaise September 2026).'); return; }
-  if(!amount || amount <= 0){ alert('Sahi fee amount likhein.'); return; }
-  let list = (students||[]).slice();
-  if(cls) list = list.filter(s => classKey(s.cls) === cls);
-  if(!list.length){ alert('Is class mein koi student nahi mila.'); return; }
-  const toCreate = list.filter(s => !studentHasFeeForMonth(s.id, month));
-  const already = list.length - toCreate.length;
-  if(!toCreate.length){
-    if(result) result.innerHTML = '✅ Is month (<b>'+month+'</b>) ke liye sab students ki challan pehle se maujood hai ('+already+').';
-    alert('Is month ke liye sab ki challan pehle se ban chuki hai.');
-    return;
-  }
-  if(!confirm(toCreate.length + ' students ke liye "' + month + '" ki pending challan generate karni hai?\n(Amount: Rs. ' + amount + (cls ? '\nClass: ' + classDisplay(cls) : ' · Sab Classes') + ')\n\nPehle se banay hue: ' + already)) return;
-  toCreate.forEach(s => {
-    const newFee = { id: newId(), studentId: s.id, month: month, amount: amount, due: due, status: 'pending' };
-    fees.push(newFee);
-    feesCol.add(newFee); // online: Firestore; offline: queue + localStorage via saveData
-  });
-  saveData(); // localStorage + cloud (offline queue jab net aaye)
-  renderAll();
-  if(result){
-    result.innerHTML = '✅ <b>' + toCreate.length + '</b> unpaid challans generate — Month: <b>' + month + '</b> · Rs. ' + amount
-      + (already ? ' · (Pehle se: ' + already + ')' : '')
-      + '<br><span style="color:var(--navy);">Ab "Print Unpaid (A4)" dabayein.</span>';
-  }
-  alert(toCreate.length + ' unpaid challans generate ho gayi!');
-}
-function printAllUnpaidChallans(){
-  const monthInput = (document.getElementById('bulkFeeMonth').value || '').trim();
-  const monthFilterEl = document.getElementById('feeMonthFilter');
-  const month = monthInput || (monthFilterEl ? monthFilterEl.value.trim() : '');
-  if(!month){ alert('Pehle Month likhein — e.g. September 2026'); return; }
-  const perPage = Number((document.getElementById('bulkPerPage')||{}).value) || 4;
-  const cls = (document.getElementById('bulkFeeClass').value || '').trim();
-  const key = feeMonthKey(month);
-  let list = (fees||[]).filter(f => f.status === 'pending' && feeMonthKey(f.month) === key);
-  if(cls){
-    list = list.filter(f => {
-      const s = students.find(x => x.id === f.studentId);
-      return s && classKey(s.cls) === cls;
-    });
-  }
-  list.sort((a,b) => {
-    const sa = students.find(s => s.id === a.studentId);
-    const sb = students.find(s => s.id === b.studentId);
-    const ca = classKey(sa && sa.cls) || '';
-    const cb = classKey(sb && sb.cls) || '';
-    if(ca !== cb) return ca.localeCompare(cb, undefined, {numeric:true});
-    return ((sa && sa.name)||'').localeCompare((sb && sb.name)||'');
-  });
-  if(!list.length){
-    alert('Is month ke koi pending/unpaid challan nahi mili.\nPehle "Generate All Unpaid" chalaein.');
-    return;
-  }
-  const colsClass = perPage <= 2 ? 'cols-2' : (perPage <= 4 ? 'cols-4' : 'cols-6');
-  function compactChallan(f, student){
-    return '<div class="challan-copy">'
-      + '<div class="copy-tag">UNPAID</div>'
-      + '<div class="challan-head">'
-      + '<img src="data:image/jpeg;base64,' + LOGO_B64 + '" alt="Logo" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-bottom:4px;">'
-      + '<h3>' + (schoolSettings.name||'School') + '</h3>'
-      + '<div class="s">FEE CHALLAN — QAMBER</div>'
-      + '<div style="font-size:10px;color:#555;">03362506588</div></div>'
-      + '<div class="challan-row"><span class="k">Student</span><span class="v" style="font-weight:700;">' + (student ? student.name : '—') + '</span></div>'
-      + '<div class="challan-row"><span class="k">Class / Sec</span><span class="v">' + (student ? ((student.cls||'—')+' / '+(student.section||'—')) : '—') + '</span></div>'
-      + '<div class="challan-row"><span class="k">Adm #</span><span class="v">' + (student ? student.adm : '—') + '</span></div>'
-      + '<div class="challan-row"><span class="k">Month</span><span class="v">' + (f.month||'—') + '</span></div>'
-      + '<div class="challan-row"><span class="k">Due</span><span class="v">' + (f.due || '—') + '</span></div>'
-      + '<div class="challan-total"><span>Amount</span><span>Rs. ' + f.amount + '</span></div>'
-      + '</div>';
-  }
-  let html = '';
-  for(let i = 0; i < list.length; i += perPage){
-    const chunk = list.slice(i, i + perPage);
-    html += '<div class="bulk-challan-grid ' + colsClass + '">';
-    chunk.forEach(f => {
-      const student = students.find(s => s.id === f.studentId);
-      html += compactChallan(f, student);
-    });
-    for(let e = 0; e < perPage - chunk.length; e++) html += '<div></div>';
-    html += '</div>';
-    if(i + perPage < list.length) html += '<div class="bulk-page-break"></div>';
-  }
-  printModalFeeId = null;
-  document.getElementById('printModal').classList.remove('thermal-mode');
-  document.getElementById('printPage').innerHTML = html;
-  const btBtn = document.getElementById('thermalPrintBtn');
-  if(btBtn) btBtn.style.display = 'none';
-  const modeBtn = document.getElementById('thermalModeBtn');
-  if(modeBtn) modeBtn.style.display = 'none';
-  const psBtn = document.getElementById('printerSettingsBtn');
-  if(psBtn) psBtn.style.display = 'none';
-  document.getElementById('printModal').style.display = 'flex';
-  const result = document.getElementById('bulkFeeResult');
-  if(result) result.innerHTML = '🖨️ Print ready: <b>' + list.length + '</b> unpaid · Month: <b>' + month + '</b> · ' + perPage + ' / page';
+  showStudentFeeHistory();
 }
 function editFee(id){
   if(session.role !== 'admin'){ alert('Sirf Admin edit kar sakta hai.'); return; }
@@ -3208,8 +3135,8 @@ function renderAttendanceForm(){
     return `<tr><td>${s.adm}</td><td>${s.name}</td><td>${s.cls||'—'}</td>
       <td>
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-          <button class="btn small att-btn-p" style="min-width:88px; font-weight:700; padding:8px 12px; border:2px solid ${pActive?'#1a7a3a':'#c5c5c5'}; background:${pActive?'#1a7a3a':'#eef5ee'}; color:${pActive?'#fff':'#1a7a3a'};" onclick="setAttStatus(${s.id},'present')">${pActive?'✓ ':''}Present</button>
-          <button class="btn small att-btn-a" style="min-width:88px; font-weight:700; padding:8px 12px; border:2px solid ${aActive?'#b33':'#c5c5c5'}; background:${aActive?'#b33':'#f8eeee'}; color:${aActive?'#fff':'#b33'};" onclick="setAttStatus(${s.id},'absent')">${aActive?'✓ ':''}Absent</button>
+          <button class="btn small att-btn-p" style="min-width:88px; font-weight:700; padding:8px 12px; border:2px solid ${pActive?'#1a7a3a':'#c5c5c5'}; background:${pActive?'#1a7a3a':'#eef5ee'}; color:${pActive?'#fff':'#1a7a3a'};" onclick="setAttStatus(${s.id},'present')">${pActive?'✓ ':''}حاضر</button>
+          <button class="btn small att-btn-a" style="min-width:88px; font-weight:700; padding:8px 12px; border:2px solid ${aActive?'#b33':'#c5c5c5'}; background:${aActive?'#b33':'#f8eeee'}; color:${aActive?'#fff':'#b33'};" onclick="setAttStatus(${s.id},'absent')">${aActive?'✓ ':''}غیر حاضر</button>
         </div>
         ${notMarkedTag}
       </td>
@@ -4103,6 +4030,243 @@ document.querySelectorAll('table').forEach(tbl=>{
   }
 });
 
+
+/* ===================== PARENT PORTAL ===================== */
+const PARENT_SESSION_KEY = 'smp_qamber_parent_session_v1';
+let parentSessionStudentId = null;
+
+function randomParentPin(){ return String(Math.floor(1000 + Math.random() * 9000)); }
+
+function getParentPortalUrl(adm){
+  const base = location.href.split('#')[0].split('?')[0];
+  let url = base + '#parent';
+  if(adm) url += '/' + encodeURIComponent(String(adm).trim());
+  return url;
+}
+function copyParentPortalBaseLink(){
+  const url = getParentPortalUrl();
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(()=> alert('Parent Portal link copy ho gaya:\n' + url)).catch(()=> prompt('Copy karein:', url));
+  } else {
+    prompt('Copy karein:', url);
+  }
+}
+/** Pehle se admitted students jinka PIN nahi — un sab ke liye automatic PIN */
+function generatePinsForAllStudents(){
+  if(!session || session.role !== 'admin'){ alert('Sirf Admin PIN generate kar sakta hai.'); return; }
+  const need = (students||[]).filter(s => !s.parentPin || !String(s.parentPin).trim());
+  if(!need.length){
+    alert('Sab students ke Parent PIN pehle se set hain (' + students.length + ').');
+    return;
+  }
+  if(!confirm(need.length + ' students ka Parent PIN abhi nahi hai.\nUn sab ke liye automatic 4-digit PIN generate karein?')) return;
+  need.forEach(s => {
+    s.parentPin = randomParentPin();
+    studentsCol.update(Object.assign({}, s));
+  });
+  saveData();
+  renderStudents();
+  alert(need.length + ' students ke Parent PIN generate ho gaye!\n\nAb har student pe "Parent Link" se WhatsApp/share kar sakte hain.');
+}
+function openParentPortalFromLogin(){
+  location.hash = '#parent';
+  showParentPortal();
+}
+function isParentHash(){
+  const h = (location.hash || '').toLowerCase();
+  return h === '#parent' || h.indexOf('#parent/') === 0;
+}
+function showParentPortal(){
+  const login = document.getElementById('loginScreen');
+  const app = document.getElementById('appScreen');
+  const portal = document.getElementById('parentPortalScreen');
+  if(login) login.style.display = 'none';
+  if(app) app.style.display = 'none';
+  if(portal) portal.style.display = 'block';
+  const h = location.hash || '';
+  const m = h.match(/^#parent\/(.+)$/i);
+  if(m){
+    const admEl = document.getElementById('parentAdm');
+    if(admEl && !admEl.value) admEl.value = decodeURIComponent(m[1]);
+  }
+  try{
+    const title = document.getElementById('parentSchoolTitle');
+    if(title && schoolSettings && schoolSettings.name) title.textContent = schoolSettings.name + ' — Parent Portal';
+  }catch(e){}
+  restoreParentSession();
+}
+function hideParentPortal(){
+  const portal = document.getElementById('parentPortalScreen');
+  if(portal) portal.style.display = 'none';
+}
+function findStudentByAdm(admRaw){
+  const adm = String(admRaw||'').trim().toLowerCase();
+  if(!adm) return null;
+  let s = (students||[]).find(x => String(x.adm||'').toLowerCase() === adm);
+  if(s) return s;
+  const strip = adm.replace(/^adm-?/,'');
+  return (students||[]).find(x => String(x.adm||'').toLowerCase().replace(/^adm-/,'') === strip) || null;
+}
+function parentPortalLogin(){
+  const adm = (document.getElementById('parentAdm').value || '').trim();
+  const pin = (document.getElementById('parentPinInput').value || '').trim();
+  const err = document.getElementById('parentLoginError');
+  if(err) err.style.display = 'none';
+  if(!adm || !pin){
+    if(err){ err.textContent = 'Admission No. aur PIN dono likhein.'; err.style.display = 'block'; }
+    return;
+  }
+  const student = findStudentByAdm(adm);
+  if(!student){
+    if(err){ err.textContent = 'Student nahi mila. Sahi Admission No. likhein.'; err.style.display = 'block'; }
+    return;
+  }
+  if(!student.parentPin || !String(student.parentPin).trim()){
+    if(err){ err.textContent = 'Is student ka Parent PIN set nahi. School office se lein.'; err.style.display = 'block'; }
+    return;
+  }
+  if(String(student.parentPin).trim() !== pin){
+    if(err){ err.textContent = 'Ghalat PIN.'; err.style.display = 'block'; }
+    return;
+  }
+  parentSessionStudentId = student.id;
+  try{ localStorage.setItem(PARENT_SESSION_KEY, JSON.stringify({ studentId: student.id, adm: student.adm })); }catch(e){}
+  document.getElementById('parentLoginCard').style.display = 'none';
+  document.getElementById('parentDashCard').style.display = 'block';
+  renderParentDashboard(student);
+}
+function restoreParentSession(){
+  let raw = null;
+  try{ raw = localStorage.getItem(PARENT_SESSION_KEY); }catch(e){}
+  if(!raw) return false;
+  let saved; try{ saved = JSON.parse(raw); }catch(e){ return false; }
+  if(!saved || saved.studentId == null) return false;
+  const student = (students||[]).find(s => String(s.id) === String(saved.studentId));
+  if(!student) return false;
+  parentSessionStudentId = student.id;
+  const loginCard = document.getElementById('parentLoginCard');
+  const dashCard = document.getElementById('parentDashCard');
+  if(loginCard) loginCard.style.display = 'none';
+  if(dashCard) dashCard.style.display = 'block';
+  renderParentDashboard(student);
+  return true;
+}
+function parentPortalLogout(){
+  parentSessionStudentId = null;
+  try{ localStorage.removeItem(PARENT_SESSION_KEY); }catch(e){}
+  const loginCard = document.getElementById('parentLoginCard');
+  const dashCard = document.getElementById('parentDashCard');
+  if(loginCard) loginCard.style.display = 'block';
+  if(dashCard) dashCard.style.display = 'none';
+  const pinEl = document.getElementById('parentPinInput');
+  if(pinEl) pinEl.value = '';
+}
+function renderParentDashboard(student){
+  if(!student) return;
+  document.getElementById('parentChildName').textContent = student.name || '—';
+  document.getElementById('parentChildMeta').textContent =
+    (student.adm||'') + ' · Class ' + (student.cls||'—') + (student.section ? '-' + student.section : '') +
+    (student.father ? ' · S/O ' + student.father : '');
+  const myFees = (fees||[]).filter(f => Number(f.studentId) === Number(student.id)).slice().sort((a,b)=>(b.id||0)-(a.id||0));
+  document.getElementById('parentFeePaid').textContent = myFees.filter(f => f.status==='paid').length;
+  document.getElementById('parentFeePending').textContent = myFees.filter(f => f.status==='pending').length;
+  const feeList = document.getElementById('parentFeeList');
+  const feeEmpty = document.getElementById('parentFeeEmpty');
+  if(!myFees.length){ feeList.innerHTML=''; if(feeEmpty) feeEmpty.style.display='block'; }
+  else {
+    if(feeEmpty) feeEmpty.style.display='none';
+    feeList.innerHTML = myFees.slice(0,12).map(f =>
+      '<div class="parent-row"><span class="k">'+(f.month||'—')+'</span><span class="v">Rs. '+f.amount+' · <span class="badge '+f.status+'">'+(f.status||'').toUpperCase()+'</span></span></div>'
+    ).join('');
+  }
+  const now = new Date();
+  const ym = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  let present=0, absent=0;
+  const attRows = [];
+  Object.keys(attendanceRecords||{}).forEach(date => {
+    if(!date.startsWith(ym)) return;
+    const day = attendanceRecords[date] || {};
+    const st = day[String(student.id)] || day[student.id] || '';
+    if(st==='present'){ present++; attRows.push({date, st:'Present'}); }
+    else if(st==='absent'){ absent++; attRows.push({date, st:'Absent'}); }
+  });
+  attRows.sort((a,b)=> b.date.localeCompare(a.date));
+  document.getElementById('parentAttPresent').textContent = present;
+  document.getElementById('parentAttAbsent').textContent = absent;
+  const attList = document.getElementById('parentAttList');
+  const attEmpty = document.getElementById('parentAttEmpty');
+  if(!attRows.length){ attList.innerHTML=''; if(attEmpty) attEmpty.style.display='block'; }
+  else {
+    if(attEmpty) attEmpty.style.display='none';
+    attList.innerHTML = attRows.map(r =>
+      '<div class="parent-row"><span class="k">'+r.date+'</span><span class="v" style="color:'+(r.st==='Present'?'var(--green)':'var(--red)')+';">'+r.st+'</span></div>'
+    ).join('');
+  }
+  const myRes = (examResults||[]).filter(r => Number(r.studentId)===Number(student.id)).slice().sort((a,b)=>(b.id||0)-(a.id||0));
+  const resList = document.getElementById('parentResultList');
+  const resEmpty = document.getElementById('parentResultEmpty');
+  if(!myRes.length){ resList.innerHTML=''; if(resEmpty) resEmpty.style.display='block'; }
+  else {
+    if(resEmpty) resEmpty.style.display='none';
+    resList.innerHTML = myRes.slice(0,5).map(r =>
+      '<div class="parent-row"><span class="k">'+(r.exam||'Exam')+' ('+(r.date||'')+')</span><span class="v">'+r.totalObtained+'/'+r.totalMax+' · '+r.percentage+'% · '+r.grade+'</span></div>'
+    ).join('');
+  }
+  const nList = document.getElementById('parentNoticeList');
+  const nEmpty = document.getElementById('parentNoticeEmpty');
+  const notes = (notices||[]).slice(0,5);
+  if(!notes.length){ nList.innerHTML=''; if(nEmpty) nEmpty.style.display='block'; }
+  else {
+    if(nEmpty) nEmpty.style.display='none';
+    nList.innerHTML = notes.map(n =>
+      '<div style="padding:8px 0; border-bottom:1px solid var(--rule);"><b style="font-size:13px;">'+(n.title||'')+'</b><div style="font-size:11px; color:var(--muted);">'+(n.date||'')+'</div>'+(n.body?'<div style="font-size:12px; margin-top:4px;">'+n.body+'</div>':'')+'</div>'
+    ).join('');
+  }
+}
+function setStudentParentPin(id){
+  if(!session || session.role !== 'admin'){ alert('Sirf Admin PIN set kar sakta hai.'); return; }
+  const s = students.find(x => x.id === id);
+  if(!s) return;
+  const pin = prompt('Parent PIN (4 digit) — '+s.name+' ('+s.adm+'):', s.parentPin || randomParentPin());
+  if(pin === null) return;
+  s.parentPin = String(pin).trim();
+  if(!s.parentPin){ alert('PIN khali nahi ho sakta.'); return; }
+  studentsCol.update(Object.assign({}, s));
+  saveData();
+  renderStudents();
+  alert('PIN save: '+s.parentPin);
+}
+function shareParentLink(id){
+  if(!session || session.role !== 'admin'){ alert('Sirf Admin share kar sakta hai.'); return; }
+  const s = students.find(x => x.id === id);
+  if(!s) return;
+  if(!s.parentPin){
+    s.parentPin = randomParentPin();
+    studentsCol.update(Object.assign({}, s));
+    saveData();
+    renderStudents();
+  }
+  const url = getParentPortalUrl(s.adm);
+  const msg = 'Assalam-o-Alaikum,\n*'+(schoolSettings.name||'School')+'* — Parent Portal\n\n'
+    + 'Apne bache (*'+s.name+'*) ki attendance, fee aur result:\n'+url
+    + '\n\n*Admission No.:* '+s.adm+'\n*Parent PIN:* '+s.parentPin
+    + '\n\nSoftware install ki zaroorat nahi.';
+  try{ if(navigator.clipboard) navigator.clipboard.writeText(url); }catch(e){}
+  const num = typeof waNumberFor === 'function' ? waNumberFor(s.contact) : null;
+  if(num) window.open('https://wa.me/'+num+'?text='+encodeURIComponent(msg), '_blank');
+  else prompt('Parent Link (PIN: '+s.parentPin+')', url);
+}
+window.addEventListener('hashchange', function(){
+  if(isParentHash()) showParentPortal();
+  else {
+    hideParentPortal();
+    if(!session){
+      const login = document.getElementById('loginScreen');
+      if(login) login.style.display = 'flex';
+    }
+  }
+});
+
 /* ===================== INIT ===================== */
 (function setDefaultAdmDate(){
   const el = document.getElementById('stuAdmDate');
@@ -4171,6 +4335,7 @@ loadData().finally(()=>{
       ? '☁️ Cloud database connected — data har device par sync hota hai.'
       : '📴 Cloud connect nahi hai — abhi sirf is browser mein (offline) data save hoga.';
   }
+  if(typeof isParentHash === 'function' && isParentHash()) showParentPortal();
 });
 
 /* ===================== AUTO-RESTORE LOGIN SESSION =====================
@@ -4248,7 +4413,7 @@ window.addEventListener('offline', ()=>{
 });
 </script>
     <script>
-  window.__APP_BUILD__ = '20260827-bulk-offline';
+  window.__APP_BUILD__ = '20260827-parent-pins-all';
   (function(){
     var reloading = false;
     function forceReload(){
