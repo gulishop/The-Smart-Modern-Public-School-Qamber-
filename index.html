@@ -376,11 +376,7 @@
 
       <button class="logout-btn" onclick="doLogout()">⎋ Logout</button>
       <div class="save-indicator"><span class="save-dot"></span><span id="saveStatus">Data saved locally</span></div>
-      <div style="margin-top:14px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08); font-size:10px; color:rgba(237,231,214,0.55); line-height:1.45; font-family:'JetBrains Mono',monospace;">
-        <div style="color:rgba(237,231,214,0.85); font-weight:600;">Software by Fazul Khan Chandio</div>
-        <div>+92 333 3909816</div>
-        <div style="margin-top:6px; opacity:0.75;">Build <span id="sidebarBuildVersion">—</span></div>
-      </div>
+      <div style="margin-top:12px; font-size:9.5px; color:rgba(237,231,214,0.35); font-family:'JetBrains Mono',monospace;">Software by Fazul Khan Chandio<br>+92 333 3909816</div>
     </aside>
 
     <div class="sidebar-overlay no-print" id="sidebarOverlay" onclick="toggleSidebar(false)"></div>
@@ -512,9 +508,7 @@
               <div class="field"><label>Monthly Salary (Rs.)</label><input id="stfSalary" type="number"></div>
               <div class="field"><label>Login Email (agar system access diya ho)</label><input id="stfEmail" type="text" placeholder="e.g. staff@smart.com"></div>
               <div class="field"><label>Staff Login Password</label><input id="stfPassword" type="text" placeholder="Set a password for app login"></div>
-              <div class="field"><label>Assigned Class (Teacher only — attendance lock)</label><input id="stfAssignedClass" type="text" placeholder="e.g. 5 ya Nursery — khali = sab classes"></div>
             </div>
-            <p class="hint">Assigned Class set ho to ye teacher Attendance mein <b>sirf usi class</b> ke students mark kar sakta hai.</p>
             <button class="btn green" onclick="addStaff()">+ Add Teacher / Staff</button>
             <p class="hint">Staff login ke liye ek "Staff ID" (jaise STF-1007) khud-ba-khud ban jayega — list mein dikh jayega, wahi ID password ke saath login screen par "Staff / User" tab mein use hogi.</p>
           </div>
@@ -648,7 +642,7 @@
           <div class="panel">
             <h3>Class-wise Attendance Summary</h3>
             <table>
-              <thead><tr><th>Class</th><th>Total</th><th>Present</th><th>Absent</th><th>Not Marked</th></tr></thead>
+              <thead><tr><th>Class</th><th>Total Students</th><th>Present</th><th>Absent</th><th>Not Marked</th></tr></thead>
               <tbody id="attClassSummaryBody"></tbody>
             </table>
             <div class="empty" id="attClassSummaryEmpty">Abhi koi student nahi hai.</div>
@@ -665,28 +659,16 @@
                 <option value="unmarked">Not Marked</option>
               </select></div>
             </div>
-            <div id="attLoadStatus" style="display:none; margin-bottom:10px; padding:8px 12px; background:#e8f0fe; color:#1a73e8; border-radius:6px; font-size:13px;">⏳ Attendance load ho rahi hai…</div>
-            <div id="attSaveStatus" style="display:none; margin-bottom:10px; padding:8px 12px; border-radius:6px; font-size:13px;"></div>
             <div id="attStatusBanner" style="display:none; margin-bottom:10px; padding:8px 12px; background:var(--gold); color:#1a1a1a; border-radius:6px; font-size:13px; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
               <span id="attStatusBannerText"></span>
               <button class="btn small" style="background:var(--navy); margin:0;" onclick="clearAttStatusFilter()">Clear Filter</button>
-            </div>
-            <div id="attHolidayBanner" style="display:none; margin-bottom:10px; padding:10px 12px; background:#fff3e0; border-left:4px solid #ef6c00; border-radius:6px; font-size:13px; color:#e65100;"></div>
-            <div id="attOfflineBadge" style="display:none; margin-bottom:10px; padding:8px 12px; background:#fce4ec; border-radius:6px; font-size:13px; color:#880e4f;"></div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-              <button class="btn green" style="flex:1; min-width:140px; padding:12px 14px; font-size:15px; font-weight:700;" onclick="markAllFiltered('present')">✅ Present (All)</button>
-              <button class="btn red" style="flex:1; min-width:140px; padding:12px 14px; font-size:15px; font-weight:700;" onclick="markAllFiltered('absent')">❌ Absent (All)</button>
-            </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-              <button class="btn small" style="background:var(--muted);" onclick="markAllFiltered('')">↺ Clear All</button>
-              <button class="btn small whatsapp" onclick="batchAbsentWhatsApp()">📱 All Absentees WhatsApp</button>
             </div>
             <table>
               <thead><tr><th>Adm #</th><th>Name</th><th>Class</th><th>Status</th><th>WhatsApp</th></tr></thead>
               <tbody id="attTable"></tbody>
             </table>
             <div class="empty" id="attEmpty">Pehle Student Management mein students add karein.</div>
-            <button class="btn green" onclick="saveAttendance()">💾 Save Attendance</button>
+            <button class="btn green" onclick="saveAttendance()">Save Attendance</button>
           </div>
         </div>
 
@@ -694,7 +676,6 @@
         <div class="view" id="view-qrattendance">
           <div class="panel">
             <h3>🔳 QR Code Attendance</h3>
-            <p class="hint">Browser mein physical biometric device support limited hai — QR / manual mark use karein. Future hardware API alag se integrate ki ja sakti hai.</p>
             <p style="font-size:13px; color:var(--muted); margin-bottom:14px; line-height:1.6;">
               Har student ka apna QR code hota hai (Student ID Card par bhi print hota hai). Camera se scan
               karte hi us student ki aaj ki attendance automatically "Present" mark ho jayegi.
@@ -953,27 +934,8 @@
             <div class="stat-grid">
               <div class="stat-card"><div class="n" id="repPresent">0</div><div class="l">Present</div></div>
               <div class="stat-card"><div class="n" id="repAbsent">0</div><div class="l">Absent</div></div>
-              <div class="stat-card"><div class="n" id="repLate">0</div><div class="l">Late / Half / Leave</div></div>
               <div class="stat-card"><div class="n" id="repNotMarked">0</div><div class="l">Not Marked</div></div>
             </div>
-          </div>
-          <div class="panel">
-            <h3>📅 Monthly Attendance Register</h3>
-            <p class="hint">Mahine ka attendance % student-wise. Date range select karke Load dabayein — cloud se past days load honge.</p>
-            <div class="form-grid">
-              <div class="field"><label>From</label><input id="attRepFrom" type="date"></div>
-              <div class="field"><label>To</label><input id="attRepTo" type="date"></div>
-              <div class="field"><label>Class</label><select id="attRepClass"><option value="">Sab Classes</option></select></div>
-            </div>
-            <button class="btn" onclick="loadMonthlyAttendanceReport()">📊 Load Report</button>
-            <button class="btn small" style="margin-left:8px;" onclick="exportMonthlyAttendanceCSV()">⬇ CSV Export</button>
-            <button class="btn small gold" style="margin-left:8px;" onclick="exportMonthlyAttendancePDF()">🖨️ PDF / Print</button>
-            <div id="attRepLoadNote" class="hint" style="margin-top:8px;"></div>
-            <table style="margin-top:12px;">
-              <thead><tr><th>Adm #</th><th>Name</th><th>Class</th><th>Present</th><th>Absent</th><th>Late</th><th>Half</th><th>Leave</th><th>Working Days</th><th>%</th></tr></thead>
-              <tbody id="attRepBody"></tbody>
-            </table>
-            <div class="empty" id="attRepEmpty">Report load karne ke liye date range select karein.</div>
           </div>
         </div>
 
@@ -1128,88 +1090,6 @@ function localDateStr(d){
 }
 // Attendance record keys hamesha string — number vs string mismatch se status "miss" na ho.
 function attKey(id){ return String(id); }
-/* ---- Holiday (Vacation events) ---- */
-function isHolidayDate(dateStr){
-  if(!dateStr) return null;
-  const list = (typeof events !== 'undefined' && events) ? events : [];
-  for(let i=0;i<list.length;i++){
-    const e = list[i];
-    if(!e || (e.type !== 'Vacation' && e.type !== 'vacation' && e.type !== 'Holiday')) continue;
-    const start = e.date || '';
-    const end = e.endDate || e.date || '';
-    if(start && dateStr >= start && dateStr <= end) return e;
-  }
-  return null;
-}
-/* ---- Staff assigned class lock ---- */
-function isStaffUser(){
-  return (session && session.role === 'user') || currentRole === 'user';
-}
-/** Optional preferred class (info only) — attendance lock NAHI hai. Staff kisi bhi class ki hazri laga sakta hai. */
-function currentStaffAssignedClass(){
-  return ''; // lock disabled: all staff can mark any class
-}
-function staffPreferredClass(){
-  if(!isStaffUser()) return '';
-  const sid = currentStaffId || (session && session.staffId) || null;
-  if(!sid) return '';
-  const s = staff.find(x => String(x.id) === String(sid));
-  if(!s) return '';
-  const raw = s.assignedClass || s.assignedClassLabel || '';
-  return raw ? classKey(raw) : '';
-}
-function staffMustHaveClass(){
-  return false; // never block attendance for staff
-}
-/* ---- Offline attendance queue ---- */
-const ATT_OFFLINE_QUEUE_KEY = 'smp_att_offline_queue_v1';
-function loadAttOfflineQueue(){
-  try{ return JSON.parse(localStorage.getItem(ATT_OFFLINE_QUEUE_KEY) || '[]'); }catch(e){ return []; }
-}
-function saveAttOfflineQueue(q){
-  try{ localStorage.setItem(ATT_OFFLINE_QUEUE_KEY, JSON.stringify(q)); }catch(e){}
-}
-function enqueueAttendanceDate(date){
-  if(!date) return;
-  const q = loadAttOfflineQueue();
-  if(!q.includes(date)) q.push(date);
-  saveAttOfflineQueue(q);
-  updateAttOfflineBadge();
-}
-function updateAttOfflineBadge(){
-  const el = document.getElementById('attOfflineBadge');
-  if(!el) return;
-  const q = loadAttOfflineQueue();
-  if(q.length){
-    el.style.display = 'block';
-    el.textContent = '⏳ Offline queue: ' + q.length + ' date(s) pending cloud sync — net aate hi auto push hoga.';
-  } else {
-    el.style.display = 'none';
-    el.textContent = '';
-  }
-}
-async function flushAttendanceOfflineQueue(){
-  const q = loadAttOfflineQueue();
-  if(!q.length || !db) return;
-  const remaining = [];
-  for(const date of q){
-    try{
-      await saveAttendanceDateToCloud(date);
-      // only remove if online success - saveAttendanceDateToCloud resolves even offline with message
-      if(navigator.onLine){ /* kept */ }
-      else remaining.push(date);
-    }catch(e){ remaining.push(date); }
-  }
-  // Re-check: clear dates that saved; keep if still failing
-  // Simpler: if online, clear all after attempting
-  if(navigator.onLine){
-    saveAttOfflineQueue([]);
-  } else {
-    saveAttOfflineQueue(remaining.length ? remaining : q);
-  }
-  updateAttOfflineBadge();
-}
-
 // Student contact: staff list/print par hide; Admin ko full number
 function contactDisplayForRole(contact){
   if(session && session.role === 'admin') return contact || '—';
@@ -1315,125 +1195,62 @@ function stopPresenceHeartbeat(){
 }
 
 // ===== ATTENDANCE: EK ALAG DOCUMENT PER DATE =====
-// Har tareekh: attendance/{YYYY-MM-DD} = { studentId: status }
-// SOURCE OF TRUTH = Firestore. Local overrides sirf is session ke unsaved marks hain.
+// Attendance roz badhti hai (har din, har student ke liye) — is liye ye kabhi
+// bhi single document mein nahi rakhi jaati. Har tareekh (e.g. attendance/2026-08-17)
+// apni alag chhoti document hai jismein sirf usi din ka { studentId: status } record hai.
 const loadedAttendanceDates = new Set();
 const attendanceDateUnsubs = {};
-const attendancePendingDeletes = {}; // date -> { id: true }
-const attendanceLocalOverrides = {}; // date -> { id: status }  — is session ke marks (server se pehle)
 function attendanceDateRef(date){
   return db ? db.collection('attendance').doc(date) : null;
 }
-function showAttSaveStatus(msg, ok){
-  const el = document.getElementById('attSaveStatus');
-  if(!el) return;
-  el.style.display = msg ? 'block' : 'none';
-  el.textContent = msg || '';
-  el.style.background = ok === true ? '#e2f5e7' : (ok === false ? '#fbe4e2' : '#fff8e1');
-  el.style.color = ok === true ? '#1b5e20' : (ok === false ? '#b71c1c' : '#5d4037');
-}
-function getAttStatus(dayRec, studentId){
-  if(!dayRec) return '';
-  const k = attKey(studentId);
-  const v = dayRec[k];
-  if(v != null && v !== '') return String(v);
-  // legacy number key fallback
-  if(dayRec[studentId] != null && dayRec[studentId] !== '') return String(dayRec[studentId]);
-  return '';
-}
-/** Canonical day record: string keys only, no empty values */
-function normalizeDayRecord(day){
-  const out = {};
-  if(!day) return out;
-  Object.keys(day).forEach(k => {
-    const v = day[k];
-    if(v != null && v !== '') out[attKey(k)] = String(v);
-  });
-  return out;
-}
-/**
- * Server base + session overrides.
- * Overrides (is session ke marks / deletes) server par jeet-te hain.
- * Baaki keys server se aati hain — purana localStorage data server ko overwrite nahi karta.
- */
-function mergeAttendanceDay(serverDay, date){
-  const merged = normalizeDayRecord(serverDay);
-  const ov = attendanceLocalOverrides[date] || {};
-  Object.keys(ov).forEach(k => {
-    const key = attKey(k);
-    if(ov[k] === '' || ov[k] == null) delete merged[key];
-    else merged[key] = String(ov[k]);
-  });
-  const pend = attendancePendingDeletes[date] || {};
-  Object.keys(pend).forEach(k => { delete merged[attKey(k)]; });
-  return merged;
-}
-/** Single source for all counts — dashboard, summary, reports */
-function countAttendanceForDate(date, studentList){
-  const list = studentList || students || [];
-  const day = attendanceRecords[date] || {};
-  const c = { present:0, absent:0, late:0, half:0, leave:0, notMarked:0, total: list.length, other:0 };
-  list.forEach(s => {
-    const st = getAttStatus(day, s.id);
-    if(st === 'present') c.present++;
-    else if(st === 'absent') c.absent++;
-    else if(st === 'late'){ c.late++; c.other++; }
-    else if(st === 'half'){ c.half++; c.other++; }
-    else if(st === 'leave'){ c.leave++; c.other++; }
-    else c.notMarked++;
-  });
-  return c;
-}
-function applyServerAttendanceDay(date, serverData){
-  attendanceRecords[date] = mergeAttendanceDay(serverData || {}, date);
-  loadedAttendanceDates.add(date);
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const existing = raw ? JSON.parse(raw) : {};
-    // localStorage mein sirf loaded dates cache — poora object
-    existing.attendanceRecords = existing.attendanceRecords || {};
-    existing.attendanceRecords[date] = attendanceRecords[date];
-    // keep other dates from memory
-    Object.keys(attendanceRecords).forEach(d => {
-      existing.attendanceRecords[d] = attendanceRecords[d];
-    });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
-  }catch(e){}
-}
+// Us tareekh ke liye ek realtime listener laga deta hai — taake agar koi doosra
+// device usi din ki attendance badle (jaise QR scan se), to ye device bhi turant update ho jaye.
 function subscribeAttendanceDate(date){
   if(!db || !date || attendanceDateUnsubs[date]) return;
   attendanceDateUnsubs[date] = attendanceDateRef(date).onSnapshot({ includeMetadataChanges:true }, function(doc){
-    // Pending local write ka intermediate snapshot skip — final server data aane do
-    if(doc.metadata && doc.metadata.hasPendingWrites) return;
-    const serverData = doc.exists ? (doc.data() || {}) : {};
-    applyServerAttendanceDay(date, serverData);
+    if(doc.metadata.hasPendingWrites) return;
+    if(!doc.exists) return;
+    const serverData = doc.data() || {};
+    const merged = Object.assign({}, attendanceRecords[date] || {});
+    Object.keys(serverData).forEach(k => { merged[attKey(k)] = serverData[k]; });
+    attendanceRecords[date] = merged;
+    loadedAttendanceDates.add(date);
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const existing = raw ? JSON.parse(raw) : {};
+      existing.attendanceRecords = attendanceRecords;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+    }catch(e){}
     const attDateEl = document.getElementById('attDate');
     const activeDate = (attDateEl && attDateEl.value) || localDateStr();
-    if(activeDate === date && typeof renderAttendanceForm === 'function') renderAttendanceForm(true);
-    if(date === localDateStr()){
-      if(typeof renderDashboard === 'function') renderDashboard();
-      if(typeof renderClassWiseCounts === 'function') renderClassWiseCounts();
-    }
+    if(activeDate === date && typeof renderAttendanceForm === 'function') renderAttendanceForm();
+    if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
   }, function(err){ console.warn('Attendance realtime sync error (' + date + '):', err); });
 }
 function ensureAttendanceDateLoaded(date){
-  if(!date) return Promise.resolve();
-  if(!db){
-    // offline: local memory / localStorage already in attendanceRecords
-    loadedAttendanceDates.add(date);
-    return Promise.resolve();
-  }
+  if(!db || !date) return Promise.resolve();
   subscribeAttendanceDate(date);
   if(loadedAttendanceDates.has(date)) return Promise.resolve();
   return attendanceDateRef(date).get().then(doc=>{
-    const serverData = doc.exists ? (doc.data() || {}) : {};
-    applyServerAttendanceDay(date, serverData);
-    const attDateEl = document.getElementById('attDate');
-    const activeDate = (attDateEl && attDateEl.value) || localDateStr();
-    if(activeDate === date && typeof renderAttendanceForm === 'function') renderAttendanceForm(true);
-    if(date === localDateStr()){
-      if(typeof renderDashboard === 'function') renderDashboard();
-      if(typeof renderClassWiseCounts === 'function') renderClassWiseCounts();
+    if(doc.exists){
+      const serverData = doc.data() || {};
+      const merged = Object.assign({}, serverData, attendanceRecords[date] || {});
+      const normalized = {};
+      Object.keys(merged).forEach(k => { normalized[attKey(k)] = merged[k]; });
+      attendanceRecords[date] = normalized;
+      loadedAttendanceDates.add(date);
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const existing = raw ? JSON.parse(raw) : {};
+        existing.attendanceRecords = attendanceRecords;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+      }catch(e){}
+      const attDateEl = document.getElementById('attDate');
+      const activeDate = (attDateEl && attDateEl.value) || localDateStr();
+      if(activeDate === date && typeof renderAttendanceForm === 'function') renderAttendanceForm();
+      if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
+    } else if(attendanceRecords[date] && Object.keys(attendanceRecords[date]).length){
+      loadedAttendanceDates.add(date);
     }
   }).catch(err=>{
     console.warn('Attendance load failed for ' + date + ':', err);
@@ -1441,60 +1258,17 @@ function ensureAttendanceDateLoaded(date){
 }
 function saveAttendanceDateToCloud(date){
   const ref = attendanceDateRef(date);
-  // Build payload from current memory (already includes overrides)
-  const raw = normalizeDayRecord(attendanceRecords[date] || {});
-  attendanceRecords[date] = raw;
-  if(!ref){
-    enqueueAttendanceDate(date);
-    showAttSaveStatus('📴 Offline — local save, queue mein add', null);
-    try{ saveData(); }catch(e){}
-    return Promise.resolve();
-  }
-  const toSave = Object.assign({}, raw);
-  const pend = attendancePendingDeletes[date] || {};
-  Object.keys(pend).forEach(k => {
-    toSave[attKey(k)] = firebase.firestore.FieldValue.delete();
-  });
-  showAttSaveStatus('☁️ Cloud pe sync…', null);
-  return ref.set(toSave, { merge:true }).then(()=>{
-    attendancePendingDeletes[date] = {};
-    // overrides clear — server ab source of truth
-    attendanceLocalOverrides[date] = {};
-    const q = loadAttOfflineQueue().filter(d => d !== date);
-    saveAttOfflineQueue(q);
-    updateAttOfflineBadge();
-    showAttSaveStatus('✅ Saved · ' + new Date().toLocaleTimeString(), true);
-    setTimeout(()=>showAttSaveStatus('', null), 3500);
-    // refresh counts
-    if(date === localDateStr()){
-      if(typeof renderDashboard === 'function') renderDashboard();
-      if(typeof renderClassWiseCounts === 'function') renderClassWiseCounts();
-    }
-  }).catch(err=>{
-    console.warn('Attendance cloud save failed:', err);
-    enqueueAttendanceDate(date);
-    showAttSaveStatus('❌ Cloud fail — offline queue mein', false);
-  });
-}
-
-function datesBetween(fromStr, toStr){
-  const out = [];
-  if(!fromStr || !toStr) return out;
-  const a = new Date(fromStr + 'T12:00:00');
-  const b = new Date(toStr + 'T12:00:00');
-  if(isNaN(a) || isNaN(b) || a > b) return out;
-  const cur = new Date(a);
-  let guard = 0;
-  while(cur <= b && guard < 400){
-    out.push(localDateStr(cur));
-    cur.setDate(cur.getDate() + 1);
-    guard++;
-  }
-  return out;
-}
-function ensureAttendanceRangeLoaded(fromStr, toStr){
-  const dates = datesBetween(fromStr, toStr);
-  return Promise.all(dates.map(d => ensureAttendanceDateLoaded(d)));
+  if(!ref) return;
+  // merge:true zaroori hai — warna jab 2 staff members ek hi date ki attendance
+  // alag-alag classes/students ke liye saath save karein, to jis ka save baad mein
+  // pohnche wo poori document ko apni local copy se overwrite kar dega aur doosre
+  // staff ki entries mit jayengi. merge:true sirf changed studentId keys update
+  // karta hai, baaki sab (doosron ka data) mehfooz rehta hai.
+  const raw = attendanceRecords[date] || {};
+  const toSave = {};
+  Object.keys(raw).forEach(k => { toSave[attKey(k)] = raw[k]; });
+  attendanceRecords[date] = toSave;
+  ref.set(toSave, { merge:true }).catch(err=>console.warn('Attendance cloud save failed:', err));
 }
 </script>
 
@@ -1596,14 +1370,9 @@ function applyData(data){
   Object.keys(rawAtt).forEach(date => {
     const day = rawAtt[date] || {};
     const normalized = {};
-    Object.keys(day).forEach(k => {
-      const v = day[k];
-      if(v != null && v !== '') normalized[String(k)] = String(v);
-    });
+    Object.keys(day).forEach(k => { normalized[String(k)] = day[k]; });
     attendanceRecords[date] = normalized;
   });
-  // loaded flags clear so cloud se fresh merge ho
-  if(typeof loadedAttendanceDates !== 'undefined' && loadedAttendanceDates.clear) loadedAttendanceDates.clear();
   const rawStaffAtt = data.staffAttendanceRecords || {};
   staffAttendanceRecords = {};
   Object.keys(rawStaffAtt).forEach(date => {
@@ -1958,7 +1727,7 @@ function logActivity(action){
 }
 
 function enterApp(name, isRestore){
-  session = { role: currentRole, name: name, staffId: currentStaffId || null };
+  session = { role: currentRole, name: name };
   // App-level session ko localStorage mein save kar dein — is se refresh/reload
   // (bar bar refresh) par bhi turant, reliably session restore ho jaati hai,
   // chahe Firebase Auth ki apni restore thodi slow/na-mumkin ho (jaise offline
@@ -2248,7 +2017,6 @@ function renderStudents(){
       : (s.contact ? '<span style="color:var(--muted); letter-spacing:1px;" title="Contact saved (sirf Admin dekh sakta hai)">••••••••</span>' : '—');
     tbody.innerHTML += `<tr><td>${s.adm}</td><td>${s.name}</td><td>${s.father||'—'}</td><td>${s.cls||'—'}</td><td>${s.section||'—'}</td><td>${s.roll||'—'}</td><td>${contactCell}</td><td style="display:flex; gap:6px; flex-wrap:wrap;">
       <button class="btn small" style="background:var(--navy);" onclick="editStudent(${s.id})">✏️ Edit</button>
-      <button class="btn small" style="background:#1565c0;color:#fff;" onclick="showStudentAttendanceHistory(${s.id})">📅 Attendance</button>
       <button class="btn small gold" onclick="printAdmissionForm(${s.id})">🖨️ Form</button>
       <button class="btn small" style="background:#5b4636; color:#fff;" onclick="printIdCard(${s.id})">🪪 ID Card</button>
       <button class="btn small" style="background:#7a5230; color:#fff;" onclick="printTC(${s.id})">📜 TC</button>
@@ -2292,7 +2060,6 @@ async function addStaff(){
   if(!name){ alert('Naam likhein.'); return; }
   const pwd = document.getElementById('stfPassword').value;
   const staffCode = nextStaffCode();
-  const assignedRaw = (document.getElementById('stfAssignedClass')||{}).value || '';
   const newStaff = {
     id: newId(),
     staffCode,
@@ -2301,69 +2068,14 @@ async function addStaff(){
     contact: document.getElementById('stfContact').value.trim(),
     salary: document.getElementById('stfSalary').value,
     email: document.getElementById('stfEmail').value.trim(),
-    assignedClass: assignedRaw.trim() ? classKey(assignedRaw.trim()) : '',
-    assignedClassLabel: assignedRaw.trim() ? classDisplay(assignedRaw.trim()) : '',
     passHash: pwd ? await hashPassword(pwd) : ''
   };
   staff.push(newStaff);
   staffCol.add(newStaff);
-  ['stfName','stfDesg','stfContact','stfSalary','stfEmail','stfPassword','stfAssignedClass'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  ['stfName','stfDesg','stfContact','stfSalary','stfEmail','stfPassword'].forEach(id => document.getElementById(id).value = '');
   renderAll();
   alert('Staff add ho gaya! Staff ID: STF-' + staffCode + (pwd ? ' — is ID aur password se wo "Staff / User" tab se login kar sakte hain.' : ' — password set nahi kiya gaya, staff abhi login nahi kar sakega jab tak password set na ho.'));
 }
-function openAssignClassModal(id){
-  if(!session || session.role !== 'admin'){ alert('Sirf Admin class assign kar sakta hai.'); return; }
-  const s = staff.find(x => x.id === id || String(x.id) === String(id));
-  if(!s){ alert('Staff nahi mila.'); return; }
-  window.__assignClassStaffId = s.id;
-  const title = document.getElementById('assignClassTitle');
-  if(title) title.textContent = '📚 Assign Class — ' + s.name;
-  const hint = document.getElementById('assignClassHint');
-  if(hint) hint.textContent = 'STF-' + (s.staffCode || s.id) + ' · Dobara staff add karne ki zaroorat nahi — sirf class save karein.';
-  const sel = document.getElementById('assignClassSelect');
-  const classes = Array.from(new Set(students.map(st => classDisplay(st.cls)).filter(Boolean)))
-    .sort((a,b)=>a.localeCompare(b, undefined, {numeric:true}));
-  const curLabel = s.assignedClassLabel || (s.assignedClass ? classDisplay(s.assignedClass) : '');
-  if(sel){
-    sel.innerHTML = '<option value="">— Select class —</option>' +
-      classes.map(c => `<option value="${c}" ${classKey(c)===classKey(curLabel)?'selected':''}>${c}</option>`).join('');
-    if(curLabel && !classes.some(c => classKey(c)===classKey(curLabel))){
-      sel.innerHTML += `<option value="${curLabel}" selected>${curLabel} (current)</option>`;
-    }
-  }
-  const man = document.getElementById('assignClassManual');
-  if(man) man.value = curLabel || '';
-  const modal = document.getElementById('assignClassModal');
-  if(modal) modal.style.display = 'flex';
-}
-function closeAssignClassModal(){
-  const modal = document.getElementById('assignClassModal');
-  if(modal) modal.style.display = 'none';
-  window.__assignClassStaffId = null;
-}
-function saveAssignClassModal(clear){
-  if(!session || session.role !== 'admin'){ alert('Sirf Admin class assign kar sakta hai.'); return; }
-  const id = window.__assignClassStaffId;
-  const s = staff.find(x => x.id === id || String(x.id) === String(id));
-  if(!s){ alert('Staff nahi mila.'); return; }
-  let trimmed = '';
-  if(!clear){
-    const man = (document.getElementById('assignClassManual')||{}).value;
-    const sel = (document.getElementById('assignClassSelect')||{}).value;
-    trimmed = (man && man.trim()) ? man.trim() : (sel || '').trim();
-  }
-  s.assignedClass = trimmed ? classKey(trimmed) : '';
-  s.assignedClassLabel = trimmed ? classDisplay(trimmed) : '';
-  if(typeof staffCol !== 'undefined' && staffCol.update) staffCol.update(Object.assign({}, s));
-  saveData();
-  renderStaff();
-  closeAssignClassModal();
-  alert(trimmed
-    ? (s.name + ' → class "' + s.assignedClassLabel + '" assign ho gayi.\nStaff login par sirf yahi class attendance mein aayegi.')
-    : (s.name + ' ki class clear ho gayi. Staff login par attendance tab tak band rahegi jab tak class set na ho.'));
-}
-function setStaffAssignedClass(id){ openAssignClassModal(id); }
-
 async function changeStaffPassword(id){
   if(session.role !== 'admin'){ alert('Sirf Admin password change kar sakta hai.'); return; }
   const s = staff.find(x => x.id === id);
@@ -2395,7 +2107,7 @@ function renderStaff(){
   document.getElementById('staffEmpty').style.display = staff.length ? 'none' : 'block';
   const isAdmin = session && session.role === 'admin';
   thead.innerHTML = isAdmin
-    ? '<th>Staff ID</th><th>Name</th><th>Designation</th><th>Class</th><th>Status</th><th>Contact</th><th>Salary</th><th>Login Email</th><th>Password</th><th></th>'
+    ? '<th>Staff ID</th><th>Name</th><th>Designation</th><th>Status</th><th>Contact</th><th>Salary</th><th>Login Email</th><th>Password</th><th></th>'
     : '<th>Staff ID</th><th>Name</th><th>Designation</th><th>Status</th>';
   staff.forEach(s => {
     const lastSeen = presenceMap[String(s.id)];
@@ -2404,12 +2116,7 @@ function renderStaff(){
       ? '<span style="color:var(--green); font-weight:600;">🟢 Online</span>'
       : '<span style="color:#888;">⚪ Offline</span>';
     if(isAdmin){
-      tbody.innerHTML += `<tr><td>STF-${s.staffCode || s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td><td>
-        <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-start;">
-          <span style="font-weight:600;">${s.assignedClassLabel || s.assignedClass || '<span style="color:var(--red);">Not set</span>'}</span>
-          <button class="btn small" style="background:#1565c0;color:#fff;padding:6px 10px;" onclick="openAssignClassModal(${s.id})">📚 Assign Class</button>
-        </div>
-      </td><td>${statusHtml}</td><td>${s.contact||'—'}</td><td>${s.salary ? 'Rs. '+s.salary : '—'}</td><td>${s.email||'—'}</td><td>${s.passHash ? '●●●●●●' : '<span style="color:var(--red);">Not set</span>'}</td><td style="display:flex; gap:6px;"><button class="btn small" style="background:var(--navy);" onclick="changeStaffPassword(${s.id})">Change Password</button><button class="btn small red" onclick="deleteStaff(${s.id})">Delete</button></td></tr>`;
+      tbody.innerHTML += `<tr><td>STF-${s.staffCode || s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td><td>${statusHtml}</td><td>${s.contact||'—'}</td><td>${s.salary ? 'Rs. '+s.salary : '—'}</td><td>${s.email||'—'}</td><td>${s.passHash ? '●●●●●●' : '<span style="color:var(--red);">Not set</span>'}</td><td style="display:flex; gap:6px;"><button class="btn small" style="background:var(--navy);" onclick="changeStaffPassword(${s.id})">Change Password</button><button class="btn small red" onclick="deleteStaff(${s.id})">Delete</button></td></tr>`;
     } else {
       tbody.innerHTML += `<tr><td>STF-${s.staffCode || s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td><td>${statusHtml}</td></tr>`;
     }
@@ -2857,31 +2564,6 @@ function renderExpenses(){
 function staffAttendanceDateRef(date){
   return db ? db.collection('staffAttendance').doc(date) : null;
 }
-const staffAttendanceUnsubs = {};
-const staffAttendancePendingDeletes = {};
-function subscribeStaffAttendanceDate(date){
-  if(!db || !date || staffAttendanceUnsubs[date]) return;
-  staffAttendanceUnsubs[date] = staffAttendanceDateRef(date).onSnapshot({ includeMetadataChanges:true }, function(doc){
-    if(doc.metadata.hasPendingWrites) return;
-    const serverData = doc.exists ? (doc.data() || {}) : {};
-    const merged = {};
-    Object.keys(serverData).forEach(k => { merged[String(k)] = serverData[k]; });
-    // local pending deletes
-    const pend = staffAttendancePendingDeletes[date] || {};
-    Object.keys(pend).forEach(k => { delete merged[String(k)]; });
-    // keep any local-only marks not yet on server? merge local non-empty
-    const loc = staffAttendanceRecords[date] || {};
-    Object.keys(loc).forEach(k => {
-      if(loc[k]) merged[String(k)] = loc[k];
-    });
-    staffAttendanceRecords[date] = merged;
-    if(typeof renderStaffAttendanceForm === 'function'){
-      const el = document.getElementById('staffAttDate');
-      if(el && el.value === date) renderStaffAttendanceForm();
-    }
-    if(typeof renderSalarySheet === 'function') renderSalarySheet();
-  }, function(err){ console.warn('Staff attendance realtime error:', err); });
-}
 function loadAllStaffAttendanceFromCloud(){
   if(!db) return Promise.resolve();
   return db.collection('staffAttendance').get().then(snap=>{
@@ -2890,26 +2572,14 @@ function loadAllStaffAttendanceFromCloud(){
       const normalized = {};
       Object.keys(data).forEach(k => { normalized[String(k)] = data[k]; });
       staffAttendanceRecords[doc.id] = normalized;
-      subscribeStaffAttendanceDate(doc.id);
     });
   }).catch(err=>console.warn('Staff attendance load failed:', err));
 }
 function saveStaffAttendanceDateToCloud(date){
   const ref = staffAttendanceDateRef(date);
-  if(!ref) return Promise.resolve();
-  subscribeStaffAttendanceDate(date);
+  if(!ref) return;
   const raw = staffAttendanceRecords[date] || {};
-  const toSave = {};
-  Object.keys(raw).forEach(k => {
-    if(raw[k]) toSave[String(k)] = raw[k];
-  });
-  const pend = staffAttendancePendingDeletes[date] || {};
-  Object.keys(pend).forEach(k => {
-    toSave[String(k)] = firebase.firestore.FieldValue.delete();
-  });
-  return ref.set(toSave, { merge:true }).then(()=>{
-    staffAttendancePendingDeletes[date] = {};
-  }).catch(err=>console.warn('Staff att save failed:', err));
+  ref.set(raw, { merge:true }).catch(err=>console.warn('Staff att save failed:', err));
 }
 function renderStaffAttendanceForm(){
   const tbody = document.getElementById('staffAttTable');
@@ -2918,7 +2588,6 @@ function renderStaffAttendanceForm(){
   if(!tbody || !dateEl) return;
   if(!dateEl.value) dateEl.value = localDateStr();
   const date = dateEl.value;
-  subscribeStaffAttendanceDate(date);
   const day = staffAttendanceRecords[date] || {};
   tbody.innerHTML = '';
   // Sunday notice
@@ -2969,23 +2638,16 @@ function saveStaffAttendanceDay(){
     return;
   }
   if(!staffAttendanceRecords[date]) staffAttendanceRecords[date] = {};
-  if(!staffAttendancePendingDeletes[date]) staffAttendancePendingDeletes[date] = {};
   document.querySelectorAll('.staff-att-select').forEach(sel => {
     const sid = String(sel.getAttribute('data-staff-id'));
     const val = sel.value;
-    if(val){
-      staffAttendanceRecords[date][sid] = val;
-      delete staffAttendancePendingDeletes[date][sid];
-    } else {
-      delete staffAttendanceRecords[date][sid];
-      staffAttendancePendingDeletes[date][sid] = true;
-    }
+    if(val) staffAttendanceRecords[date][sid] = val;
+    else delete staffAttendanceRecords[date][sid];
   });
-  saveStaffAttendanceDateToCloud(date).then(()=>{
-    saveData();
-    alert('Staff attendance save ho gayi: ' + date);
-    if(typeof renderSalarySheet === 'function') renderSalarySheet();
-  });
+  saveStaffAttendanceDateToCloud(date);
+  saveData();
+  alert('Staff attendance save ho gayi: ' + date);
+  if(typeof renderSalarySheet === 'function') renderSalarySheet();
 }
 
 
@@ -3160,73 +2822,7 @@ function printSalarySlip(staffId, yearMonth){
     <body>${buildSalarySlipHtml(row, ym)}
     <div class="no-print" style="text-align:center; margin:16px;"><button onclick="window.print()">Print</button></div>
     <script>window.onload=function(){ setTimeout(function(){ window.print(); }, 300); }<\/script>
-    
-<!-- Student Attendance History Modal -->
-<div id="stuAttHistoryModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:200; align-items:center; justify-content:center; padding:16px;">
-  <div style="background:#fff; border-radius:12px; max-width:640px; width:100%; max-height:90vh; overflow:auto; padding:20px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <h3 style="margin:0;" id="stuAttHistoryTitle">Attendance History</h3>
-      <button class="btn small red" onclick="closeStudentAttendanceHistory()">Close</button>
-    </div>
-    <div class="form-grid">
-      <div class="field"><label>From</label><input id="stuAttHistFrom" type="date"></div>
-      <div class="field"><label>To</label><input id="stuAttHistTo" type="date"></div>
-    </div>
-    <button class="btn small" onclick="loadStudentAttendanceHistory()">Load</button>
-    <div id="stuAttHistSummary" class="hint" style="margin:10px 0;"></div>
-    <table>
-      <thead><tr><th>Date</th><th>Day</th><th>Status</th></tr></thead>
-      <tbody id="stuAttHistBody"></tbody>
-    </table>
-    <div class="empty" id="stuAttHistEmpty">Range select karke Load dabayein.</div>
-  </div>
-</div>
-<!-- Batch Absentee WhatsApp Modal -->
-<div id="batchWaModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:200; align-items:center; justify-content:center; padding:16px;">
-  <div style="background:#fff; border-radius:12px; max-width:520px; width:100%; max-height:90vh; overflow:auto; padding:20px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <h3 style="margin:0;">📱 Absentee WhatsApp</h3>
-      <button class="btn small red" onclick="closeBatchWaModal()">Close</button>
-    </div>
-    <p class="hint" id="batchWaHint"></p>
-    <div id="batchWaList"></div>
-    <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
-      <button class="btn whatsapp" onclick="batchWaSendNext()">Send Next ▶</button>
-      <button class="btn small" onclick="batchWaSendAllDelayed()">Auto-send (1.5s gap)</button>
-    </div>
-  </div>
-</div>
-
-
-<!-- Assign Class Modal (existing staff — dobara add ki zaroorat nahi) -->
-<div id="assignClassModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:220; align-items:center; justify-content:center; padding:16px;">
-  <div style="background:#fff; border-radius:12px; max-width:420px; width:100%; padding:20px;">
-    <h3 style="margin:0 0 8px;" id="assignClassTitle">📚 Assign Class</h3>
-    <p class="hint" id="assignClassHint">Is staff ko attendance ke liye class assign karein. Dobara staff add karne ki zaroorat nahi.</p>
-    <div class="field" style="margin:12px 0;">
-      <label>Class</label>
-      <select id="assignClassSelect" style="width:100%; padding:10px; font-size:15px;"></select>
-    </div>
-    <div class="field" style="margin-bottom:12px;">
-      <label>Ya manually likhein</label>
-      <input id="assignClassManual" type="text" placeholder="e.g. K.G / 5 / Nursery" style="width:100%; padding:10px; font-size:15px;">
-    </div>
-    <div style="display:flex; gap:8px; flex-wrap:wrap;">
-      <button class="btn green" onclick="saveAssignClassModal()">💾 Save Class</button>
-      <button class="btn small" style="background:#eee;color:#333;" onclick="saveAssignClassModal(true)">Clear (No class)</button>
-      <button class="btn small red" onclick="closeAssignClassModal()">Cancel</button>
-    </div>
-  </div>
-</div>
-
-
-<!-- App build version (corner) + credit -->
-<div id="appBuildBadge" style="position:fixed; right:10px; bottom:10px; z-index:150; background:rgba(15,23,42,0.88); color:#e2e8f0; font-size:10px; font-family:ui-monospace,monospace; padding:6px 10px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.25); line-height:1.35; pointer-events:none; max-width:90vw;">
-  <div style="opacity:0.9;">By <b style="color:#f8fafc;">Fazul Khan Chandio</b></div>
-  <div style="opacity:0.7; margin-top:2px;">Build <span id="cornerBuildVersion">—</span></div>
-</div>
-
-</body></html>`;
+    </body></html>`;
   const w = window.open('', '_blank');
   if(!w){ alert('Popup blocked — allow popups for salary slip.'); return; }
   w.document.write(html);
@@ -3256,21 +2852,21 @@ function printAllSalarySlips(){
 
 /* ===================== ATTENDANCE ===================== */
 function populateAttClassFilter(){
+
   const sel = document.getElementById('attClassFilter');
   if(!sel) return;
   const prev = sel.value;
+  // Class ka naam chahe kisi bhi likhawat (case) mein ho, ek hi option ban kar aaye —
+  // is liye option ki VALUE hamesha classKey() hoti hai (grouping ke liye), aur
+  // dikhne wala naam classDisplay() (saaf/consistent) hota hai.
   const seen = {};
   students.forEach(s => {
     const key = classKey(s.cls);
     if(key && !seen[key]) seen[key] = classDisplay(s.cls);
   });
   const keys = Object.keys(seen).sort((a,b)=> seen[a].localeCompare(seen[b], undefined, {numeric:true}));
-  // Admin + Staff dono: sab classes — koi lock nahi
   sel.innerHTML = '<option value="">Sab Classes</option>' + keys.map(k => `<option value="${k}">${seen[k]}</option>`).join('');
-  sel.disabled = false;
-  const pref = staffPreferredClass();
   if(keys.includes(prev)) sel.value = prev;
-  else if(pref && keys.includes(pref)) sel.value = pref; // optional default preferred class
 }
 function waNumberFor(contact){
   // Contact number ko WhatsApp link ke liye saaf karta hai (sirf digits, agar 0 se shuru ho to Pakistan code 92 lagata hai)
@@ -3280,104 +2876,47 @@ function waNumberFor(contact){
   else if(!digits.startsWith('92') && digits.length === 10) digits = '92' + digits;
   return digits;
 }
-function renderAttendanceForm(skipLoad){
-  const dateEl = document.getElementById('attDate');
-  const date = (dateEl && dateEl.value) || localDateStr();
-  if(dateEl && !dateEl.value) dateEl.value = date;
-  const loadEl = document.getElementById('attLoadStatus');
-  if(!skipLoad && db && !loadedAttendanceDates.has(date)){
-    if(loadEl){ loadEl.style.display = 'block'; loadEl.textContent = '⏳ ' + date + ' ki attendance cloud se load ho rahi hai…'; }
-    ensureAttendanceDateLoaded(date).finally(()=>{
-      if(loadEl) loadEl.style.display = 'none';
-      renderAttendanceForm(true);
-    });
-    // pehle local/cache se bhi dikhao (agar hai)
-  } else {
-    if(loadEl) loadEl.style.display = 'none';
-    if(!skipLoad) ensureAttendanceDateLoaded(date); // subscribe ensure
-  }
+function renderAttendanceForm(){
+  const date = document.getElementById('attDate').value || localDateStr();
+  ensureAttendanceDateLoaded(date); // pehli baar is date par aane par cloud se load ho kar khud dobara render karega
   const tbody = document.getElementById('attTable');
-  if(!tbody) return;
   populateAttClassFilter();
-  updateAttOfflineBadge();
-  const clsFilterEl = document.getElementById('attClassFilter');
-  // Holiday / Sunday banner
-  const hol = isHolidayDate(date);
-  const holEl = document.getElementById('attHolidayBanner');
-  if(holEl){
-    if(hol){
-      holEl.style.display = 'block';
-      holEl.style.background = '#fff3e0';
-      holEl.style.color = '#e65100';
-      holEl.innerHTML = '🏖️ <b>Holiday / Vacation:</b> ' + (hol.title||'Vacation') + (hol.date ? ' (' + hol.date + (hol.endDate ? ' → ' + hol.endDate : '') + ')' : '') + ' — marking optional hai.';
-    } else if(typeof isSunday === 'function' && isSunday(date)){
-      holEl.style.display = 'block';
-      holEl.style.background = '#fff3e0';
-      holEl.style.color = '#e65100';
-      holEl.innerHTML = '⛔ <b>Sunday</b> — usually leave. Mark karna optional hai; monthly % se Sunday exclude hota hai.';
-    } else {
-      holEl.style.display = 'none';
-      holEl.innerHTML = '';
-    }
-  }
-  // Admin + Staff: filter by selected class (optional). Koi class lock nahi.
-  const clsFilter = (clsFilterEl && clsFilterEl.value) || '';
+  const clsFilter = (document.getElementById('attClassFilter')||{}).value || '';
   const statusFilter = (document.getElementById('attStatusFilter')||{}).value || '';
   const dayRecord = attendanceRecords[date] || {};
   let list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : students.slice();
-  if(statusFilter === 'present') list = list.filter(s => getAttStatus(dayRecord, s.id) === 'present');
-  else if(statusFilter === 'absent') list = list.filter(s => getAttStatus(dayRecord, s.id) === 'absent');
-  else if(statusFilter === 'late') list = list.filter(s => getAttStatus(dayRecord, s.id) === 'late');
-  else if(statusFilter === 'half') list = list.filter(s => getAttStatus(dayRecord, s.id) === 'half');
-  else if(statusFilter === 'leave') list = list.filter(s => getAttStatus(dayRecord, s.id) === 'leave');
-  else if(statusFilter === 'unmarked') list = list.filter(s => !getAttStatus(dayRecord, s.id));
+  if(statusFilter === 'present') list = list.filter(s => (dayRecord[attKey(s.id)] || dayRecord[s.id] || '') === 'present');
+  else if(statusFilter === 'absent') list = list.filter(s => (dayRecord[attKey(s.id)] || dayRecord[s.id] || '') === 'absent');
+  else if(statusFilter === 'unmarked') list = list.filter(s => !(dayRecord[attKey(s.id)] || dayRecord[s.id] || ''));
   const banner = document.getElementById('attStatusBanner');
   const bannerText = document.getElementById('attStatusBannerText');
   if(banner && bannerText){
     if(statusFilter || clsFilter){
       const parts = [];
       if(clsFilter) parts.push('Class: ' + (document.getElementById('attClassFilter').selectedOptions[0]?.text || clsFilter));
-      if(statusFilter === 'absent') parts.push('Absent');
-      else if(statusFilter === 'unmarked') parts.push('Not Marked');
-      else if(statusFilter === 'present') parts.push('Present');
-      else if(statusFilter === 'late') parts.push('Late');
-      else if(statusFilter === 'half') parts.push('Half-day');
-      else if(statusFilter === 'leave') parts.push('Leave');
+      if(statusFilter === 'absent') parts.push('Absent students');
+      else if(statusFilter === 'unmarked') parts.push('Not Marked students');
+      else if(statusFilter === 'present') parts.push('Present students');
       bannerText.textContent = parts.join(' · ') + ' (' + list.length + ')';
       banner.style.display = 'flex';
     } else {
       banner.style.display = 'none';
     }
   }
-  const emptyEl = document.getElementById('attEmpty');
-  if(emptyEl) emptyEl.style.display = list.length ? 'none' : 'block';
-  const attBtnStyle = (active, bgActive, bgIdle, color) => {
-    const bg = active ? bgActive : bgIdle;
-    const col = color || '#fff';
-    const ring = active ? 'box-shadow:0 0 0 2px #fff,0 0 0 4px '+bgActive+'; font-weight:700;' : '';
-    return `flex:1; min-width:0; padding:12px 8px; font-size:14px; border:none; border-radius:8px; cursor:pointer; background:${bg}; color:${col}; ${ring}`;
-  };
+  document.getElementById('attEmpty').style.display = list.length ? 'none' : 'block';
+  // Fast render: ek hi baar innerHTML set (loop mein += bohat slow hota hai 200+ students par)
   const rows = list.map(s => {
-    const status = getAttStatus(dayRecord, s.id);
-    // sirf present/absent UI — purane late/half/leave ko absent jaisa treat nahi, clear dikhao option
-    const st = (status === 'present' || status === 'absent') ? status : (status ? status : '');
-    const waBtn = st === 'absent'
+    const status = dayRecord[attKey(s.id)] || dayRecord[s.id] || '';
+    const waBtn = status === 'absent'
       ? (waNumberFor(s.contact)
           ? `<button class="btn whatsapp small" onclick="sendAbsentWhatsApp(${s.id})">📱 Message</button>`
           : `<span class="hint">Contact # nahi hai</span>`)
       : '—';
-    const notMarkedTag = (st === 'present' || st === 'absent') ? '' : '<div style="font-size:11px; color:var(--red); margin-top:6px; text-align:center;">⚠ Not marked</div>';
-    const statusLabel = st === 'present' ? '✅ Present' : st === 'absent' ? '❌ Absent' : '';
+    const notMarkedTag = status ? '' : '<div style="font-size:11px; color:var(--red); margin-top:3px;">⚠ Not marked</div>';
     return `<tr><td>${s.adm}</td><td>${s.name}</td><td>${s.cls||'—'}</td>
-      <td style="white-space:normal; min-width:160px;">
-        ${statusLabel ? `<div style="font-size:12px; font-weight:700; margin-bottom:6px; color:#333;">${statusLabel}</div>` : ''}
-        <div style="display:flex; gap:8px; margin-bottom:6px;">
-          <button type="button" style="${attBtnStyle(st==='present','#2e7d32','#c8e6c9','#1b5e20')}" onclick="setAttStatus(${s.id},'present')">✅ Present</button>
-          <button type="button" style="${attBtnStyle(st==='absent','#c62828','#ffcdd2','#b71c1c')}" onclick="setAttStatus(${s.id},'absent')">❌ Absent</button>
-        </div>
-        <div style="text-align:center;">
-          <button type="button" style="padding:6px 12px; font-size:12px; border:none; border-radius:8px; background:#eee; color:#333; cursor:pointer;" onclick="setAttStatus(${s.id},'')" title="Clear">↺ Clear</button>
-        </div>
+      <td>
+        <button class="btn small ${status==='present'?'green':''}" style="${status==='present'?'':'background:var(--muted);'}" onclick="setAttStatus(${s.id},'present')">Present</button>
+        <button class="btn small ${status==='absent'?'red':''}" style="${status==='absent'?'':'background:var(--muted);'} margin-left:6px;" onclick="setAttStatus(${s.id},'absent')">Absent</button>
         ${notMarkedTag}
       </td>
       <td>${waBtn}</td></tr>`;
@@ -3389,16 +2928,17 @@ function renderAttClassSummary(date){
   const body = document.getElementById('attClassSummaryBody');
   if(!body) return;
   date = date || document.getElementById('attDate').value || localDateStr();
+  const dayRecord = attendanceRecords[date] || {};
   const counts = {};
   students.forEach(s => {
     const key = classKey(s.cls) || 'unassigned';
     const label = classKey(s.cls) ? classDisplay(s.cls) : 'Unassigned';
-    if(!counts[key]) counts[key] = { label, total:0, present:0, absent:0, other:0, unmarked:0 };
+    if(!counts[key]) counts[key] = { label, total:0, present:0, absent:0, unmarked:0 };
     counts[key].total++;
-    const status = getAttStatus(attendanceRecords[date] || {}, s.id);
+    const status = dayRecord[attKey(s.id)] || dayRecord[s.id] || '';
     if(status === 'absent') counts[key].absent++;
     else if(status === 'present') counts[key].present++;
-    else counts[key].unmarked++; // late/half/leave legacy → not marked for UI
+    else counts[key].unmarked++;
   });
   const keys = Object.keys(counts).sort((a,b)=> counts[a].label.localeCompare(counts[b].label, undefined, {numeric:true}));
   const emptyEl = document.getElementById('attClassSummaryEmpty');
@@ -3407,74 +2947,14 @@ function renderAttClassSummary(date){
 }
 function setAttStatus(studentId, status){
   const date = document.getElementById('attDate').value || localDateStr();
-  // Only present / absent / clear
-  if(status && status !== 'present' && status !== 'absent'){
-    status = status === '' ? '' : 'present';
-  }
   if(!attendanceRecords[date]) attendanceRecords[date] = {};
-  if(!attendanceLocalOverrides[date]) attendanceLocalOverrides[date] = {};
-  if(!attendancePendingDeletes[date]) attendancePendingDeletes[date] = {};
-  const key = attKey(studentId);
-  if(!status){
-    delete attendanceRecords[date][key];
-    attendanceLocalOverrides[date][key] = '';
-    attendancePendingDeletes[date][key] = true;
-  } else {
-    attendanceRecords[date][key] = status;
-    attendanceLocalOverrides[date][key] = status;
-    delete attendancePendingDeletes[date][key];
-  }
-  // Turant UI + dashboard counts
-  renderAttendanceForm(true);
-  if(date === localDateStr()){
-    if(typeof renderDashboard === 'function') renderDashboard();
-    if(typeof renderClassWiseCounts === 'function') renderClassWiseCounts();
-  }
+  // Key hamesha string — miss na ho dashboard/summary mein
+  attendanceRecords[date][attKey(studentId)] = status;
   saveAttendanceDateToCloud(date);
-  try{ saveData(); }catch(e){}
-}
-function markAllFiltered(status){
-  const date = document.getElementById('attDate').value || localDateStr();
-  if(status && status !== 'present' && status !== 'absent'){
-    alert('Sirf Present ya Absent mark ho sakta hai.');
-    return;
-  }
-  const clsFilter = (document.getElementById('attClassFilter')||{}).value || '';
-  const statusFilter = (document.getElementById('attStatusFilter')||{}).value || '';
-  if(!attendanceRecords[date]) attendanceRecords[date] = {};
-  let list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : students.slice();
-  const dayRecord = attendanceRecords[date] || {};
-  if(statusFilter === 'present') list = list.filter(s => getAttStatus(dayRecord, s.id) === 'present');
-  else if(statusFilter === 'absent') list = list.filter(s => getAttStatus(dayRecord, s.id) === 'absent');
-  else if(statusFilter === 'late') list = list.filter(s => getAttStatus(dayRecord, s.id) === 'late');
-  else if(statusFilter === 'half') list = list.filter(s => getAttStatus(dayRecord, s.id) === 'half');
-  else if(statusFilter === 'leave') list = list.filter(s => getAttStatus(dayRecord, s.id) === 'leave');
-  else if(statusFilter === 'unmarked') list = list.filter(s => !getAttStatus(dayRecord, s.id));
-  if(!list.length){ alert('Is filter mein koi student nahi.'); return; }
-  const label = status === 'present' ? 'Present' : status === 'absent' ? 'Absent' : status === 'late' ? 'Late' : status === '' ? 'Clear/Unmark' : status;
-  if(!confirm(list.length + ' students ko "' + label + '" mark karein?')) return;
-  if(!attendancePendingDeletes[date]) attendancePendingDeletes[date] = {};
-  if(!attendanceLocalOverrides[date]) attendanceLocalOverrides[date] = {};
-  if(!attendanceRecords[date]) attendanceRecords[date] = {};
-  list.forEach(s => {
-    const key = attKey(s.id);
-    if(!status){
-      delete attendanceRecords[date][key];
-      attendanceLocalOverrides[date][key] = '';
-      attendancePendingDeletes[date][key] = true;
-    } else {
-      attendanceRecords[date][key] = status;
-      attendanceLocalOverrides[date][key] = status;
-      delete attendancePendingDeletes[date][key];
-    }
-  });
-  renderAttendanceForm(true);
-  if(date === localDateStr()){
-    if(typeof renderDashboard === 'function') renderDashboard();
-    if(typeof renderClassWiseCounts === 'function') renderClassWiseCounts();
-  }
-  saveAttendanceDateToCloud(date);
-  try{ saveData(); }catch(e){}
+  saveData();
+  renderAttendanceForm();
+  // Dashboard turant update — warna mark ke baad dashboard par purana count dikhta tha
+  if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
 }
 function sendAbsentWhatsApp(studentId){
   const s = students.find(x => x.id === studentId);
@@ -3487,189 +2967,12 @@ function sendAbsentWhatsApp(studentId){
 }
 function saveAttendance(){
   const date = document.getElementById('attDate').value || localDateStr();
-  saveAttendanceDateToCloud(date).then(()=>{
-    saveData();
-    alert('Attendance save ho gayi is date k liye: ' + date);
-    renderAll();
-  });
+  saveAttendanceDateToCloud(date);
+  saveData();
+  alert('Attendance save ho gayi is date k liye: ' + date);
+  renderAll();
 }
-
-document.addEventListener('change', function(e){
-  if(e.target.id === 'attDate' || e.target.id === 'attClassFilter' || e.target.id === 'attStatusFilter'){
-    renderAttendanceForm(e.target.id !== 'attDate' ? true : false);
-  }
-});
-
-/* ===================== BATCH ABSENTEE WHATSAPP ===================== */
-let batchWaQueue = [];
-let batchWaIndex = 0;
-function batchAbsentWhatsApp(){
-  const date = document.getElementById('attDate').value || localDateStr();
-  const clsFilter = (document.getElementById('attClassFilter')||{}).value || '';
-  const dayRecord = attendanceRecords[date] || {};
-  let list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : students.slice();
-  list = list.filter(s => getAttStatus(dayRecord, s.id) === 'absent');
-  const withNum = [];
-  const without = [];
-  list.forEach(s => {
-    const num = waNumberFor(s.contact);
-    if(num) withNum.push(s);
-    else without.push(s);
-  });
-  if(!withNum.length){
-    alert('Is date/filter par koi absent student contact number ke saath nahi mila.' + (without.length ? ('\n' + without.length + ' absent bina number ke hain.') : ''));
-    return;
-  }
-  batchWaQueue = withNum.map(s => {
-    const num = waNumberFor(s.contact);
-    const msg = 'Assalam-o-Alaikum,\n' + schoolSettings.name + ' se ittila di jaa rahi hai ke aap ka bacha/bachi *' + s.name + '* (Class: ' + (s.cls||'—') + ', Adm#: ' + s.adm + ') tareekh ' + date + ' ko school mein ghair-hazir (absent) tha/thi.\nBaraye meherbani wajah se agah karein.\nShukriya.';
-    return { s, num, msg, url: 'https://wa.me/' + num + '?text=' + encodeURIComponent(msg) };
-  });
-  batchWaIndex = 0;
-  const modal = document.getElementById('batchWaModal');
-  if(modal) modal.style.display = 'flex';
-  const hint = document.getElementById('batchWaHint');
-  if(hint) hint.textContent = withNum.length + ' absentees with WhatsApp' + (without.length ? ' · ' + without.length + ' bina number (skip)' : '') + '. "Send Next" se ek-ek message khulega (browser multi-popup block karta hai).';
-  const box = document.getElementById('batchWaList');
-  if(box){
-    box.innerHTML = batchWaQueue.map((x,i) => `<div style="padding:6px 0; border-bottom:1px solid #eee; font-size:13px;">${i+1}. ${x.s.name} (${x.s.adm}) — ${x.s.contact||''}</div>`).join('');
-  }
-}
-function closeBatchWaModal(){
-  const m = document.getElementById('batchWaModal');
-  if(m) m.style.display = 'none';
-}
-function batchWaSendNext(){
-  if(batchWaIndex >= batchWaQueue.length){
-    alert('Sab messages open ho chuke / queue khatam.');
-    return;
-  }
-  const item = batchWaQueue[batchWaIndex++];
-  window.open(item.url, '_blank');
-  const hint = document.getElementById('batchWaHint');
-  if(hint) hint.textContent = 'Sent ' + batchWaIndex + ' / ' + batchWaQueue.length + ' — Next dabayein.';
-}
-function batchWaSendAllDelayed(){
-  if(!batchWaQueue.length) return;
-  let i = batchWaIndex;
-  const run = () => {
-    if(i >= batchWaQueue.length){
-      batchWaIndex = i;
-      alert('Auto-send complete: ' + batchWaQueue.length);
-      return;
-    }
-    window.open(batchWaQueue[i].url, '_blank');
-    i++;
-    batchWaIndex = i;
-    const hint = document.getElementById('batchWaHint');
-    if(hint) hint.textContent = 'Auto ' + i + ' / ' + batchWaQueue.length + '…';
-    setTimeout(run, 1600);
-  };
-  run();
-}
-
-/* ===================== STUDENT ATTENDANCE HISTORY ===================== */
-let stuAttHistId = null;
-function showStudentAttendanceHistory(studentId){
-  stuAttHistId = studentId;
-  const s = students.find(x => x.id === studentId);
-  const modal = document.getElementById('stuAttHistoryModal');
-  if(!modal) return;
-  modal.style.display = 'flex';
-  const title = document.getElementById('stuAttHistoryTitle');
-  if(title) title.textContent = '📅 ' + (s ? s.name : 'Student') + ' — Attendance History';
-  const toEl = document.getElementById('stuAttHistTo');
-  const fromEl = document.getElementById('stuAttHistFrom');
-  const today = localDateStr();
-  if(toEl && !toEl.value) toEl.value = today;
-  if(fromEl && !fromEl.value){
-    const d = new Date();
-    fromEl.value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-01';
-  }
-  loadStudentAttendanceHistory();
-}
-function closeStudentAttendanceHistory(){
-  const m = document.getElementById('stuAttHistoryModal');
-  if(m) m.style.display = 'none';
-  stuAttHistId = null;
-}
-function loadStudentAttendanceHistory(){
-  if(!stuAttHistId) return;
-  const fromStr = (document.getElementById('stuAttHistFrom')||{}).value;
-  const toStr = (document.getElementById('stuAttHistTo')||{}).value;
-  const body = document.getElementById('stuAttHistBody');
-  const empty = document.getElementById('stuAttHistEmpty');
-  const sum = document.getElementById('stuAttHistSummary');
-  if(!fromStr || !toStr){ alert('From/To select karein'); return; }
-  if(sum) sum.textContent = '⏳ Loading…';
-  ensureAttendanceRangeLoaded(fromStr, toStr).then(()=>{
-    const dates = datesBetween(fromStr, toStr);
-    const key = attKey(stuAttHistId);
-    let p=0,a=0,l=0,h=0,lv=0,wd=0;
-    const rows = [];
-    dates.forEach(d => {
-      const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d+'T12:00:00').getDay()];
-      const hol = isHolidayDate(d);
-      const sun = isSunday(d);
-      let st = (attendanceRecords[d]||{})[key] || '';
-      let label = st || (hol ? 'Holiday' : (sun ? 'Sunday' : '—'));
-      if(!sun && !hol){
-        wd++;
-        if(st==='present') p++;
-        else if(st==='absent') a++;
-        else if(st==='late') l++;
-        else if(st==='half') h++;
-        else if(st==='leave') lv++;
-      }
-      const color = st==='present'?'#2e7d32':st==='absent'?'#c62828':st==='late'?'#f9a825':(hol||sun)?'#888':'#333';
-      rows.push(`<tr><td>${d}</td><td>${dayName}</td><td style="color:${color};font-weight:600;">${label || 'Not marked'}</td></tr>`);
-    });
-    if(body) body.innerHTML = rows.join('');
-    if(empty) empty.style.display = rows.length ? 'none' : 'block';
-    const pct = wd ? (((p + l + h*0.5)/wd)*100).toFixed(1) : '0.0';
-    if(sum) sum.textContent = `Present ${p} · Absent ${a} · Late ${l} · Half ${h} · Leave ${lv} · Working ${wd} · Attendance ${pct}%`;
-  });
-}
-
-/* ===================== MONTHLY PDF / PRINT ===================== */
-function exportMonthlyAttendancePDF(){
-  const fromStr = (document.getElementById('attRepFrom')||{}).value;
-  const toStr = (document.getElementById('attRepTo')||{}).value;
-  const clsFilter = (document.getElementById('attRepClass')||{}).value || '';
-  if(!fromStr || !toStr){ alert('Pehle From/To select karke Load Report karein.'); return; }
-  const dates = datesBetween(fromStr, toStr);
-  const workingDates = dates.filter(d => !isSunday(d) && !isHolidayDate(d));
-  let list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : students.slice();
-  list = list.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  const rows = list.map(s => {
-    let p=0,a=0,l=0,h=0,lv=0;
-    workingDates.forEach(d => {
-      const st = (attendanceRecords[d]||{})[attKey(s.id)] || '';
-      if(st==='present') p++;
-      else if(st==='absent') a++;
-      else if(st==='late') l++;
-      else if(st==='half') h++;
-      else if(st==='leave') lv++;
-    });
-    const wd = workingDates.length;
-    const pct = wd ? (((p+l+h*0.5)/wd)*100).toFixed(1) : '0.0';
-    return `<tr><td>${s.adm||''}</td><td>${s.name||''}</td><td>${s.cls||''}</td><td>${p}</td><td>${a}</td><td>${l}</td><td>${h}</td><td>${lv}</td><td>${wd}</td><td>${pct}%</td></tr>`;
-  }).join('');
-  const html = `<!DOCTYPE html><html><head><title>Attendance ${fromStr} to ${toStr}</title>
-    <style>body{font-family:Arial,sans-serif;padding:20px;} table{border-collapse:collapse;width:100%;font-size:12px;} th,td{border:1px solid #ccc;padding:6px;text-align:left;} th{background:#f0f0f0;} h2{margin:0 0 8px;} .meta{color:#555;margin-bottom:14px;}</style>
-    </head><body>
-    <h2>${(schoolSettings&&schoolSettings.name)||'School'} — Monthly Attendance</h2>
-    <div class="meta">${fromStr} → ${toStr}${clsFilter?' · Class '+clsFilter:''} · Working days (no Sunday/Holiday): ${workingDates.length}</div>
-    <table><thead><tr><th>Adm</th><th>Name</th><th>Class</th><th>P</th><th>A</th><th>Late</th><th>Half</th><th>Leave</th><th>WD</th><th>%</th></tr></thead>
-    <tbody>${rows}</tbody></table>
-    <script>window.onload=function(){setTimeout(function(){window.print();},400);}<\\/script>
-    </body></html>`;
-  const w = window.open('', '_blank');
-  if(!w){ alert('Popup blocked — browser mein allow karein.'); return; }
-  w.document.write(html);
-  w.document.close();
-}
-
+document.addEventListener('change', function(e){ if(e.target.id === 'attDate' || e.target.id === 'attClassFilter' || e.target.id === 'attStatusFilter') renderAttendanceForm(); });
 
 /* ===================== QR CODE ATTENDANCE ===================== */
 let qrScannerInstance = null;
@@ -3728,11 +3031,7 @@ function onQrScanSuccess(decodedText){
     return;
   }
   if(!attendanceRecords[date]) attendanceRecords[date] = {};
-  if(!attendanceLocalOverrides[date]) attendanceLocalOverrides[date] = {};
-  const qk = attKey(s.id);
-  attendanceRecords[date][qk] = 'present';
-  attendanceLocalOverrides[date][qk] = 'present';
-  if(attendancePendingDeletes[date]) delete attendancePendingDeletes[date][qk];
+  attendanceRecords[date][attKey(s.id)] = 'present';
   saveAttendanceDateToCloud(date);
   const scanEntry = { id:newId(), date, time:new Date().toLocaleTimeString(), adm:s.adm, name:s.name, cls:s.cls, studentId:s.id };
   qrScanLog.push(scanEntry);
@@ -4284,17 +3583,16 @@ function renderClassWiseCounts(){
   const body = document.getElementById('classWiseBody');
   if(!body) return;
   const today = localDateStr();
-  ensureAttendanceDateLoaded(today);
+  const todayRec = attendanceRecords[today] || {};
   const counts = {};
   students.forEach(s=>{
     const key = classKey(s.cls) || 'unassigned';
     const label = classKey(s.cls) ? classDisplay(s.cls) : 'Unassigned';
     if(!counts[key]) counts[key] = { label, total:0, present:0, absent:0, unmarked:0 };
     counts[key].total++;
-    const st = getAttStatus(attendanceRecords[today] || {}, s.id);
+    const st = todayRec[attKey(s.id)] || todayRec[s.id] || '';
     if(st === 'present') counts[key].present++;
     else if(st === 'absent') counts[key].absent++;
-    else if(st === 'late' || st === 'half' || st === 'leave') { /* other statuses: not unmarked */ }
     else counts[key].unmarked++;
   });
   const filterEl = document.getElementById('classWiseFilter');
@@ -4338,11 +3636,19 @@ function renderDashboard(){
     staffOnlineEl.innerHTML = '<span style="color:var(--green);">🟢 ' + onlineCount + ' Online</span> · <span style="color:#888;">⚪ ' + (staff.length - onlineCount) + ' Offline</span>';
   }
   const today = localDateStr();
-  ensureAttendanceDateLoaded(today);
-  const counts = countAttendanceForDate(today, students);
-  const present = counts.present;
-  const absent = counts.absent;
-  const notMarked = counts.notMarked;
+  const todayRec = attendanceRecords[today] || {};
+  const present = students.filter(s => {
+    const st = todayRec[attKey(s.id)] || todayRec[s.id] || '';
+    return st === 'present';
+  }).length;
+  const absent = students.filter(s => {
+    const st = todayRec[attKey(s.id)] || todayRec[s.id] || '';
+    return st === 'absent';
+  }).length;
+  const notMarked = students.filter(s => {
+    const st = todayRec[attKey(s.id)] || todayRec[s.id] || '';
+    return !st;
+  }).length;
   document.getElementById('statPresent').textContent = present;
   const statAbsentEl = document.getElementById('statAbsent');
   if(statAbsentEl) statAbsentEl.textContent = absent;
@@ -4401,107 +3707,19 @@ function renderReports(){
   document.getElementById('repAmount').textContent = 'Rs. ' + fees.filter(f=>f.status==='paid').reduce((s,f)=>s+f.amount,0);
   renderClassFeeSummary();
   const today = localDateStr();
-  ensureAttendanceDateLoaded(today);
-  const rc = countAttendanceForDate(today, students);
-  document.getElementById('repPresent').textContent = rc.present;
-  document.getElementById('repAbsent').textContent = rc.absent;
-  const repLateEl = document.getElementById('repLate');
-  if(repLateEl) repLateEl.textContent = rc.other;
+  const todayRec = attendanceRecords[today] || {};
+  const present = students.filter(s => {
+    const st = todayRec[attKey(s.id)] || todayRec[s.id] || '';
+    return st === 'present';
+  }).length;
+  const absent = students.filter(s => {
+    const st = todayRec[attKey(s.id)] || todayRec[s.id] || '';
+    return st === 'absent';
+  }).length;
+  document.getElementById('repPresent').textContent = present;
+  document.getElementById('repAbsent').textContent = absent;
   const repNotMarkedEl = document.getElementById('repNotMarked');
-  if(repNotMarkedEl) repNotMarkedEl.textContent = rc.notMarked;
-  // Monthly report defaults
-  const fromEl = document.getElementById('attRepFrom');
-  const toEl = document.getElementById('attRepTo');
-  if(fromEl && !fromEl.value){
-    const d = new Date();
-    fromEl.value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-01';
-  }
-  if(toEl && !toEl.value) toEl.value = today;
-  const clsSel = document.getElementById('attRepClass');
-  if(clsSel && clsSel.options.length <= 1){
-    const keys = {};
-    students.forEach(s => { const k = classKey(s.cls); if(k) keys[k] = classDisplay(s.cls); });
-    Object.keys(keys).sort((a,b)=>keys[a].localeCompare(keys[b], undefined, {numeric:true})).forEach(k=>{
-      const opt = document.createElement('option');
-      opt.value = k; opt.textContent = keys[k];
-      clsSel.appendChild(opt);
-    });
-  }
-}
-function loadMonthlyAttendanceReport(){
-  const fromStr = (document.getElementById('attRepFrom')||{}).value;
-  const toStr = (document.getElementById('attRepTo')||{}).value;
-  const clsFilter = (document.getElementById('attRepClass')||{}).value || '';
-  const note = document.getElementById('attRepLoadNote');
-  const body = document.getElementById('attRepBody');
-  const empty = document.getElementById('attRepEmpty');
-  if(!fromStr || !toStr){ alert('From aur To date select karein.'); return; }
-  const dates = datesBetween(fromStr, toStr);
-  if(!dates.length){ alert('Invalid date range.'); return; }
-  if(note) note.textContent = '⏳ ' + dates.length + ' din cloud se load ho rahe hain…';
-  ensureAttendanceRangeLoaded(fromStr, toStr).then(()=>{
-    let list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : students.slice();
-    list = list.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-    // working days = non-Sunday and non-holiday (Vacation events)
-    const workingDates = dates.filter(d => !isSunday(d) && !isHolidayDate(d));
-    const rows = list.map(s => {
-      let p=0,a=0,l=0,h=0,lv=0,marked=0;
-      workingDates.forEach(d => {
-        const st = (attendanceRecords[d]||{})[attKey(s.id)] || '';
-        if(st === 'present'){ p++; marked++; }
-        else if(st === 'absent'){ a++; marked++; }
-        else if(st === 'late'){ l++; marked++; }
-        else if(st === 'half'){ h++; marked++; }
-        else if(st === 'leave'){ lv++; marked++; }
-      });
-      const wd = workingDates.length;
-      // % = (present + late + half*0.5) / working days * 100  (leave optional count as present for %? treat leave as neither)
-      const score = p + l + (h * 0.5);
-      const pct = wd ? ((score / wd) * 100).toFixed(1) : '0.0';
-      return `<tr>
-        <td>${s.adm||'—'}</td><td>${s.name}</td><td>${s.cls||'—'}</td>
-        <td>${p}</td><td>${a}</td><td>${l}</td><td>${h}</td><td>${lv}</td>
-        <td>${wd}</td><td><b>${pct}%</b></td>
-      </tr>`;
-    });
-    if(body) body.innerHTML = rows.join('');
-    if(empty) empty.style.display = list.length ? 'none' : 'block';
-    if(note) note.textContent = '✅ ' + dates.length + ' din · ' + workingDates.length + ' working days (Sunday exclude) · ' + list.length + ' students';
-  }).catch(err=>{
-    if(note) note.textContent = '❌ Load fail: ' + (err && err.message ? err.message : err);
-  });
-}
-function exportMonthlyAttendanceCSV(){
-  const fromStr = (document.getElementById('attRepFrom')||{}).value;
-  const toStr = (document.getElementById('attRepTo')||{}).value;
-  const clsFilter = (document.getElementById('attRepClass')||{}).value || '';
-  if(!fromStr || !toStr){ alert('Pehle report load karein (From/To).'); return; }
-  const dates = datesBetween(fromStr, toStr);
-  const workingDates = dates.filter(d => !isSunday(d) && !isHolidayDate(d));
-  let list = clsFilter ? students.filter(s => classKey(s.cls) === clsFilter) : students.slice();
-  const lines = ['Adm,Name,Class,Present,Absent,Late,Half,Leave,WorkingDays,Percentage'];
-  list.forEach(s => {
-    let p=0,a=0,l=0,h=0,lv=0;
-    workingDates.forEach(d => {
-      const st = (attendanceRecords[d]||{})[attKey(s.id)] || '';
-      if(st==='present') p++;
-      else if(st==='absent') a++;
-      else if(st==='late') l++;
-      else if(st==='half') h++;
-      else if(st==='leave') lv++;
-    });
-    const wd = workingDates.length;
-    const pct = wd ? (((p + l + h*0.5) / wd) * 100).toFixed(1) : '0.0';
-    const esc = (v) => '"' + String(v||'').replace(/"/g,'""') + '"';
-    lines.push([esc(s.adm),esc(s.name),esc(s.cls),p,a,l,h,lv,wd,pct].join(','));
-  });
-  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'attendance_' + fromStr + '_to_' + toStr + '.csv';
-  a.click();
-  URL.revokeObjectURL(url);
+  if(repNotMarkedEl) repNotMarkedEl.textContent = students.length - present - absent;
 }
 
 function renderClassFeeSummary(){
@@ -4707,7 +3925,6 @@ window.addEventListener('online', ()=>{
   const s = document.getElementById('saveStatus');
   if(s) s.textContent = 'Online ho gaye — sync ho raha hai…';
   if(SCHOOL_DOC) saveData();
-  try{ if(typeof flushAttendanceOfflineQueue === 'function') flushAttendanceOfflineQueue(); }catch(e){}
   try{
     const today = localDateStr();
     loadedAttendanceDates.delete(today);
@@ -4731,17 +3948,7 @@ window.addEventListener('offline', ()=>{
 });
 </script>
     <script>
-  window.__APP_BUILD__ = '20260826-v11-stable';
-function applyAppBuildLabels(){
-  var v = (typeof window.__APP_BUILD__ !== 'undefined' && window.__APP_BUILD__) ? window.__APP_BUILD__ : 'dev';
-  var a = document.getElementById('sidebarBuildVersion');
-  var b = document.getElementById('cornerBuildVersion');
-  if(a) a.textContent = v;
-  if(b) b.textContent = v;
-}
-if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyAppBuildLabels);
-else applyAppBuildLabels();
-
+  window.__APP_BUILD__ = '20260822-sync-presence-2';
   (function(){
     var reloading = false;
     function forceReload(){
