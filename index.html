@@ -78,23 +78,27 @@
   .login-hint{margin-top:16px; font-size:12px; color:var(--navy); background:var(--cream); border-left:3px solid var(--gold); border-radius:6px; padding:12px 13px; line-height:1.6; font-family:'Lora',serif; font-style:italic; text-align:center;}
   .login-error{color:var(--red); font-size:12px; margin-top:8px; display:none; font-weight:600;}
   .offline-note{margin-top:12px; text-align:center; font-size:10.5px; color:#8892AC;}
-  #parentPortalScreen{display:none; min-height:100vh; background:var(--cream); padding:20px 14px 40px;}
-  body.parent-mode #loginScreen, body.parent-mode #appScreen{display:none !important;}
-  body.parent-mode #parentPortalScreen{display:block !important;}
-  .parent-wrap{max-width:520px; margin:0 auto;}
-  .parent-card{background:var(--paper); border:1px solid var(--rule); border-radius:12px; padding:22px 20px; margin-bottom:16px;}
-  .parent-card h2{font-size:18px; color:var(--navy); margin-bottom:6px;}
-  .parent-card .sub{font-size:12px; color:var(--muted); margin-bottom:16px;}
-  .parent-stat{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0;}
-  .parent-stat .box{background:var(--cream); border-radius:8px; padding:12px; text-align:center;}
-  .parent-stat .box .n{font-size:20px; font-weight:700; color:var(--navy); font-family:'JetBrains Mono',monospace;}
-  .parent-stat .box .l{font-size:11px; color:var(--muted); margin-top:2px;}
-  .parent-row{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--rule); font-size:13px;}
-  .parent-row .k{color:var(--muted);} .parent-row .v{font-weight:600; text-align:right;}
-  .parent-quote{background:linear-gradient(135deg,#1B2A4A,#2d3f66); color:#fff; border-radius:12px; padding:16px 18px; margin-bottom:16px; border-left:4px solid var(--gold);}
-  .parent-quote .q-label{font-size:11px; color:var(--gold); margin-bottom:6px; font-weight:600;}
-  .parent-quote .q-text{font-size:14px; line-height:1.55; font-style:italic;}
-  .parent-remind{background:#fff8e8; border:1px solid #e8d4a0; border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:13px; line-height:1.5; color:#3a3020;}
+  #parentPortalScreen{display:none;min-height:100vh;background:var(--cream);padding:20px 14px 40px;}
+  body.parent-mode #loginScreen,body.parent-mode #appScreen{display:none!important;}
+  body.parent-mode #parentPortalScreen{display:block!important;}
+  .parent-wrap{max-width:520px;margin:0 auto;}
+  .parent-card{background:var(--paper);border:1px solid var(--rule);border-radius:12px;padding:20px;margin-bottom:14px;}
+  .parent-card h2{font-size:18px;color:var(--navy);margin-bottom:6px;}
+  .parent-card .sub{font-size:12px;color:var(--muted);margin-bottom:12px;}
+  .parent-stat{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;}
+  .parent-stat .box{background:var(--cream);border-radius:8px;padding:12px;text-align:center;}
+  .parent-stat .box .n{font-size:20px;font-weight:700;color:var(--navy);font-family:'JetBrains Mono',monospace;}
+  .parent-stat .box .l{font-size:11px;color:var(--muted);margin-top:2px;}
+  .parent-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--rule);font-size:13px;}
+  .parent-row .k{color:var(--muted)}.parent-row .v{font-weight:600;text-align:right;}
+  .parent-quote{background:linear-gradient(135deg,#1B2A4A,#2d3f66);color:#fff;border-radius:12px;padding:16px;margin-bottom:14px;border-left:4px solid var(--gold);}
+  .parent-quote .q-label{font-size:11px;color:var(--gold);margin-bottom:6px;font-weight:600;}
+  .parent-quote .q-text{font-size:14px;line-height:1.55;font-style:italic;}
+  .parent-remind{background:#fff8e8;border:1px solid #e8d4a0;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px;line-height:1.5;color:#3a3020;}
+  .bulk-challan-grid{display:grid;gap:10px;width:100%;}
+  .bulk-challan-grid.cols-2,.bulk-challan-grid.cols-4,.bulk-challan-grid.cols-6{grid-template-columns:1fr 1fr;}
+  .bulk-challan-grid .challan-copy{margin-bottom:0;padding:12px 14px;page-break-inside:avoid;break-inside:avoid;}
+  .bulk-page-break{page-break-after:always;break-after:page;height:0;margin:0;padding:0;border:none;}
 
   .dev-credit{margin-top:14px; padding-top:12px; border-top:1px solid var(--rule); text-align:center; font-size:10px; color:var(--muted); font-family:'JetBrains Mono',monospace; letter-spacing:0.3px;}
   .dev-credit b{color:var(--navy);}
@@ -275,10 +279,6 @@
   .thermal-receipt .t-total{border-top:1px solid #000; margin-top:6px; padding-top:6px; font-weight:700; display:flex; justify-content:space-between;}
   #printModal.thermal-mode .print-wrap{max-width:300px;}
 
-  .bulk-challan-grid{display:grid; gap:10px; width:100%;}
-  .bulk-challan-grid.cols-2,.bulk-challan-grid.cols-4,.bulk-challan-grid.cols-6{grid-template-columns:1fr 1fr;}
-  .bulk-challan-grid .challan-copy{margin-bottom:0; padding:12px 14px; page-break-inside:avoid; break-inside:avoid;}
-  .bulk-page-break{page-break-after:always; break-after:page; height:0; margin:0; padding:0; border:none;}
   @media print{
     @page{ size:A4; margin:10mm; }
     body *{visibility:hidden;}
@@ -337,7 +337,7 @@
 </style>
 </head>
 <body>
-<script>(function(){try{var h=(location.hash||'').toLowerCase();if(h==='#parent'||h.indexOf('#parent/')===0){document.documentElement.classList.add('parent-boot');document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('parent-mode');});}}catch(e){}})();</script>
+<script>(function(){try{var h=(location.hash||'').toLowerCase(),q=location.search||'';if(h==='#p'||h.indexOf('#p/')===0||h==='#parent'||h.indexOf('#parent/')===0||/[?&]parents=1/.test(q)){document.documentElement.classList.add('parent-boot');document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('parent-mode');});}}catch(e){}})();</script>
 <style>html.parent-boot #loginScreen,html.parent-boot #appScreen{display:none!important;}html.parent-boot #parentPortalScreen{display:block!important;}</style>
 
 
@@ -362,7 +362,6 @@
       <span id="quoteText">Loading…</span>
     </div>
     <div class="offline-note" id="cloudStatusNote">☁️ Cloud database se connect ho raha hai…</div>
-    <div style="margin-top:14px;text-align:center;"><button type="button" onclick="openParentPortalFromLogin()" style="background:none;border:none;color:var(--gold);font-size:12px;text-decoration:underline;cursor:pointer;font-family:inherit;">👨‍👩‍👧 Parent Portal</button></div>
     <div class="dev-credit">Software by <b>Fazul Khan Chandio</b> · +92 333 3909816</div>
   </div>
 </div>
@@ -371,16 +370,19 @@
 <div id="parentPortalScreen">
   <div class="parent-wrap">
     <div class="parent-card" id="parentLoginCard">
-      <div style="text-align:center;margin-bottom:12px;"><h2 id="parentSchoolTitle">Parent Portal</h2>
-      <div class="sub">Sirf apne bache ka data — admin login nahi</div></div>
-      <div class="field"><label>Admission No.</label><input id="parentAdm" type="text" placeholder="e.g. ADM-0134"></div>
-      <div class="field"><label>Parent PIN</label><input id="parentPinInput" type="password" maxlength="8" onkeydown="if(event.key==='Enter')parentPortalLogin()"></div>
+      <div style="text-align:center;margin-bottom:12px;">
+        <h2 id="parentSchoolTitle">Parents Portal</h2>
+        <div class="sub">The Smart Modern Public School, Qamber</div>
+        <div class="sub">Sirf apne bache ka data · Admin login nahi</div>
+      </div>
+      <div class="field"><label>Admission No.</label><input id="parentAdm" type="text" placeholder="ADM-0134" autocomplete="username"></div>
+      <div class="field"><label>Parent PIN</label><input id="parentPinInput" type="password" maxlength="8" placeholder="4-digit PIN" autocomplete="current-password" onkeydown="if(event.key==='Enter')parentPortalLogin()"></div>
       <button class="btn green" style="width:100%;margin-top:8px;" onclick="parentPortalLogin()">View My Child</button>
       <div id="parentLoginError" class="login-error" style="display:none;margin-top:10px;"></div>
     </div>
     <div id="parentDashCard" style="display:none;">
       <div class="parent-quote"><div class="q-label">📖 Aaj ki tarbiyat</div><div class="q-text" id="parentQuoteText">—</div></div>
-      <div id="parentHwReminder" class="parent-remind"><strong>📚 Homework:</strong> Aaj bache se homework poochhein aur check karein.</div>
+      <div id="parentHwReminder" class="parent-remind"><strong>📚 Homework:</strong> Aaj homework check karein.</div>
       <div class="parent-card">
         <div style="display:flex;justify-content:space-between;gap:10px;">
           <div><h2 id="parentChildName">—</h2><div class="sub" id="parentChildMeta">—</div></div>
@@ -393,11 +395,11 @@
           <div class="box"><div class="n" id="parentFeePending">0</div><div class="l">Pending</div></div>
         </div>
       </div>
-      <div class="parent-card"><h3 style="font-size:15px;margin-bottom:10px;">📚 Homework</h3><div id="parentHwList"></div><div id="parentHwEmpty" class="empty" style="display:none;">Koi homework nahi.</div></div>
-      <div class="parent-card"><h3 style="font-size:15px;margin-bottom:10px;">📋 Fees</h3><div id="parentFeeList"></div><div id="parentFeeEmpty" class="empty" style="display:none;">Koi fee nahi.</div></div>
-      <div class="parent-card"><h3 style="font-size:15px;margin-bottom:10px;">📅 Attendance</h3><div id="parentAttList" style="max-height:200px;overflow-y:auto;"></div><div id="parentAttEmpty" class="empty" style="display:none;">—</div></div>
-      <div class="parent-card"><h3 style="font-size:15px;margin-bottom:10px;">📝 Results</h3><div id="parentResultList"></div><div id="parentResultEmpty" class="empty" style="display:none;">—</div></div>
-      <div class="parent-card"><h3 style="font-size:15px;margin-bottom:10px;">📢 Notices</h3><div id="parentNoticeList"></div><div id="parentNoticeEmpty" class="empty" style="display:none;">—</div></div>
+      <div class="parent-card"><h3 style="font-size:15px;margin-bottom:8px;">📚 Homework</h3><div id="parentHwList"></div><div id="parentHwEmpty" class="empty" style="display:none;">—</div></div>
+      <div class="parent-card"><h3 style="font-size:15px;margin-bottom:8px;">📋 Fees</h3><div id="parentFeeList"></div><div id="parentFeeEmpty" class="empty" style="display:none;">—</div></div>
+      <div class="parent-card"><h3 style="font-size:15px;margin-bottom:8px;">📅 Attendance</h3><div id="parentAttList" style="max-height:180px;overflow-y:auto;"></div><div id="parentAttEmpty" class="empty" style="display:none;">—</div></div>
+      <div class="parent-card"><h3 style="font-size:15px;margin-bottom:8px;">📝 Results</h3><div id="parentResultList"></div><div id="parentResultEmpty" class="empty" style="display:none;">—</div></div>
+      <div class="parent-card"><h3 style="font-size:15px;margin-bottom:8px;">📢 Notices</h3><div id="parentNoticeList"></div><div id="parentNoticeEmpty" class="empty" style="display:none;">—</div></div>
     </div>
   </div>
 </div>
@@ -537,7 +539,6 @@
             <h3>Student List</h3>
             <div style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:8px;" class="admin-only">
               <button class="btn small green" style="margin:0;" onclick="generatePinsForAllStudents()">🔐 Generate PIN for All</button>
-              <button class="btn small" style="margin:0;background:var(--navy);" onclick="copyParentPortalBaseLink()">📋 Parent Link</button>
             </div>
             <div class="form-grid" style="margin-bottom:10px;">
               <div class="field"><label>Search (Name / Adm # / Roll)</label><input id="stuSearch" type="text" placeholder="Type to filter…" oninput="renderStudents()"></div>
@@ -607,21 +608,19 @@
           </div>
           <div class="panel admin-only">
             <h3>Generate All Unpaid Challans</h3>
-            <p class="hint">Month select karein. Jin students ki is month ki challan nahi bani, unke liye pending challan banegi. A4 pe 2/4/6 print.</p>
+            <p class="hint">Month select karein. Jin ki is month ki challan nahi, unke liye pending banegi. A4 pe 2/4/6 print.</p>
             <div class="form-grid">
               <div class="field"><label>Month</label><input id="bulkFeeMonth" type="text" placeholder="e.g. September 2026"></div>
               <div class="field"><label>Amount (Rs.)</label><input id="bulkFeeAmount" type="number" placeholder="1000"></div>
               <div class="field"><label>Due Date</label><input id="bulkFeeDue" type="date"></div>
               <div class="field"><label>Class</label><select id="bulkFeeClass"><option value="">Sab Classes</option></select></div>
-              <div class="field"><label>Per A4 page</label>
-                <select id="bulkPerPage"><option value="2">2</option><option value="4" selected>4</option><option value="6">6</option></select>
-              </div>
+              <div class="field"><label>Per A4 page</label><select id="bulkPerPage"><option value="2">2</option><option value="4" selected>4</option><option value="6">6</option></select></div>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:8px;">
+            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">
               <button class="btn green" style="margin-top:0;" onclick="generateAllUnpaidChallans()">⚡ Generate All Unpaid</button>
               <button class="btn gold" style="margin-top:0;" onclick="printAllUnpaidChallans()">🖨️ Print Unpaid (A4)</button>
             </div>
-            <div id="bulkFeeResult" style="margin-top:12px; font-size:13px; color:var(--muted);"></div>
+            <div id="bulkFeeResult" style="margin-top:12px;font-size:13px;color:var(--muted);"></div>
           </div>
           <div class="panel">
             <h3>Fee Records</h3>
@@ -1827,7 +1826,7 @@ function logActivity(action){
 }
 
 function enterApp(name, isRestore){
-  try{ const h=(location.hash||'').toLowerCase(); if(h==='#parent'||h.indexOf('#parent/')===0) return; }catch(e){}
+  try{ if(typeof isParentHash==='function' && isParentHash()) return; }catch(e){}
 
   session = { role: currentRole, name: name };
   // App-level session ko localStorage mein save kar dein — is se refresh/reload
@@ -2063,6 +2062,7 @@ function addStudent(){
     s.address = document.getElementById('stuAddress').value.trim();
     const pinEl = document.getElementById('stuParentPin');
     if(pinEl) s.parentPin = String(pinEl.value||'').trim();
+    if(typeof ensureParentToken==='function') ensureParentToken(s);
     studentsCol.update(Object.assign({}, s));
     cancelEditStudent();
     saveData();
@@ -2082,7 +2082,8 @@ function addStudent(){
     gender: document.getElementById('stuGender').value,
     admDate: document.getElementById('stuAdmDate').value || new Date().toISOString().slice(0,10),
     address: document.getElementById('stuAddress').value.trim(),
-    parentPin: ((document.getElementById('stuParentPin')||{}).value||'').trim()
+    parentPin: ((document.getElementById('stuParentPin')||{}).value||'').trim(),
+    parentToken: (typeof makeParentToken==='function'?makeParentToken():String(Math.random()).slice(2,10))
   };
   students.push(newStudent);
   studentsCol.add(newStudent);
@@ -2171,7 +2172,7 @@ function renderStudents(){
     const pinBadge = s.parentPin ? '<span style="font-size:10px;color:var(--green);">PIN✓</span>' : '<span style="font-size:10px;color:var(--red);">No PIN</span>';
     tbody.innerHTML += `<tr><td>${s.adm}<div>${pinBadge}</div></td><td>${s.name}</td><td>${s.father||'—'}</td><td>${s.cls||'—'}</td><td>${s.section||'—'}</td><td>${s.roll||'—'}</td><td>${contactCell}</td><td style="display:flex; gap:6px; flex-wrap:wrap;">
       <button class="btn small" style="background:var(--navy);" onclick="editStudent(${s.id})">✏️ Edit</button>
-      ${isAdmin?`<button class="btn small" style="background:#5b4636;color:#fff;" onclick="shareParentLink(${s.id})">🔗 Parent Link</button>`:''}
+      ${isAdmin?`<button class="btn small" style="background:#5b4636;color:#fff;" onclick="shareParentLink(${s.id})">📱 WhatsApp Portal</button>`:''}
       ${isAdmin?`<button class="btn small gold" onclick="setStudentParentPin(${s.id})">PIN</button>`:''}
       <button class="btn small gold" onclick="printAdmissionForm(${s.id})">🖨️ Form</button>
       <button class="btn small" style="background:#5b4636; color:#fff;" onclick="printIdCard(${s.id})">🪪 ID Card</button>
@@ -2349,10 +2350,7 @@ function populateFeeClassFilter(){
   if(!sel) return;
   const prev = sel.value;
   const seen = {};
-  (students||[]).forEach(s => {
-    const k = classKey(s.cls);
-    if(k && !seen[k]) seen[k] = classDisplay(s.cls);
-  });
+  (students||[]).forEach(s => { const k = classKey(s.cls); if(k && !seen[k]) seen[k] = classDisplay(s.cls); });
   const keys = Object.keys(seen).sort((a,b)=> seen[a].localeCompare(seen[b], undefined, {numeric:true}));
   sel.innerHTML = '<option value="">Sab Classes</option>' + keys.map(k => '<option value="'+k+'">'+seen[k]+'</option>').join('');
   if(prev) sel.value = prev;
@@ -2372,10 +2370,7 @@ function populateBulkFeeClass(){
   if(!sel) return;
   const prev = sel.value;
   const seen = {};
-  (students||[]).forEach(s => {
-    const k = classKey(s.cls);
-    if(k && !seen[k]) seen[k] = classDisplay(s.cls);
-  });
+  (students||[]).forEach(s => { const k = classKey(s.cls); if(k && !seen[k]) seen[k] = classDisplay(s.cls); });
   const keys = Object.keys(seen).sort((a,b)=> seen[a].localeCompare(seen[b], undefined, {numeric:true}));
   sel.innerHTML = '<option value="">Sab Classes</option>' + keys.map(k => '<option value="'+k+'">'+seen[k]+'</option>').join('');
   if(prev) sel.value = prev;
@@ -2387,34 +2382,32 @@ function studentHasFeeForMonth(studentId, month){
   return (fees||[]).some(f => Number(f.studentId)===Number(studentId) && feeMonthKey(f.month)===key);
 }
 function generateAllUnpaidChallans(){
-  if(session && session.role !== 'admin'){ alert('Sirf Admin bulk generate kar sakta hai.'); return; }
+  if(session && session.role !== 'admin'){ alert('Sirf Admin'); return; }
   const month = (document.getElementById('bulkFeeMonth').value||'').trim();
   const amount = Number(document.getElementById('bulkFeeAmount').value);
   const due = document.getElementById('bulkFeeDue').value || '';
   const cls = (document.getElementById('bulkFeeClass').value||'').trim();
-  const result = document.getElementById('bulkFeeResult');
-  if(!month){ alert('Month likhein (e.g. September 2026).'); return; }
-  if(!amount || amount<=0){ alert('Sahi amount likhein.'); return; }
+  if(!month){ alert('Month likhein'); return; }
+  if(!amount||amount<=0){ alert('Amount likhein'); return; }
   let list = (students||[]).slice();
   if(cls) list = list.filter(s => classKey(s.cls)===cls);
-  if(!list.length){ alert('Koi student nahi.'); return; }
   const toCreate = list.filter(s => !studentHasFeeForMonth(s.id, month));
-  const already = list.length - toCreate.length;
-  if(!toCreate.length){ alert('Is month ke liye sab ki challan pehle se hai.'); return; }
-  if(!confirm(toCreate.length+' unpaid challans generate? Month: '+month+' · Rs. '+amount)) return;
+  if(!toCreate.length){ alert('Is month sab ki challan pehle se hai'); return; }
+  if(!confirm(toCreate.length+' unpaid generate? '+month+' Rs.'+amount)) return;
   toCreate.forEach(s => {
     const nf = { id:newId(), studentId:s.id, month:month, amount:amount, due:due, status:'pending' };
     fees.push(nf); feesCol.add(nf);
   });
   saveData(); renderAll();
-  if(result) result.innerHTML = '✅ <b>'+toCreate.length+'</b> unpaid generate — '+month;
-  alert(toCreate.length+' unpaid challans ban gayi!');
+  const result = document.getElementById('bulkFeeResult');
+  if(result) result.innerHTML = '✅ <b>'+toCreate.length+'</b> unpaid — '+month;
+  alert(toCreate.length+' challans ban gayi!');
 }
 function printAllUnpaidChallans(){
   const monthInput = (document.getElementById('bulkFeeMonth').value||'').trim();
   const monthFilterEl = document.getElementById('feeMonthFilter');
   const month = monthInput || (monthFilterEl ? monthFilterEl.value.trim() : '');
-  if(!month){ alert('Month likhein.'); return; }
+  if(!month){ alert('Month likhein'); return; }
   const perPage = Number((document.getElementById('bulkPerPage')||{}).value)||4;
   const cls = (document.getElementById('bulkFeeClass').value||'').trim();
   const key = feeMonthKey(month);
@@ -2426,15 +2419,15 @@ function printAllUnpaidChallans(){
     if(ca!==cb) return ca.localeCompare(cb,undefined,{numeric:true});
     return ((sa&&sa.name)||'').localeCompare((sb&&sb.name)||'');
   });
-  if(!list.length){ alert('Is month ki unpaid challan nahi mili. Pehle Generate All Unpaid chalaein.'); return; }
+  if(!list.length){ alert('Unpaid nahi mili — pehle Generate All Unpaid'); return; }
   const colsClass = perPage<=2?'cols-2':(perPage<=4?'cols-4':'cols-6');
   function compactChallan(f, student){
     return '<div class="challan-copy"><div class="copy-tag">UNPAID</div><div class="challan-head">'
       +'<img src="data:image/jpeg;base64,'+LOGO_B64+'" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-bottom:4px;">'
-      +'<h3>'+(schoolSettings.name||'School')+'</h3><div class="s">FEE CHALLAN — QAMBER</div></div>'
+      +'<h3>'+(schoolSettings.name||'School')+'</h3><div class="s">FEE CHALLAN</div></div>'
       +'<div class="challan-row"><span class="k">Student</span><span class="v" style="font-weight:700;">'+(student?student.name:'—')+'</span></div>'
       +'<div class="challan-row"><span class="k">Class</span><span class="v">'+(student?((student.cls||'—')+' / '+(student.section||'—')):'—')+'</span></div>'
-      +'<div class="challan-row"><span class="k">Adm #</span><span class="v">'+(student?student.adm:'—')+'</span></div>'
+      +'<div class="challan-row"><span class="k">Adm</span><span class="v">'+(student?student.adm:'—')+'</span></div>'
       +'<div class="challan-row"><span class="k">Month</span><span class="v">'+(f.month||'—')+'</span></div>'
       +'<div class="challan-total"><span>Amount</span><span>Rs. '+f.amount+'</span></div></div>';
   }
@@ -4156,157 +4149,222 @@ document.querySelectorAll('table').forEach(tbl=>{
 });
 
 
-/* ===== PARENT PORTAL ===== */
+/* ===== PARENT PORTAL COMPLETE ===== */
 const PARENT_SESSION_KEY='smp_qamber_parent_session_v1';
 let parentSessionStudentId=null;
 const PARENT_TARBIYAT_QUOTES=[
-"Bache wahi seekhte hain jo ghar mein dekhte hain. Aaj sabr aur achhi baat ka andaaz rakhein.",
-"Homework check karna saza nahi, mohabbat hai. Aaj poochhein: Aaj kya seekha?",
-"Roz thodi si waqt bache ke sath — mobile se zyada aapki tawajjo zaroori hai.",
-"Galti par chillane se behtar seedha rasta batana. Tarbiyat narmi se asar karti hai.",
-"Namaz/dua ka waqt ghar mein mil kar rakhein — aadat umar bhar kaam aati hai.",
-"Tareef mehnat par karein, sirf number par nahi.",
-"TV/phone limit rakhein. Behtar: ek kahani, ek sawal, ek dua.",
-"School aur ghar mil kar tarbiyat karte hain. Teacher ka message ignore na karein.",
-"Subah jaldi, nashta, bag ready — chhoti aadatein bari kamiyabi.",
-"Aaj ka simple kaam: homework dekho, ek dua, ek muskurahat.",
-"Bache ki baat ghaur se sunna unhein kehta hai: tum ahem ho.",
-"Screen time kam, baat cheet zyada.",
-"Homework sirf complete nahi — samajh bhi aaya? yeh poochhein.",
-"Bache ko muqabla apne kal se karne ko kahiye.",
-"Dua: Aye Allah, hamare bachon ko achhi tarbiyat, ilm aur adab ata farma."
+"Bache wahi seekhte hain jo ghar mein dekhte hain.",
+"Homework check karna mohabbat hai. Aaj poochhein: Aaj kya seekha?",
+"Mobile se zyada aapki tawajjo zaroori hai.",
+"Galti par narmi se rasta batain.",
+"Namaz/dua ghar mein mil kar.",
+"Tareef mehnat par, sirf number par nahi.",
+"Phone limit: kahani, sawal, dua.",
+"Teacher ka message zaroori hai.",
+"Subah jaldi, nashta, bag ready.",
+"Homework, dua, muskurahat — aaj ka kaam.",
+"Bache ki baat ghaur se sunain.",
+"Screen kam, baat zyada.",
+"Homework samajh mein aaya? poochhein.",
+"Muqabla apne kal se.",
+"Dua: Allah achhi tarbiyat ata farma."
 ];
 const PARENT_HW_REMINDERS=[
-"Aaj poochhein: Aaj school se kya homework aaya? Bag check karein.",
-"Homework ke baad signature/date laga dein.",
-"Mushkil homework par gussa nahi — 15 minute sath madad karein.",
-"Raat ko bag/diary ready karwa dein.",
-"Phone se pehle homework — ghar ka rule clear rakhein."
+"Aaj: school se kya homework aaya?",
+"Homework ke baad signature laga dein.",
+"Mushkil ho to 15 min sath madad.",
+"Raat ko bag ready karwa dein.",
+"Phone se pehle homework."
 ];
-function randomParentPin(){return String(Math.floor(1000+Math.random()*9000));}
-function dayOfYearIndex(len){const d=new Date(),s=new Date(d.getFullYear(),0,0);return Math.floor((d-s)/86400000)%len;}
-function getTodayTarbiyatQuote(){return PARENT_TARBIYAT_QUOTES[dayOfYearIndex(PARENT_TARBIYAT_QUOTES.length)];}
-function getTodayHwReminder(){return PARENT_HW_REMINDERS[dayOfYearIndex(PARENT_HW_REMINDERS.length)];}
-function getParentPortalUrl(adm){const base=location.href.split('#')[0].split('?')[0];return base+'#parent'+(adm?'/'+encodeURIComponent(String(adm).trim()):'');}
-function copyParentPortalBaseLink(){const url=getParentPortalUrl();if(navigator.clipboard)navigator.clipboard.writeText(url).then(()=>alert('Copied:\\n'+url)).catch(()=>prompt('Copy',url));else prompt('Copy',url);}
-function generatePinsForAllStudents(){
-  if(!session||session.role!=='admin'){alert('Sirf Admin');return;}
-  const need=(students||[]).filter(s=>!s.parentPin||!String(s.parentPin).trim());
-  if(!need.length){alert('Sab ke PIN pehle se hain.');return;}
-  if(!confirm(need.length+' students ke PIN generate?'))return;
-  need.forEach(s=>{s.parentPin=randomParentPin();studentsCol.update(Object.assign({},s));});
-  saveData();renderStudents();alert(need.length+' PIN ban gaye!');
+function randomParentPin(){ return String(Math.floor(1000+Math.random()*9000)); }
+function makeParentToken(){
+  const c='abcdefghjkmnpqrstuvwxyz23456789'; let t='';
+  for(let i=0;i<8;i++) t+=c[Math.floor(Math.random()*c.length)];
+  return t;
 }
-function openParentPortalFromLogin(){location.hash='#parent';showParentPortal();}
-function isParentHash(){const h=(location.hash||'').toLowerCase();return h==='#parent'||h.indexOf('#parent/')===0;}
+function ensureParentToken(s){
+  if(!s) return '';
+  if(s.parentToken && String(s.parentToken).length>=6) return s.parentToken;
+  s.parentToken=makeParentToken();
+  try{ studentsCol.update(Object.assign({},s)); }catch(e){}
+  return s.parentToken;
+}
+function dayOfYearIndex(len){ const d=new Date(),s=new Date(d.getFullYear(),0,0); return Math.floor((d-s)/86400000)%len; }
+function getTodayTarbiyatQuote(){ return PARENT_TARBIYAT_QUOTES[dayOfYearIndex(PARENT_TARBIYAT_QUOTES.length)]; }
+function getTodayHwReminder(){ return PARENT_HW_REMINDERS[dayOfYearIndex(PARENT_HW_REMINDERS.length)]; }
+function schoolPortalBrandName(){
+  const n=(schoolSettings && schoolSettings.name) ? schoolSettings.name : 'The Smart Modern Public School';
+  return n + ', Qamber — Parents Portal';
+}
+function getParentPortalUrl(student){
+  const base = location.href.split('#')[0].split('?')[0];
+  const token = student ? ensureParentToken(student) : '';
+  if(token) return base + '?parents=1&t=' + encodeURIComponent(token);
+  return base + '?parents=1';
+}
+function generatePinsForAllStudents(){
+  if(!session||session.role!=='admin'){ alert('Sirf Admin'); return; }
+  (students||[]).forEach(s=>{ if(!s.parentToken){ s.parentToken=makeParentToken(); studentsCol.update(Object.assign({},s)); }});
+  const need=(students||[]).filter(s=>!s.parentPin||!String(s.parentPin).trim());
+  if(!need.length){ saveData(); renderStudents(); alert('Sab PIN ready.'); return; }
+  if(!confirm(need.length+' PIN generate?')) return;
+  need.forEach(s=>{ s.parentPin=randomParentPin(); ensureParentToken(s); studentsCol.update(Object.assign({},s)); });
+  saveData(); renderStudents(); alert(need.length+' PIN ban gaye!');
+}
+function isParentHash(){
+  const h=(location.hash||'').toLowerCase();
+  const q=location.search||'';
+  if(h==='#p'||h.indexOf('#p/')===0||h==='#parent'||h.indexOf('#parent/')===0) return true;
+  if(/[?&]parents=1/.test(q) || /[?&]t=/.test(q)) return true;
+  return false;
+}
+function hideParentTechInUrl(){
+  try{ history.replaceState(null,'', location.href.split('#')[0].split('?')[0] + '?parents=1'); }catch(e){}
+}
 function showParentPortal(){
-  try{document.body.classList.add('parent-mode');document.documentElement.classList.add('parent-boot');}catch(e){}
-  const login=document.getElementById('loginScreen'),app=document.getElementById('appScreen'),portal=document.getElementById('parentPortalScreen');
-  if(login)login.style.display='none';if(app)app.style.display='none';if(portal)portal.style.display='block';
-  const m=(location.hash||'').match(/^#parent\/(.+)$/i);
-  if(m){const el=document.getElementById('parentAdm');if(el)el.value=decodeURIComponent(m[1]);}
-  try{const t=document.getElementById('parentSchoolTitle');if(t&&schoolSettings&&schoolSettings.name)t.textContent=schoolSettings.name+' — Parent Portal';}catch(e){}
+  try{ document.body.classList.add('parent-mode'); document.documentElement.classList.add('parent-boot'); }catch(e){}
+  const login=document.getElementById('loginScreen'), app=document.getElementById('appScreen'), portal=document.getElementById('parentPortalScreen');
+  if(login) login.style.display='none';
+  if(app) app.style.display='none';
+  if(portal) portal.style.display='block';
+  let token='', admPrefill='';
+  try{ token = new URLSearchParams(location.search||'').get('t') || ''; }catch(e){}
+  const hm=(location.hash||'').match(/^#p\/(.+)$/i);
+  if(hm) token = token || decodeURIComponent(hm[1]);
+  const am=(location.hash||'').match(/^#parent\/(.+)$/i);
+  if(am) admPrefill = decodeURIComponent(am[1]);
+  if(token){
+    try{ sessionStorage.setItem('smp_parent_t', token); }catch(e){}
+    const s=(students||[]).find(x=>String(x.parentToken||'')===token);
+    if(s) admPrefill = s.adm || admPrefill;
+  }
+  if(admPrefill){ const el=document.getElementById('parentAdm'); if(el&&!el.value) el.value=admPrefill; }
+  hideParentTechInUrl();
   restoreParentSession();
 }
-function hideParentPortal(){try{document.body.classList.remove('parent-mode');document.documentElement.classList.remove('parent-boot');}catch(e){}
-  const p=document.getElementById('parentPortalScreen');if(p)p.style.display='none';}
+function hideParentPortal(){
+  try{ document.body.classList.remove('parent-mode'); document.documentElement.classList.remove('parent-boot'); }catch(e){}
+  const p=document.getElementById('parentPortalScreen'); if(p) p.style.display='none';
+}
 function findStudentByAdm(admRaw){
-  const adm=String(admRaw||'').trim().toLowerCase();if(!adm)return null;
-  let s=(students||[]).find(x=>String(x.adm||'').toLowerCase()===adm);if(s)return s;
+  const adm=String(admRaw||'').trim().toLowerCase(); if(!adm) return null;
+  let s=(students||[]).find(x=>String(x.adm||'').toLowerCase()===adm); if(s) return s;
   const strip=adm.replace(/^adm-?/,'');
   return (students||[]).find(x=>String(x.adm||'').toLowerCase().replace(/^adm-/,'')===strip)||null;
 }
 function parentPortalLogin(){
   const adm=(document.getElementById('parentAdm').value||'').trim();
   const pin=(document.getElementById('parentPinInput').value||'').trim();
-  const err=document.getElementById('parentLoginError');if(err)err.style.display='none';
-  if(!adm||!pin){if(err){err.textContent='Adm + PIN likhein.';err.style.display='block';}return;}
+  const err=document.getElementById('parentLoginError'); if(err) err.style.display='none';
+  if(!adm||!pin){ if(err){ err.textContent='Adm + PIN likhein.'; err.style.display='block'; } return; }
   const student=findStudentByAdm(adm);
-  if(!student){if(err){err.textContent='Student nahi mila.';err.style.display='block';}return;}
-  if(!student.parentPin||String(student.parentPin).trim()!==pin){if(err){err.textContent='Ghalat PIN ya PIN set nahi.';err.style.display='block';}return;}
+  if(!student){ if(err){ err.textContent='Student nahi mila.'; err.style.display='block'; } return; }
+  if(!student.parentPin||String(student.parentPin).trim()!==pin){
+    if(err){ err.textContent='Ghalat PIN.'; err.style.display='block'; } return;
+  }
   parentSessionStudentId=student.id;
-  try{localStorage.setItem(PARENT_SESSION_KEY,JSON.stringify({studentId:student.id,adm:student.adm}));}catch(e){}
+  try{ localStorage.setItem(PARENT_SESSION_KEY, JSON.stringify({studentId:student.id,adm:student.adm})); }catch(e){}
+  hideParentTechInUrl();
   document.getElementById('parentLoginCard').style.display='none';
   document.getElementById('parentDashCard').style.display='block';
   renderParentDashboard(student);
 }
 function restoreParentSession(){
-  let raw=null;try{raw=localStorage.getItem(PARENT_SESSION_KEY);}catch(e){}
-  if(!raw)return false;let saved;try{saved=JSON.parse(raw);}catch(e){return false;}
-  if(!saved||saved.studentId==null)return false;
-  const student=(students||[]).find(s=>String(s.id)===String(saved.studentId));if(!student)return false;
+  let raw=null; try{ raw=localStorage.getItem(PARENT_SESSION_KEY); }catch(e){}
+  if(!raw) return false;
+  let saved; try{ saved=JSON.parse(raw); }catch(e){ return false; }
+  if(!saved||saved.studentId==null) return false;
+  const student=(students||[]).find(s=>String(s.id)===String(saved.studentId)); if(!student) return false;
   parentSessionStudentId=student.id;
   document.getElementById('parentLoginCard').style.display='none';
   document.getElementById('parentDashCard').style.display='block';
-  renderParentDashboard(student);return true;
+  hideParentTechInUrl();
+  renderParentDashboard(student); return true;
 }
 function parentPortalLogout(){
-  parentSessionStudentId=null;try{localStorage.removeItem(PARENT_SESSION_KEY);}catch(e){}
+  parentSessionStudentId=null;
+  try{ localStorage.removeItem(PARENT_SESSION_KEY); }catch(e){}
   document.getElementById('parentLoginCard').style.display='block';
   document.getElementById('parentDashCard').style.display='none';
-  const p=document.getElementById('parentPinInput');if(p)p.value='';
+  const p=document.getElementById('parentPinInput'); if(p) p.value='';
 }
 function renderParentDashboard(student){
-  if(!student)return;
-  const q=document.getElementById('parentQuoteText');if(q)q.textContent=getTodayTarbiyatQuote();
-  const r=document.getElementById('parentHwReminder');if(r)r.innerHTML='<strong>📚 Homework:</strong> '+getTodayHwReminder();
+  if(!student) return;
+  const q=document.getElementById('parentQuoteText'); if(q) q.textContent=getTodayTarbiyatQuote();
+  const r=document.getElementById('parentHwReminder'); if(r) r.innerHTML='<strong>📚 Homework:</strong> '+getTodayHwReminder();
   document.getElementById('parentChildName').textContent=student.name||'—';
-  document.getElementById('parentChildMeta').textContent=(student.adm||'')+' · Class '+(student.cls||'—')+(student.section?'-'+student.section:'');
+  document.getElementById('parentChildMeta').textContent=(student.adm||'')+' · Class '+(student.cls||'—');
   const stuCls=String(student.cls||'').trim().toLowerCase();
   const hwList=(homework||[]).filter(h=>String(h.cls||'').trim().toLowerCase()===stuCls).sort((a,b)=>new Date(b.postedAt||0)-new Date(a.postedAt||0));
-  const hwBox=document.getElementById('parentHwList'),hwEmpty=document.getElementById('parentHwEmpty');
-  if(!hwList.length){if(hwBox)hwBox.innerHTML='';if(hwEmpty)hwEmpty.style.display='block';}
-  else{if(hwEmpty)hwEmpty.style.display='none';if(hwBox)hwBox.innerHTML=hwList.slice(0,8).map(h=>'<div style="padding:8px 0;border-bottom:1px solid var(--rule);"><b>'+(h.title||'')+'</b><div style="font-size:11px;color:var(--muted);">'+(h.subject||'')+(h.due?' · Due '+h.due:'')+'</div>'+(h.details?'<div style="font-size:12px;margin-top:4px;">'+h.details+'</div>':'')+'</div>').join('');}
+  const hwBox=document.getElementById('parentHwList'), hwEmpty=document.getElementById('parentHwEmpty');
+  if(!hwList.length){ if(hwBox) hwBox.innerHTML=''; if(hwEmpty) hwEmpty.style.display='block'; }
+  else { if(hwEmpty) hwEmpty.style.display='none'; if(hwBox) hwBox.innerHTML=hwList.slice(0,8).map(h=>'<div style="padding:8px 0;border-bottom:1px solid var(--rule);"><b>'+(h.title||'')+'</b></div>').join(''); }
   const myFees=(fees||[]).filter(f=>Number(f.studentId)===Number(student.id)).sort((a,b)=>(b.id||0)-(a.id||0));
   document.getElementById('parentFeePaid').textContent=myFees.filter(f=>f.status==='paid').length;
   document.getElementById('parentFeePending').textContent=myFees.filter(f=>f.status==='pending').length;
-  const feeList=document.getElementById('parentFeeList'),feeEmpty=document.getElementById('parentFeeEmpty');
-  if(!myFees.length){feeList.innerHTML='';if(feeEmpty)feeEmpty.style.display='block';}
-  else{if(feeEmpty)feeEmpty.style.display='none';feeList.innerHTML=myFees.slice(0,12).map(f=>'<div class="parent-row"><span class="k">'+(f.month||'')+'</span><span class="v">Rs. '+f.amount+' · '+(f.status||'').toUpperCase()+'</span></div>').join('');}
-  const now=new Date(),ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  let present=0,absent=0;const attRows=[];
+  const feeList=document.getElementById('parentFeeList'), feeEmpty=document.getElementById('parentFeeEmpty');
+  if(!myFees.length){ feeList.innerHTML=''; if(feeEmpty) feeEmpty.style.display='block'; }
+  else { if(feeEmpty) feeEmpty.style.display='none'; feeList.innerHTML=myFees.slice(0,12).map(f=>'<div class="parent-row"><span class="k">'+(f.month||'')+'</span><span class="v">Rs. '+f.amount+' · '+(f.status||'')+'</span></div>').join(''); }
+  const now=new Date(), ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  let present=0,absent=0; const attRows=[];
   Object.keys(attendanceRecords||{}).forEach(date=>{
-    if(!date.startsWith(ym))return;
+    if(!date.startsWith(ym)) return;
     const st=(attendanceRecords[date]||{})[String(student.id)]||'';
-    if(st==='present'){present++;attRows.push({date,st:'Present'});}
-    else if(st==='absent'){absent++;attRows.push({date,st:'Absent'});}
+    if(st==='present'){ present++; attRows.push({date,st:'Present'}); }
+    else if(st==='absent'){ absent++; attRows.push({date,st:'Absent'}); }
   });
-  attRows.sort((a,b)=>b.date.localeCompare(a.date));
   document.getElementById('parentAttPresent').textContent=present;
   document.getElementById('parentAttAbsent').textContent=absent;
-  const attList=document.getElementById('parentAttList'),attEmpty=document.getElementById('parentAttEmpty');
-  if(!attRows.length){attList.innerHTML='';if(attEmpty)attEmpty.style.display='block';}
-  else{if(attEmpty)attEmpty.style.display='none';attList.innerHTML=attRows.map(r=>'<div class="parent-row"><span class="k">'+r.date+'</span><span class="v">'+r.st+'</span></div>').join('');}
-  const myRes=(examResults||[]).filter(r=>Number(r.studentId)===Number(student.id)).sort((a,b)=>(b.id||0)-(a.id||0));
-  const resList=document.getElementById('parentResultList'),resEmpty=document.getElementById('parentResultEmpty');
-  if(!myRes.length){resList.innerHTML='';if(resEmpty)resEmpty.style.display='block';}
-  else{if(resEmpty)resEmpty.style.display='none';resList.innerHTML=myRes.slice(0,5).map(r=>'<div class="parent-row"><span class="k">'+(r.exam||'')+'</span><span class="v">'+r.totalObtained+'/'+r.totalMax+' · '+r.grade+'</span></div>').join('');}
-  const nList=document.getElementById('parentNoticeList'),nEmpty=document.getElementById('parentNoticeEmpty');
+  const attList=document.getElementById('parentAttList'), attEmpty=document.getElementById('parentAttEmpty');
+  if(!attRows.length){ attList.innerHTML=''; if(attEmpty) attEmpty.style.display='block'; }
+  else { if(attEmpty) attEmpty.style.display='none'; attList.innerHTML=attRows.sort((a,b)=>b.date.localeCompare(a.date)).map(r=>'<div class="parent-row"><span class="k">'+r.date+'</span><span class="v">'+r.st+'</span></div>').join(''); }
+  const myRes=(examResults||[]).filter(r=>Number(r.studentId)===Number(student.id));
+  const resList=document.getElementById('parentResultList'), resEmpty=document.getElementById('parentResultEmpty');
+  if(!myRes.length){ resList.innerHTML=''; if(resEmpty) resEmpty.style.display='block'; }
+  else { if(resEmpty) resEmpty.style.display='none'; resList.innerHTML=myRes.slice(0,5).map(r=>'<div class="parent-row"><span class="k">'+(r.exam||'')+'</span><span class="v">'+r.grade+'</span></div>').join(''); }
+  const nList=document.getElementById('parentNoticeList'), nEmpty=document.getElementById('parentNoticeEmpty');
   const notes=(notices||[]).slice(0,5);
-  if(!notes.length){nList.innerHTML='';if(nEmpty)nEmpty.style.display='block';}
-  else{if(nEmpty)nEmpty.style.display='none';nList.innerHTML=notes.map(n=>'<div style="padding:8px 0;border-bottom:1px solid var(--rule);"><b>'+(n.title||'')+'</b><div style="font-size:11px;color:var(--muted);">'+(n.date||'')+'</div></div>').join('');}
+  if(!notes.length){ nList.innerHTML=''; if(nEmpty) nEmpty.style.display='block'; }
+  else { if(nEmpty) nEmpty.style.display='none'; nList.innerHTML=notes.map(n=>'<div style="padding:6px 0;"><b>'+(n.title||'')+'</b></div>').join(''); }
 }
 function setStudentParentPin(id){
-  if(!session||session.role!=='admin'){alert('Sirf Admin');return;}
-  const s=students.find(x=>x.id===id);if(!s)return;
-  const pin=prompt('PIN — '+s.name+' ('+s.adm+'):',s.parentPin||randomParentPin());
-  if(pin===null)return;s.parentPin=String(pin).trim();
-  if(!s.parentPin){alert('PIN khali nahi');return;}
-  studentsCol.update(Object.assign({},s));saveData();renderStudents();alert('PIN: '+s.parentPin);
+  if(!session||session.role!=='admin'){ alert('Sirf Admin'); return; }
+  const s=students.find(x=>x.id===id); if(!s) return;
+  const pin=prompt('PIN — '+s.name, s.parentPin||randomParentPin());
+  if(pin===null) return;
+  s.parentPin=String(pin).trim();
+  ensureParentToken(s);
+  studentsCol.update(Object.assign({},s)); saveData(); renderStudents();
+  alert('PIN: '+s.parentPin);
 }
 function shareParentLink(id){
-  if(!session||session.role!=='admin'){alert('Sirf Admin');return;}
-  const s=students.find(x=>x.id===id);if(!s)return;
-  if(!s.parentPin){s.parentPin=randomParentPin();studentsCol.update(Object.assign({},s));saveData();renderStudents();}
-  const url=getParentPortalUrl(s.adm);
-  const msg='Assalam-o-Alaikum,\n*'+(schoolSettings.name||'School')+'* — Parent Portal\n\nApne bache (*'+s.name+'*) ka data:\n\n'+url+'\n\n————————————\n*Admission No.:* '+s.adm+'\n*Parent PIN:* '+s.parentPin+'\n————————————\n\nLink open → Adm + PIN likhein.\nSoftware install ki zaroorat nahi.';
-  try{if(navigator.clipboard)navigator.clipboard.writeText(url+'\nPIN: '+s.parentPin);}catch(e){}
-  const num=typeof waNumberFor==='function'?waNumberFor(s.contact):null;
-  window.open('https://wa.me/'+(num||'')+'?text='+encodeURIComponent(msg),'_blank');
+  if(!session||session.role!=='admin'){ alert('Sirf Admin'); return; }
+  const s=students.find(x=>x.id===id); if(!s) return;
+  if(!s.parentPin) s.parentPin=randomParentPin();
+  ensureParentToken(s);
+  studentsCol.update(Object.assign({},s)); saveData(); renderStudents();
+  const brand = schoolPortalBrandName();
+  const portalUrl = getParentPortalUrl(s);
+  const msg =
+    'Assalam-o-Alaikum,\n\n'
+    + '🏫 *' + brand + '*\n\n'
+    + 'Apne bache *' + s.name + '* ki attendance, fee, homework aur result '
+    + 'ab *Parents Portal* se dekh sakte hain.\n\n'
+    + '————————————\n'
+    + '*Admission No.:* ' + s.adm + '\n'
+    + '*Parent PIN:* ' + s.parentPin + '\n'
+    + '————————————\n\n'
+    + 'Portal kholne ke liye yahan dabayein:\n'
+    + '👉 *Parents Portal Open*\n'
+    + portalUrl + '\n\n'
+    + '(Ek dafa open karke bookmark / Home Screen par Add kar lein.)\n\n'
+    + 'Software install ki zaroorat nahi.\nShukriya.';
+  const num = typeof waNumberFor==='function' ? waNumberFor(s.contact) : null;
+  window.open('https://wa.me/'+(num||'')+'?text='+encodeURIComponent(msg), '_blank');
 }
-window.addEventListener('hashchange',function(){
-  if(isParentHash())showParentPortal();
-  else{hideParentPortal();if(!session){const l=document.getElementById('loginScreen');if(l)l.style.display='flex';}}
+window.addEventListener('hashchange', function(){
+  if(isParentHash()) showParentPortal();
+  else { hideParentPortal(); if(!session){ const l=document.getElementById('loginScreen'); if(l) l.style.display='flex'; } }
 });
 /* ===================== INIT ===================== */
 (function setDefaultAdmDate(){
@@ -4386,7 +4444,7 @@ loadData().finally(()=>{
    karne par bhi login screen wapas nahi aati, chahe network slow ho ya
    Firebase Auth ki apni restore mein thodi der lage. */
 function restoreLocalSession(){
-  try{ const h=(location.hash||'').toLowerCase(); if(h==='#parent'||h.indexOf('#parent/')===0) return false; }catch(e){}
+  try{ if(typeof isParentHash==='function' && isParentHash()) return false; }catch(e){}
   if(session) return true;
   let raw = null;
   try{ raw = localStorage.getItem(APP_SESSION_KEY); }catch(e){}
@@ -4455,7 +4513,7 @@ window.addEventListener('offline', ()=>{
 });
 </script>
     <script>
-  window.__APP_BUILD__ = '20260827-complete';
+  window.__APP_BUILD__ = '20260828-COMPLETE-ALL';
   (function(){
     var reloading = false;
     function forceReload(){
