@@ -528,22 +528,36 @@
             <h3>Generate Fee Challan</h3>
             <div class="form-grid">
               <div class="field"><label>Class</label><select id="feeClass" onchange="renderFeeStudentOptions()"></select></div>
-              <div class="field"><label>Student</label><select id="feeStudent"></select></div>
+              <div class="field"><label>Student</label><select id="feeStudent" onchange="showStudentFeeHistory()"></select></div>
               <div class="field"><label>Month</label><input id="feeMonth" type="text" placeholder="e.g. August 2026"></div>
               <div class="field"><label>Amount (Rs.)</label><input id="feeAmount" type="number"></div>
               <div class="field"><label>Due Date</label><input id="feeDue" type="date"></div>
+            </div>
+            <div id="studentFeeHistoryBox" style="display:none; margin:12px 0; padding:12px 14px; background:var(--cream); border:1px solid var(--rule); border-radius:8px; border-left:4px solid var(--gold);">
+              <div style="font-weight:700; font-size:13px; margin-bottom:8px; color:var(--navy);">📋 Is student ki pehli fees (previous months)</div>
+              <div id="studentFeeHistoryList" style="font-size:13px; line-height:1.7;"></div>
             </div>
             <button class="btn green" onclick="addFee()">+ Generate Challan</button>
           </div>
           <div class="panel">
             <h3>Fee Records</h3>
-            <p class="hint">Print button se School Copy + Student Copy — dono ek hi A4 page par print hongi.</p>
+            <p class="hint">Print button se School Copy + Student Copy — dono ek hi A4 page par print hongi. Filter se pehle mahine ki paid/pending fees dekh sakte hain.</p>
+            <div class="form-grid" style="margin-bottom:12px;">
+              <div class="field"><label>Filter Month</label><select id="feeMonthFilter" onchange="renderFees()"><option value="">Sab Months</option></select></div>
+              <div class="field"><label>Status</label>
+                <select id="feeStatusFilterUI" onchange="onFeeStatusFilterChange()">
+                  <option value="">Sab Status</option>
+                  <option value="paid">Paid</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+            </div>
             <div id="feeFilterBanner" style="display:none; margin-bottom:10px; padding:8px 12px; background:var(--gold); color:#1a1a1a; border-radius:6px; font-size:13px; justify-content:space-between; align-items:center;">
               <span id="feeFilterText"></span>
               <button class="btn small" style="background:var(--navy); margin:0;" onclick="clearFeeFilter()">Clear Filter</button>
             </div>
             <table>
-              <thead><tr><th>Student</th><th>Month</th><th>Amount</th><th>Due Date</th><th>Status</th><th></th></tr></thead>
+              <thead><tr><th>Student</th><th>Class</th><th>Month</th><th>Amount</th><th>Due Date</th><th>Status</th><th></th></tr></thead>
               <tbody id="feeTable"></tbody>
             </table>
             <div class="empty" id="feeEmpty">Koi fee record nahi hai. Pehle upar se challan generate karein.</div>
@@ -1497,19 +1511,19 @@ function loadData(){
     console.warn('Cloud se settings load nahi ho saki — offline/local data use ho raha hai.', err);
   });
   const collectionPromises = [
-    studentsCol.loadAll().then(arr=>{ students = arr; }),
-    staffCol.loadAll().then(arr=>{ staff = arr; }),
-    noticesCol.loadAll().then(arr=>{ notices = arr; }),
-    eventsCol.loadAll().then(arr=>{ events = arr; }),
-    examResultsCol.loadAll().then(arr=>{ examResults = arr; }),
-    timetableCol.loadAll().then(arr=>{ timetable = arr; }),
-    homeworkCol.loadAll().then(arr=>{ homework = arr; }),
-    galleryCol.loadAll().then(arr=>{ if(arr.length) galleryPhotos = arr; }),
-    feesCol.loadAll().then(arr=>{ fees = arr; }),
-    expensesCol.loadAll().then(arr=>{ expenses = arr; }),
-    quoteLogCol.loadAll().then(arr=>{ quoteLog = arr; }),
-    loginLogCol.loadAll().then(arr=>{ loginLog = arr; }),
-    qrScanLogCol.loadAll().then(arr=>{ qrScanLog = arr; }),
+    studentsCol.loadAll().then(arr=>{ if(arr && arr.length) students = arr; }),
+    staffCol.loadAll().then(arr=>{ if(arr && arr.length) staff = arr; }),
+    noticesCol.loadAll().then(arr=>{ if(arr && arr.length) notices = arr; }),
+    eventsCol.loadAll().then(arr=>{ if(arr && arr.length) events = arr; }),
+    examResultsCol.loadAll().then(arr=>{ if(arr && arr.length) examResults = arr; }),
+    timetableCol.loadAll().then(arr=>{ if(arr && arr.length) timetable = arr; }),
+    homeworkCol.loadAll().then(arr=>{ if(arr && arr.length) homework = arr; }),
+    galleryCol.loadAll().then(arr=>{ if(arr && arr.length) galleryPhotos = arr; }),
+    feesCol.loadAll().then(arr=>{ if(arr && arr.length) fees = arr; }),
+    expensesCol.loadAll().then(arr=>{ if(arr && arr.length) expenses = arr; }),
+    quoteLogCol.loadAll().then(arr=>{ if(arr && arr.length) quoteLog = arr; }),
+    loginLogCol.loadAll().then(arr=>{ if(arr && arr.length) loginLog = arr; }),
+    qrScanLogCol.loadAll().then(arr=>{ if(arr && arr.length) qrScanLog = arr; }),
     presenceCol.loadAll().then(arr=>{
       presence = arr || [];
       presenceMap = {};
@@ -1780,26 +1794,73 @@ function doLogin(){
       btn.textContent = originalText;
       return;
     }
-    hashPassword(p).then(hash => {
-      const enteredId = u.toLowerCase().replace(/^stf-?/, '').trim();
-      const match = staff.find(s => String(s.staffCode || s.id).toLowerCase() === enteredId && s.passHash && s.passHash === hash);
-      if(!match){
-        errorBox.textContent = 'Ghalat Staff ID ya password.';
+
+    function normalizeStaffLoginId(raw){
+      return String(raw || '').toLowerCase().replace(/^stf-?/, '').trim();
+    }
+    function findStaffByLoginId(list, enteredId, hash){
+      return (list || []).find(s => {
+        if(!s || !s.passHash || s.passHash !== hash) return false;
+        const code = normalizeStaffLoginId(s.staffCode);
+        const sid  = normalizeStaffLoginId(s.id);
+        return (code && code === enteredId) || (sid && sid === enteredId);
+      });
+    }
+
+    hashPassword(p).then(async function(hash){
+      const enteredId = normalizeStaffLoginId(u);
+      if(!enteredId){
+        errorBox.textContent = 'Staff ID likhein (jaise 1011 ya STF-1011).';
         errorBox.style.display = 'block';
         btn.disabled = false;
         btn.textContent = originalText;
         return;
       }
+
+      let match = findStaffByLoginId(staff, enteredId, hash);
+
+      if(!match && staffCol && staffCol.loadAll){
+        try{
+          const fresh = await staffCol.loadAll();
+          if(Array.isArray(fresh) && fresh.length){
+            staff = fresh;
+            match = findStaffByLoginId(staff, enteredId, hash);
+          }
+        }catch(e){
+          console.warn('Staff reload before login failed:', e);
+        }
+      }
+
+      if(!match){
+        const anyWithCode = (staff || []).some(s => {
+          const code = normalizeStaffLoginId(s.staffCode);
+          const sid  = normalizeStaffLoginId(s.id);
+          return (code && code === enteredId) || (sid && sid === enteredId);
+        });
+        if(!(staff && staff.length)){
+          errorBox.textContent = 'Staff data abhi load nahi hui. Internet check karein, 5 sec wait karke dobara Login dabayein.';
+        } else if(anyWithCode){
+          errorBox.textContent = 'Password ghalat hai. Admin se naya password set karwayein.';
+        } else {
+          errorBox.textContent = 'Staff ID nahi mili (STF-' + enteredId + '). Sahi Staff ID likhein ya Admin se confirm karein.';
+        }
+        errorBox.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = originalText;
+        return;
+      }
+
       currentRole = 'user';
       currentStaffId = match.id;
-      // Staff ID ko local mein bhi save kar dein — taake PWA/tab dobara khulne par
-      // (auto-restore session) ye pata chal sake ke ONLINE heartbeat kis staff ke
-      // naam se bhejna hai. Bina is ke, reload ke baad presence kabhi shuru nahi hoti
-      // aur staff hamesha "Offline" dikhta reh jaata tha jab tak dobara Login na kare.
       try{ localStorage.setItem(STAFF_SESSION_KEY, String(currentStaffId)); }catch(e){}
-      // Firestore rules ke liye ek anonymous session bana lein taake data save/sync chalta rahe (ye local password check ko affect nahi karta).
       if(auth && auth.signInAnonymously){ auth.signInAnonymously().catch(()=>{}); }
       enterApp(match.name);
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }).catch(function(err){
+      console.warn('Staff login hash/error:', err);
+      errorBox.textContent = 'Login process fail ho gaya. Page refresh karke dobara try karein.';
+      errorBox.style.display = 'block';
       btn.disabled = false;
       btn.textContent = originalText;
     });
@@ -2138,6 +2199,60 @@ function renderFeeStudentOptions(){
   const selectedClass = document.getElementById('feeClass').value;
   const list = selectedClass ? students.filter(s => (s.cls||'').trim() === selectedClass) : students;
   sel.innerHTML = list.map(s => `<option value="${s.id}">${s.name} — ${s.adm}</option>`).join('') || '<option value="">Is class mein koi student nahi</option>';
+  showStudentFeeHistory();
+}
+function showStudentFeeHistory(){
+  const box = document.getElementById('studentFeeHistoryBox');
+  const listEl = document.getElementById('studentFeeHistoryList');
+  if(!box || !listEl) return;
+  const studentId = Number(document.getElementById('feeStudent').value);
+  if(!studentId){ box.style.display = 'none'; return; }
+  const history = (fees || []).filter(f => Number(f.studentId) === studentId)
+    .slice()
+    .sort((a,b) => (b.id||0) - (a.id||0)); // newest first
+  if(!history.length){
+    listEl.innerHTML = '<span style="color:var(--muted);">Abhi is student ki koi pehli fee record nahi hai.</span>';
+    box.style.display = 'block';
+    return;
+  }
+  // Highlight last paid + last pending
+  const lastPaid = history.find(f => f.status === 'paid');
+  const lastPending = history.find(f => f.status === 'pending');
+  let summary = '';
+  if(lastPaid){
+    summary += '<div style="margin-bottom:6px;">✅ <b>Akhri paid:</b> ' + (lastPaid.month||'—') + ' — Rs. ' + lastPaid.amount + (lastPaid.due ? ' (due ' + lastPaid.due + ')' : '') + '</div>';
+  }
+  if(lastPending){
+    summary += '<div style="margin-bottom:6px;">⏳ <b>Pending:</b> ' + (lastPending.month||'—') + ' — Rs. ' + lastPending.amount + '</div>';
+  }
+  const rows = history.slice(0, 8).map(f => {
+    const badge = f.status === 'paid'
+      ? '<span class="badge paid">PAID</span>'
+      : '<span class="badge pending">PENDING</span>';
+    return '<div style="display:flex; justify-content:space-between; gap:8px; padding:4px 0; border-bottom:1px dashed var(--rule);">'
+      + '<span>' + (f.month||'—') + '</span>'
+      + '<span>Rs. ' + f.amount + '</span>'
+      + '<span>' + badge + '</span></div>';
+  }).join('');
+  listEl.innerHTML = summary + '<div style="margin-top:8px; font-size:12px; color:var(--muted);">Poori history (naye se purani):</div>' + rows
+    + (history.length > 8 ? '<div style="margin-top:4px; color:var(--muted); font-size:12px;">… aur ' + (history.length-8) + ' records</div>' : '');
+  box.style.display = 'block';
+}
+function populateFeeMonthFilter(){
+  const sel = document.getElementById('feeMonthFilter');
+  if(!sel) return;
+  const prev = sel.value;
+  const months = Array.from(new Set((fees||[]).map(f => (f.month||'').trim()).filter(Boolean)))
+    .sort((a,b) => a.localeCompare(b, undefined, {numeric:true}));
+  // Prefer reverse chronological if months look like "Month Year"
+  months.sort((a,b) => b.localeCompare(a, undefined, {numeric:true}));
+  sel.innerHTML = '<option value="">Sab Months</option>' + months.map(m => '<option value="'+m.replace(/"/g,'&quot;')+'">'+m+'</option>').join('');
+  if(prev && months.includes(prev)) sel.value = prev;
+}
+function onFeeStatusFilterChange(){
+  const v = (document.getElementById('feeStatusFilterUI')||{}).value || '';
+  feeFilterStatus = v ? v : null;
+  renderFees();
 }
 function addFee(){
   const studentId = Number(document.getElementById('feeStudent').value);
@@ -2157,6 +2272,7 @@ function addFee(){
   feesCol.add(newFee);
   ['feeMonth','feeAmount','feeDue'].forEach(id => document.getElementById(id).value = '');
   renderAll();
+  showStudentFeeHistory();
 }
 function editFee(id){
   if(session.role !== 'admin'){ alert('Sirf Admin edit kar sakta hai.'); return; }
@@ -2228,25 +2344,34 @@ function sendFeePaidWhatsApp(feeId){
 function renderFees(){
   const tbody = document.getElementById('feeTable');
   tbody.innerHTML = '';
-  let list = fees;
-  if(feeFilterClass !== null || feeFilterStatus !== null){
-    list = fees.filter(f => {
-      const student = students.find(s => s.id === f.studentId);
-      const key = (student ? classKey(student.cls) : '') || 'unassigned';
-      const classOk = feeFilterClass === null || key === feeFilterClass;
-      const statusOk = feeFilterStatus === null || f.status === feeFilterStatus;
-      return classOk && statusOk;
-    });
+  populateFeeMonthFilter();
+  const monthFilter = ((document.getElementById('feeMonthFilter')||{}).value || '').trim();
+  // Keep UI status select in sync when filter set from dashboard
+  const statusUI = document.getElementById('feeStatusFilterUI');
+  if(statusUI && feeFilterStatus !== null && statusUI.value !== feeFilterStatus){
+    statusUI.value = feeFilterStatus || '';
   }
+  let list = (fees || []).slice();
+  list = list.filter(f => {
+    const student = students.find(s => s.id === f.studentId);
+    const key = (student ? classKey(student.cls) : '') || 'unassigned';
+    const classOk = feeFilterClass === null || key === feeFilterClass;
+    const statusOk = feeFilterStatus === null || f.status === feeFilterStatus;
+    const monthOk = !monthFilter || String(f.month||'').trim() === monthFilter;
+    return classOk && statusOk && monthOk;
+  });
+  // Newest first — pehle mahine / naye challans upar
+  list.sort((a,b) => (b.id||0) - (a.id||0));
   const banner = document.getElementById('feeFilterBanner');
   const bannerText = document.getElementById('feeFilterText');
-  if(feeFilterClass !== null || feeFilterStatus !== null){
+  if(feeFilterClass !== null || feeFilterStatus !== null || monthFilter){
     banner.style.display = 'flex';
     const parts = [];
     if(feeFilterStatus !== null) parts.push(feeFilterStatus.toUpperCase());
     parts.push('fees');
+    if(monthFilter) parts.push('— Month: ' + monthFilter);
     if(feeFilterClass !== null) parts.push('— Class ' + (feeFilterClass === 'unassigned' ? 'Unassigned' : classDisplay(feeFilterClass)));
-    bannerText.textContent = 'Showing ' + parts.join(' ');
+    bannerText.textContent = 'Showing ' + parts.join(' ') + ' (' + list.length + ')';
   } else {
     banner.style.display = 'none';
   }
@@ -2255,12 +2380,13 @@ function renderFees(){
   list.forEach(f => {
     const student = students.find(s => s.id === f.studentId);
     tbody.innerHTML += `<tr>
-      <td>${student ? student.name : '—'}</td>
+      <td>${student ? student.name : '—'}${student && student.adm ? ' <span style="color:var(--muted);font-size:11px;">('+student.adm+')</span>' : ''}</td>
+      <td>${student ? (student.cls||'—') : '—'}</td>
       <td>${f.month}</td>
       <td>Rs. ${f.amount}</td>
       <td>${f.due || '—'}</td>
       <td><span class="badge ${f.status}">${f.status.toUpperCase()}</span></td>
-      <td style="display:flex; gap:6px;">
+      <td style="display:flex; gap:6px; flex-wrap:wrap;">
         <button class="btn small gold" onclick="openChallan(${f.id})">Print</button>
         ${isAdmin ? `<button class="btn small" style="background:var(--muted);" onclick="toggleFeeStatus(${f.id})">${f.status==='paid'?'Mark Pending':'Mark Paid'}</button>` : ''}
         ${f.status==='paid' ? `<button class="btn whatsapp small" onclick="sendFeePaidWhatsApp(${f.id})">📱 Message</button>` : ''}
@@ -2273,6 +2399,10 @@ function renderFees(){
 function clearFeeFilter(){
   feeFilterClass = null;
   feeFilterStatus = null;
+  const monthSel = document.getElementById('feeMonthFilter');
+  if(monthSel) monthSel.value = '';
+  const statusUI = document.getElementById('feeStatusFilterUI');
+  if(statusUI) statusUI.value = '';
   renderFees();
 }
 function showUnpaidFeesForClass(cls){
@@ -2913,10 +3043,14 @@ function renderAttendanceForm(){
           : `<span class="hint">Contact # nahi hai</span>`)
       : '—';
     const notMarkedTag = status ? '' : '<div style="font-size:11px; color:var(--red); margin-top:3px;">⚠ Not marked</div>';
+    const pActive = status==='present';
+    const aActive = status==='absent';
     return `<tr><td>${s.adm}</td><td>${s.name}</td><td>${s.cls||'—'}</td>
       <td>
-        <button class="btn small ${status==='present'?'green':''}" style="${status==='present'?'':'background:var(--muted);'}" onclick="setAttStatus(${s.id},'present')">Present</button>
-        <button class="btn small ${status==='absent'?'red':''}" style="${status==='absent'?'':'background:var(--muted);'} margin-left:6px;" onclick="setAttStatus(${s.id},'absent')">Absent</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <button class="btn small att-btn-p" style="min-width:88px; font-weight:700; padding:8px 12px; border:2px solid ${pActive?'#1a7a3a':'#c5c5c5'}; background:${pActive?'#1a7a3a':'#eef5ee'}; color:${pActive?'#fff':'#1a7a3a'};" onclick="setAttStatus(${s.id},'present')">${pActive?'✓ ':''}حاضر</button>
+          <button class="btn small att-btn-a" style="min-width:88px; font-weight:700; padding:8px 12px; border:2px solid ${aActive?'#b33':'#c5c5c5'}; background:${aActive?'#b33':'#f8eeee'}; color:${aActive?'#fff':'#b33'};" onclick="setAttStatus(${s.id},'absent')">${aActive?'✓ ':''}غیر حاضر</button>
+        </div>
         ${notMarkedTag}
       </td>
       <td>${waBtn}</td></tr>`;
@@ -2949,7 +3083,13 @@ function setAttStatus(studentId, status){
   const date = document.getElementById('attDate').value || localDateStr();
   if(!attendanceRecords[date]) attendanceRecords[date] = {};
   // Key hamesha string — miss na ho dashboard/summary mein
-  attendanceRecords[date][attKey(studentId)] = status;
+  const key = attKey(studentId);
+  // Same button dobara dabane se unmark (toggle)
+  if(attendanceRecords[date][key] === status){
+    delete attendanceRecords[date][key];
+  } else {
+    attendanceRecords[date][key] = status;
+  }
   saveAttendanceDateToCloud(date);
   saveData();
   renderAttendanceForm();
@@ -3948,7 +4088,7 @@ window.addEventListener('offline', ()=>{
 });
 </script>
     <script>
-  window.__APP_BUILD__ = '20260822-sync-presence-2';
+  window.__APP_BUILD__ = '20260827-fees-att-staff';
   (function(){
     var reloading = false;
     function forceReload(){
