@@ -257,13 +257,25 @@
   .thermal-receipt .t-total{border-top:1px solid #000; margin-top:6px; padding-top:6px; font-weight:700; display:flex; justify-content:space-between;}
   #printModal.thermal-mode .print-wrap{max-width:300px;}
 
+  .bulk-challan-grid{display:grid; gap:10px; width:100%;}
+  .bulk-challan-grid.cols-2{grid-template-columns:1fr 1fr;}
+  .bulk-challan-grid.cols-4{grid-template-columns:1fr 1fr;}
+  .bulk-challan-grid.cols-6{grid-template-columns:1fr 1fr;}
+  .bulk-challan-grid .challan-copy{margin-bottom:0; padding:12px 14px; page-break-inside:avoid; break-inside:avoid;}
+  .bulk-challan-grid .challan-head h3{font-size:13px;}
+  .bulk-challan-grid .challan-head img{width:36px;height:36px;}
+  .bulk-challan-grid .challan-row{font-size:11px; padding:3px 0;}
+  .bulk-challan-grid .challan-total{font-size:13px; padding-top:6px;}
+  .bulk-page-break{page-break-after:always; break-after:page; height:0; margin:0; padding:0; border:none;}
+
   @media print{
-    @page{ size:A4; margin:14mm; }
+    @page{ size:A4; margin:10mm; }
     body *{visibility:hidden;}
     #printModal, #printModal *{visibility:visible;}
     #printModal{position:absolute; inset:auto; background:#fff; padding:0; display:block;}
-    .print-wrap{max-width:100%; padding:0;}
+    .print-wrap{max-width:100%; padding:0; box-shadow:none;}
     .no-print{display:none !important;}
+    .bulk-challan-grid{gap:8px;}
   }
 
   /* ===================== RESPONSIVE / MOBILE MODE ===================== */
@@ -539,12 +551,34 @@
             </div>
             <button class="btn green" onclick="addFee()">+ Generate Challan</button>
           </div>
+
+          <div class="panel admin-only">
+            <h3>Generate All Unpaid Challans</h3>
+            <p class="hint">Month select karein (jaise September 2026). Jin students ki is month ki challan abhi nahi bani, un sab ke liye automatic pending challan ban jayegi. Online/offline dono mein kaam karega. A4 pe 2 / 4 / 6 challans per page print.</p>
+            <div class="form-grid">
+              <div class="field"><label>Month</label><input id="bulkFeeMonth" type="text" placeholder="e.g. September 2026"></div>
+              <div class="field"><label>Amount (Rs.)</label><input id="bulkFeeAmount" type="number" placeholder="e.g. 1000"></div>
+              <div class="field"><label>Due Date</label><input id="bulkFeeDue" type="date"></div>
+              <div class="field"><label>Class</label><select id="bulkFeeClass"><option value="">Sab Classes</option></select></div>
+              <div class="field"><label>Challans per A4 page</label>
+                <select id="bulkPerPage">
+                  <option value="2">2 per page</option>
+                  <option value="4" selected>4 per page</option>
+                  <option value="6">6 per page</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:8px;">
+              <button class="btn green" style="margin-top:0;" onclick="generateAllUnpaidChallans()">⚡ Generate All Unpaid</button>
+              <button class="btn gold" style="margin-top:0;" onclick="printAllUnpaidChallans()">🖨️ Print Unpaid (A4)</button>
+            </div>
+            <div id="bulkFeeResult" style="margin-top:12px; font-size:13px; color:var(--muted);"></div>
+          </div>
+
           <div class="panel">
             <h3>Fee Records</h3>
             <p class="hint">Print button se School Copy + Student Copy — dono ek hi A4 page par print hongi. Filter se pehle mahine ki paid/pending fees dekh sakte hain.</p>
             <div class="form-grid" style="margin-bottom:12px;">
-              <div class="field"><label>Search Name / Adm #</label><input id="feeNameSearch" type="text" placeholder="Name ya Adm # type karein…" oninput="renderFees()"></div>
-              <div class="field"><label>Filter Class</label><select id="feeClassFilterUI" onchange="onFeeClassFilterChange()"><option value="">Sab Classes</option></select></div>
               <div class="field"><label>Filter Month</label><select id="feeMonthFilter" onchange="renderFees()"><option value="">Sab Months</option></select></div>
               <div class="field"><label>Status</label>
                 <select id="feeStatusFilterUI" onchange="onFeeStatusFilterChange()">
@@ -1360,7 +1394,7 @@ function newId(){
 }
 function nextStaffCode(){
   // Staff login ke liye chhota, aasan-se-type ID (STF-1001, STF-1002, ...) — internal id se alag.
-  const used = staff.map(s => Number(s.staffCode)).filter(n => !isNaN(n) && n > 0);
+  const used = staff.map(s => s.staffCode).filter(Boolean);
   return used.length ? Math.max(...used) + 1 : 1001;
 }
 // applyScalars — sirf chhoti "school/main" settings apply karta hai (cloud se). Records
@@ -1937,7 +1971,7 @@ function showView(name){
     if(d && !d.value) d.value = localDateStr();
     renderExpenses();
   }
-  if(name==='fees') renderFeeStudentOptions();
+  if(name==='fees'){ renderFeeStudentOptions(); if(typeof populateBulkFeeClass==='function') populateBulkFeeClass(); }
   if(name==='reports') renderReports();
   if(name==='settings') fillSettingsForm();
   if(name==='loginlog') renderLoginLog();
@@ -2251,27 +2285,6 @@ function populateFeeMonthFilter(){
   sel.innerHTML = '<option value="">Sab Months</option>' + months.map(m => '<option value="'+m.replace(/"/g,'&quot;')+'">'+m+'</option>').join('');
   if(prev && months.includes(prev)) sel.value = prev;
 }
-function populateFeeClassFilter(){
-  const sel = document.getElementById('feeClassFilterUI');
-  if(!sel) return;
-  const prev = sel.value;
-  const seen = {};
-  (students||[]).forEach(s => {
-    const k = classKey(s.cls);
-    if(k && !seen[k]) seen[k] = classDisplay(s.cls);
-  });
-  const keys = Object.keys(seen).sort((a,b)=> seen[a].localeCompare(seen[b], undefined, {numeric:true}));
-  sel.innerHTML = '<option value="">Sab Classes</option>' + keys.map(k => '<option value="'+k+'">'+seen[k]+'</option>').join('');
-  if(prev) sel.value = prev;
-  if(feeFilterClass !== null && (feeFilterClass === 'unassigned' || keys.includes(feeFilterClass))){
-    sel.value = feeFilterClass;
-  }
-}
-function onFeeClassFilterChange(){
-  const v = (document.getElementById('feeClassFilterUI')||{}).value || '';
-  feeFilterClass = v ? v : null;
-  renderFees();
-}
 function onFeeStatusFilterChange(){
   const v = (document.getElementById('feeStatusFilterUI')||{}).value || '';
   feeFilterStatus = v ? v : null;
@@ -2295,7 +2308,131 @@ function addFee(){
   feesCol.add(newFee);
   ['feeMonth','feeAmount','feeDue'].forEach(id => document.getElementById(id).value = '');
   renderAll();
-  showStudentFeeHistory();
+  if(typeof showStudentFeeHistory === 'function') showStudentFeeHistory();
+}
+function populateBulkFeeClass(){
+  const sel = document.getElementById('bulkFeeClass');
+  if(!sel) return;
+  const prev = sel.value;
+  const seen = {};
+  (students||[]).forEach(s => {
+    const k = classKey(s.cls);
+    if(k && !seen[k]) seen[k] = classDisplay(s.cls);
+  });
+  const keys = Object.keys(seen).sort((a,b)=> seen[a].localeCompare(seen[b], undefined, {numeric:true}));
+  sel.innerHTML = '<option value="">Sab Classes</option>' + keys.map(k => '<option value="'+k+'">'+seen[k]+'</option>').join('');
+  if(prev) sel.value = prev;
+}
+function feeMonthKey(m){
+  return String(m||'').trim().toLowerCase().replace(/\s+/g,' ');
+}
+function studentHasFeeForMonth(studentId, month){
+  const key = feeMonthKey(month);
+  if(!key) return false;
+  return (fees||[]).some(f => Number(f.studentId) === Number(studentId) && feeMonthKey(f.month) === key);
+}
+function generateAllUnpaidChallans(){
+  if(session && session.role !== 'admin'){ alert('Sirf Admin bulk generate kar sakta hai.'); return; }
+  const month = (document.getElementById('bulkFeeMonth').value || '').trim();
+  const amount = Number(document.getElementById('bulkFeeAmount').value);
+  const due = document.getElementById('bulkFeeDue').value || '';
+  const cls = (document.getElementById('bulkFeeClass').value || '').trim();
+  const result = document.getElementById('bulkFeeResult');
+  if(!month){ alert('Month likhein (jaise September 2026).'); return; }
+  if(!amount || amount <= 0){ alert('Sahi fee amount likhein.'); return; }
+  let list = (students||[]).slice();
+  if(cls) list = list.filter(s => classKey(s.cls) === cls);
+  if(!list.length){ alert('Is class mein koi student nahi mila.'); return; }
+  const toCreate = list.filter(s => !studentHasFeeForMonth(s.id, month));
+  const already = list.length - toCreate.length;
+  if(!toCreate.length){
+    if(result) result.innerHTML = '✅ Is month (<b>'+month+'</b>) ke liye sab students ki challan pehle se maujood hai ('+already+').';
+    alert('Is month ke liye sab ki challan pehle se ban chuki hai.');
+    return;
+  }
+  if(!confirm(toCreate.length + ' students ke liye "' + month + '" ki pending challan generate karni hai?\n(Amount: Rs. ' + amount + (cls ? '\nClass: ' + classDisplay(cls) : ' · Sab Classes') + ')\n\nPehle se banay hue: ' + already)) return;
+  toCreate.forEach(s => {
+    const newFee = { id: newId(), studentId: s.id, month: month, amount: amount, due: due, status: 'pending' };
+    fees.push(newFee);
+    feesCol.add(newFee); // online: Firestore; offline: queue + localStorage via saveData
+  });
+  saveData(); // localStorage + cloud (offline queue jab net aaye)
+  renderAll();
+  if(result){
+    result.innerHTML = '✅ <b>' + toCreate.length + '</b> unpaid challans generate — Month: <b>' + month + '</b> · Rs. ' + amount
+      + (already ? ' · (Pehle se: ' + already + ')' : '')
+      + '<br><span style="color:var(--navy);">Ab "Print Unpaid (A4)" dabayein.</span>';
+  }
+  alert(toCreate.length + ' unpaid challans generate ho gayi!');
+}
+function printAllUnpaidChallans(){
+  const monthInput = (document.getElementById('bulkFeeMonth').value || '').trim();
+  const monthFilterEl = document.getElementById('feeMonthFilter');
+  const month = monthInput || (monthFilterEl ? monthFilterEl.value.trim() : '');
+  if(!month){ alert('Pehle Month likhein — e.g. September 2026'); return; }
+  const perPage = Number((document.getElementById('bulkPerPage')||{}).value) || 4;
+  const cls = (document.getElementById('bulkFeeClass').value || '').trim();
+  const key = feeMonthKey(month);
+  let list = (fees||[]).filter(f => f.status === 'pending' && feeMonthKey(f.month) === key);
+  if(cls){
+    list = list.filter(f => {
+      const s = students.find(x => x.id === f.studentId);
+      return s && classKey(s.cls) === cls;
+    });
+  }
+  list.sort((a,b) => {
+    const sa = students.find(s => s.id === a.studentId);
+    const sb = students.find(s => s.id === b.studentId);
+    const ca = classKey(sa && sa.cls) || '';
+    const cb = classKey(sb && sb.cls) || '';
+    if(ca !== cb) return ca.localeCompare(cb, undefined, {numeric:true});
+    return ((sa && sa.name)||'').localeCompare((sb && sb.name)||'');
+  });
+  if(!list.length){
+    alert('Is month ke koi pending/unpaid challan nahi mili.\nPehle "Generate All Unpaid" chalaein.');
+    return;
+  }
+  const colsClass = perPage <= 2 ? 'cols-2' : (perPage <= 4 ? 'cols-4' : 'cols-6');
+  function compactChallan(f, student){
+    return '<div class="challan-copy">'
+      + '<div class="copy-tag">UNPAID</div>'
+      + '<div class="challan-head">'
+      + '<img src="data:image/jpeg;base64,' + LOGO_B64 + '" alt="Logo" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-bottom:4px;">'
+      + '<h3>' + (schoolSettings.name||'School') + '</h3>'
+      + '<div class="s">FEE CHALLAN — QAMBER</div>'
+      + '<div style="font-size:10px;color:#555;">03362506588</div></div>'
+      + '<div class="challan-row"><span class="k">Student</span><span class="v" style="font-weight:700;">' + (student ? student.name : '—') + '</span></div>'
+      + '<div class="challan-row"><span class="k">Class / Sec</span><span class="v">' + (student ? ((student.cls||'—')+' / '+(student.section||'—')) : '—') + '</span></div>'
+      + '<div class="challan-row"><span class="k">Adm #</span><span class="v">' + (student ? student.adm : '—') + '</span></div>'
+      + '<div class="challan-row"><span class="k">Month</span><span class="v">' + (f.month||'—') + '</span></div>'
+      + '<div class="challan-row"><span class="k">Due</span><span class="v">' + (f.due || '—') + '</span></div>'
+      + '<div class="challan-total"><span>Amount</span><span>Rs. ' + f.amount + '</span></div>'
+      + '</div>';
+  }
+  let html = '';
+  for(let i = 0; i < list.length; i += perPage){
+    const chunk = list.slice(i, i + perPage);
+    html += '<div class="bulk-challan-grid ' + colsClass + '">';
+    chunk.forEach(f => {
+      const student = students.find(s => s.id === f.studentId);
+      html += compactChallan(f, student);
+    });
+    for(let e = 0; e < perPage - chunk.length; e++) html += '<div></div>';
+    html += '</div>';
+    if(i + perPage < list.length) html += '<div class="bulk-page-break"></div>';
+  }
+  printModalFeeId = null;
+  document.getElementById('printModal').classList.remove('thermal-mode');
+  document.getElementById('printPage').innerHTML = html;
+  const btBtn = document.getElementById('thermalPrintBtn');
+  if(btBtn) btBtn.style.display = 'none';
+  const modeBtn = document.getElementById('thermalModeBtn');
+  if(modeBtn) modeBtn.style.display = 'none';
+  const psBtn = document.getElementById('printerSettingsBtn');
+  if(psBtn) psBtn.style.display = 'none';
+  document.getElementById('printModal').style.display = 'flex';
+  const result = document.getElementById('bulkFeeResult');
+  if(result) result.innerHTML = '🖨️ Print ready: <b>' + list.length + '</b> unpaid · Month: <b>' + month + '</b> · ' + perPage + ' / page';
 }
 function editFee(id){
   if(session.role !== 'admin'){ alert('Sirf Admin edit kar sakta hai.'); return; }
@@ -2366,12 +2503,9 @@ function sendFeePaidWhatsApp(feeId){
 }
 function renderFees(){
   const tbody = document.getElementById('feeTable');
-  if(!tbody) return;
   tbody.innerHTML = '';
   populateFeeMonthFilter();
-  if(typeof populateFeeClassFilter === 'function') populateFeeClassFilter();
   const monthFilter = ((document.getElementById('feeMonthFilter')||{}).value || '').trim();
-  const nameQ = ((document.getElementById('feeNameSearch')||{}).value || '').trim().toLowerCase();
   // Keep UI status select in sync when filter set from dashboard
   const statusUI = document.getElementById('feeStatusFilterUI');
   if(statusUI && feeFilterStatus !== null && statusUI.value !== feeFilterStatus){
@@ -2384,43 +2518,34 @@ function renderFees(){
     const classOk = feeFilterClass === null || key === feeFilterClass;
     const statusOk = feeFilterStatus === null || f.status === feeFilterStatus;
     const monthOk = !monthFilter || String(f.month||'').trim() === monthFilter;
-    let nameOk = true;
-    if(nameQ){
-      const nm = ((student && student.name) || '').toLowerCase();
-      const adm = ((student && student.adm) || '').toLowerCase();
-      nameOk = nm.includes(nameQ) || adm.includes(nameQ);
-    }
-    return classOk && statusOk && monthOk && nameOk;
+    return classOk && statusOk && monthOk;
   });
   // Newest first — pehle mahine / naye challans upar
   list.sort((a,b) => (b.id||0) - (a.id||0));
   const banner = document.getElementById('feeFilterBanner');
   const bannerText = document.getElementById('feeFilterText');
-  if(feeFilterClass !== null || feeFilterStatus !== null || monthFilter || nameQ){
+  if(feeFilterClass !== null || feeFilterStatus !== null || monthFilter){
     banner.style.display = 'flex';
     const parts = [];
     if(feeFilterStatus !== null) parts.push(feeFilterStatus.toUpperCase());
     parts.push('fees');
-    if(nameQ) parts.push('— Search: "' + nameQ + '"');
     if(monthFilter) parts.push('— Month: ' + monthFilter);
     if(feeFilterClass !== null) parts.push('— Class ' + (feeFilterClass === 'unassigned' ? 'Unassigned' : classDisplay(feeFilterClass)));
     bannerText.textContent = 'Showing ' + parts.join(' ') + ' (' + list.length + ')';
   } else {
     banner.style.display = 'none';
   }
-  const emptyEl = document.getElementById('feeEmpty');
-  if(emptyEl) emptyEl.style.display = list.length ? 'none' : 'block';
+  document.getElementById('feeEmpty').style.display = list.length ? 'none' : 'block';
   const isAdmin = session && session.role === 'admin';
-  // Single innerHTML set — bohat fees par += se hang/slow avoid
-  tbody.innerHTML = list.map(f => {
+  list.forEach(f => {
     const student = students.find(s => s.id === f.studentId);
-    return `<tr>
+    tbody.innerHTML += `<tr>
       <td>${student ? student.name : '—'}${student && student.adm ? ' <span style="color:var(--muted);font-size:11px;">('+student.adm+')</span>' : ''}</td>
       <td>${student ? (student.cls||'—') : '—'}</td>
-      <td>${f.month||'—'}</td>
+      <td>${f.month}</td>
       <td>Rs. ${f.amount}</td>
       <td>${f.due || '—'}</td>
-      <td><span class="badge ${f.status}">${(f.status||'').toUpperCase()}</span></td>
+      <td><span class="badge ${f.status}">${f.status.toUpperCase()}</span></td>
       <td style="display:flex; gap:6px; flex-wrap:wrap;">
         <button class="btn small gold" onclick="openChallan(${f.id})">Print</button>
         ${isAdmin ? `<button class="btn small" style="background:var(--muted);" onclick="toggleFeeStatus(${f.id})">${f.status==='paid'?'Mark Pending':'Mark Paid'}</button>` : ''}
@@ -2429,7 +2554,7 @@ function renderFees(){
         ${isAdmin ? `<button class="btn small red" onclick="deleteFee(${f.id})">Delete</button>` : ''}
       </td>
     </tr>`;
-  }).join('');
+  });
 }
 function clearFeeFilter(){
   feeFilterClass = null;
@@ -2438,10 +2563,6 @@ function clearFeeFilter(){
   if(monthSel) monthSel.value = '';
   const statusUI = document.getElementById('feeStatusFilterUI');
   if(statusUI) statusUI.value = '';
-  const classUI = document.getElementById('feeClassFilterUI');
-  if(classUI) classUI.value = '';
-  const nameEl = document.getElementById('feeNameSearch');
-  if(nameEl) nameEl.value = '';
   renderFees();
 }
 function showUnpaidFeesForClass(cls){
@@ -4127,7 +4248,7 @@ window.addEventListener('offline', ()=>{
 });
 </script>
     <script>
-  window.__APP_BUILD__ = '20260827-stable-v2';
+  window.__APP_BUILD__ = '20260827-bulk-offline';
   (function(){
     var reloading = false;
     function forceReload(){
@@ -4159,7 +4280,7 @@ window.addEventListener('offline', ()=>{
       }).catch(function(){});
     }
     setTimeout(checkPageVersion, 4000);
-    setInterval(checkPageVersion, 20000);
+    setInterval(checkPageVersion, 5000);
     document.addEventListener('visibilitychange', function(){
       if(document.visibilityState === 'visible') setTimeout(checkPageVersion, 500);
     });
@@ -4172,7 +4293,7 @@ window.addEventListener('offline', ()=>{
       document.addEventListener('visibilitychange', function(){
         if(document.visibilityState === 'visible') checkForUpdate();
       });
-      setInterval(checkForUpdate, 15 * 1000);
+      setInterval(checkForUpdate, 3 * 1000);
     });
     let swRefreshed = false;
     navigator.serviceWorker.addEventListener('controllerchange', function(){
