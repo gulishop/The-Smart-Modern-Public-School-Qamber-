@@ -543,6 +543,8 @@
             <h3>Fee Records</h3>
             <p class="hint">Print button se School Copy + Student Copy — dono ek hi A4 page par print hongi. Filter se pehle mahine ki paid/pending fees dekh sakte hain.</p>
             <div class="form-grid" style="margin-bottom:12px;">
+              <div class="field"><label>Search Name / Adm #</label><input id="feeNameSearch" type="text" placeholder="Name ya Adm # type karein…" oninput="renderFees()"></div>
+              <div class="field"><label>Filter Class</label><select id="feeClassFilterUI" onchange="onFeeClassFilterChange()"><option value="">Sab Classes</option></select></div>
               <div class="field"><label>Filter Month</label><select id="feeMonthFilter" onchange="renderFees()"><option value="">Sab Months</option></select></div>
               <div class="field"><label>Status</label>
                 <select id="feeStatusFilterUI" onchange="onFeeStatusFilterChange()">
@@ -1358,7 +1360,7 @@ function newId(){
 }
 function nextStaffCode(){
   // Staff login ke liye chhota, aasan-se-type ID (STF-1001, STF-1002, ...) — internal id se alag.
-  const used = staff.map(s => s.staffCode).filter(Boolean);
+  const used = staff.map(s => Number(s.staffCode)).filter(n => !isNaN(n) && n > 0);
   return used.length ? Math.max(...used) + 1 : 1001;
 }
 // applyScalars — sirf chhoti "school/main" settings apply karta hai (cloud se). Records
@@ -2249,6 +2251,27 @@ function populateFeeMonthFilter(){
   sel.innerHTML = '<option value="">Sab Months</option>' + months.map(m => '<option value="'+m.replace(/"/g,'&quot;')+'">'+m+'</option>').join('');
   if(prev && months.includes(prev)) sel.value = prev;
 }
+function populateFeeClassFilter(){
+  const sel = document.getElementById('feeClassFilterUI');
+  if(!sel) return;
+  const prev = sel.value;
+  const seen = {};
+  (students||[]).forEach(s => {
+    const k = classKey(s.cls);
+    if(k && !seen[k]) seen[k] = classDisplay(s.cls);
+  });
+  const keys = Object.keys(seen).sort((a,b)=> seen[a].localeCompare(seen[b], undefined, {numeric:true}));
+  sel.innerHTML = '<option value="">Sab Classes</option>' + keys.map(k => '<option value="'+k+'">'+seen[k]+'</option>').join('');
+  if(prev) sel.value = prev;
+  if(feeFilterClass !== null && (feeFilterClass === 'unassigned' || keys.includes(feeFilterClass))){
+    sel.value = feeFilterClass;
+  }
+}
+function onFeeClassFilterChange(){
+  const v = (document.getElementById('feeClassFilterUI')||{}).value || '';
+  feeFilterClass = v ? v : null;
+  renderFees();
+}
 function onFeeStatusFilterChange(){
   const v = (document.getElementById('feeStatusFilterUI')||{}).value || '';
   feeFilterStatus = v ? v : null;
@@ -2343,9 +2366,12 @@ function sendFeePaidWhatsApp(feeId){
 }
 function renderFees(){
   const tbody = document.getElementById('feeTable');
+  if(!tbody) return;
   tbody.innerHTML = '';
   populateFeeMonthFilter();
+  if(typeof populateFeeClassFilter === 'function') populateFeeClassFilter();
   const monthFilter = ((document.getElementById('feeMonthFilter')||{}).value || '').trim();
+  const nameQ = ((document.getElementById('feeNameSearch')||{}).value || '').trim().toLowerCase();
   // Keep UI status select in sync when filter set from dashboard
   const statusUI = document.getElementById('feeStatusFilterUI');
   if(statusUI && feeFilterStatus !== null && statusUI.value !== feeFilterStatus){
@@ -2358,34 +2384,43 @@ function renderFees(){
     const classOk = feeFilterClass === null || key === feeFilterClass;
     const statusOk = feeFilterStatus === null || f.status === feeFilterStatus;
     const monthOk = !monthFilter || String(f.month||'').trim() === monthFilter;
-    return classOk && statusOk && monthOk;
+    let nameOk = true;
+    if(nameQ){
+      const nm = ((student && student.name) || '').toLowerCase();
+      const adm = ((student && student.adm) || '').toLowerCase();
+      nameOk = nm.includes(nameQ) || adm.includes(nameQ);
+    }
+    return classOk && statusOk && monthOk && nameOk;
   });
   // Newest first — pehle mahine / naye challans upar
   list.sort((a,b) => (b.id||0) - (a.id||0));
   const banner = document.getElementById('feeFilterBanner');
   const bannerText = document.getElementById('feeFilterText');
-  if(feeFilterClass !== null || feeFilterStatus !== null || monthFilter){
+  if(feeFilterClass !== null || feeFilterStatus !== null || monthFilter || nameQ){
     banner.style.display = 'flex';
     const parts = [];
     if(feeFilterStatus !== null) parts.push(feeFilterStatus.toUpperCase());
     parts.push('fees');
+    if(nameQ) parts.push('— Search: "' + nameQ + '"');
     if(monthFilter) parts.push('— Month: ' + monthFilter);
     if(feeFilterClass !== null) parts.push('— Class ' + (feeFilterClass === 'unassigned' ? 'Unassigned' : classDisplay(feeFilterClass)));
     bannerText.textContent = 'Showing ' + parts.join(' ') + ' (' + list.length + ')';
   } else {
     banner.style.display = 'none';
   }
-  document.getElementById('feeEmpty').style.display = list.length ? 'none' : 'block';
+  const emptyEl = document.getElementById('feeEmpty');
+  if(emptyEl) emptyEl.style.display = list.length ? 'none' : 'block';
   const isAdmin = session && session.role === 'admin';
-  list.forEach(f => {
+  // Single innerHTML set — bohat fees par += se hang/slow avoid
+  tbody.innerHTML = list.map(f => {
     const student = students.find(s => s.id === f.studentId);
-    tbody.innerHTML += `<tr>
+    return `<tr>
       <td>${student ? student.name : '—'}${student && student.adm ? ' <span style="color:var(--muted);font-size:11px;">('+student.adm+')</span>' : ''}</td>
       <td>${student ? (student.cls||'—') : '—'}</td>
-      <td>${f.month}</td>
+      <td>${f.month||'—'}</td>
       <td>Rs. ${f.amount}</td>
       <td>${f.due || '—'}</td>
-      <td><span class="badge ${f.status}">${f.status.toUpperCase()}</span></td>
+      <td><span class="badge ${f.status}">${(f.status||'').toUpperCase()}</span></td>
       <td style="display:flex; gap:6px; flex-wrap:wrap;">
         <button class="btn small gold" onclick="openChallan(${f.id})">Print</button>
         ${isAdmin ? `<button class="btn small" style="background:var(--muted);" onclick="toggleFeeStatus(${f.id})">${f.status==='paid'?'Mark Pending':'Mark Paid'}</button>` : ''}
@@ -2394,7 +2429,7 @@ function renderFees(){
         ${isAdmin ? `<button class="btn small red" onclick="deleteFee(${f.id})">Delete</button>` : ''}
       </td>
     </tr>`;
-  });
+  }).join('');
 }
 function clearFeeFilter(){
   feeFilterClass = null;
@@ -2403,6 +2438,10 @@ function clearFeeFilter(){
   if(monthSel) monthSel.value = '';
   const statusUI = document.getElementById('feeStatusFilterUI');
   if(statusUI) statusUI.value = '';
+  const classUI = document.getElementById('feeClassFilterUI');
+  if(classUI) classUI.value = '';
+  const nameEl = document.getElementById('feeNameSearch');
+  if(nameEl) nameEl.value = '';
   renderFees();
 }
 function showUnpaidFeesForClass(cls){
@@ -3048,8 +3087,8 @@ function renderAttendanceForm(){
     return `<tr><td>${s.adm}</td><td>${s.name}</td><td>${s.cls||'—'}</td>
       <td>
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-          <button class="btn small att-btn-p" style="min-width:88px; font-weight:700; padding:8px 12px; border:2px solid ${pActive?'#1a7a3a':'#c5c5c5'}; background:${pActive?'#1a7a3a':'#eef5ee'}; color:${pActive?'#fff':'#1a7a3a'};" onclick="setAttStatus(${s.id},'present')">${pActive?'✓ ':''}حاضر</button>
-          <button class="btn small att-btn-a" style="min-width:88px; font-weight:700; padding:8px 12px; border:2px solid ${aActive?'#b33':'#c5c5c5'}; background:${aActive?'#b33':'#f8eeee'}; color:${aActive?'#fff':'#b33'};" onclick="setAttStatus(${s.id},'absent')">${aActive?'✓ ':''}غیر حاضر</button>
+          <button class="btn small att-btn-p" style="min-width:88px; font-weight:700; padding:8px 12px; border:2px solid ${pActive?'#1a7a3a':'#c5c5c5'}; background:${pActive?'#1a7a3a':'#eef5ee'}; color:${pActive?'#fff':'#1a7a3a'};" onclick="setAttStatus(${s.id},'present')">${pActive?'✓ ':''}Present</button>
+          <button class="btn small att-btn-a" style="min-width:88px; font-weight:700; padding:8px 12px; border:2px solid ${aActive?'#b33':'#c5c5c5'}; background:${aActive?'#b33':'#f8eeee'}; color:${aActive?'#fff':'#b33'};" onclick="setAttStatus(${s.id},'absent')">${aActive?'✓ ':''}Absent</button>
         </div>
         ${notMarkedTag}
       </td>
@@ -4088,7 +4127,7 @@ window.addEventListener('offline', ()=>{
 });
 </script>
     <script>
-  window.__APP_BUILD__ = '20260827-fees-att-staff';
+  window.__APP_BUILD__ = '20260827-stable-v2';
   (function(){
     var reloading = false;
     function forceReload(){
@@ -4120,7 +4159,7 @@ window.addEventListener('offline', ()=>{
       }).catch(function(){});
     }
     setTimeout(checkPageVersion, 4000);
-    setInterval(checkPageVersion, 5000);
+    setInterval(checkPageVersion, 20000);
     document.addEventListener('visibilitychange', function(){
       if(document.visibilityState === 'visible') setTimeout(checkPageVersion, 500);
     });
@@ -4133,7 +4172,7 @@ window.addEventListener('offline', ()=>{
       document.addEventListener('visibilitychange', function(){
         if(document.visibilityState === 'visible') checkForUpdate();
       });
-      setInterval(checkForUpdate, 3 * 1000);
+      setInterval(checkForUpdate, 15 * 1000);
     });
     let swRefreshed = false;
     navigator.serviceWorker.addEventListener('controllerchange', function(){
