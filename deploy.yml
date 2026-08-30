@@ -3,7 +3,9 @@ name: Deploy to GitHub Pages (auto-version)
 # Jab bhi aap 'main' branch par push karein, ye workflow khud chalega:
 # 1) sw.js ke andar __BUILD_ID__ ko is commit ke unique SHA se replace karega
 #    (matlab CACHE_NAME khud-ba-khud badal jayega — manually kuch nahi karna).
-# 2) Poora site GitHub Pages par publish kar dega.
+# 2) index.html ke andar __GOOGLE_API_KEY__ ko GOOGLE_API_KEY secret se
+#    replace karega (AI Notice feature ke liye — sirf yahi ek secret chahiye).
+# 3) Poora site GitHub Pages par publish kar dega.
 on:
   push:
     branches: [ main ]
@@ -32,6 +34,13 @@ jobs:
         run: |
           sed -i "s/__BUILD_ID__/${GITHUB_SHA::8}/g" sw.js
           echo "Naya cache version set ho gaya: smp-${GITHUB_SHA::8}"
+
+      - name: Inject Google AI API key into index.html
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          sed -i "s/__GOOGLE_API_KEY__/${GOOGLE_API_KEY}/g" index.html
+          echo "AI Notice feature ke liye API key bhar di gayi."
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
