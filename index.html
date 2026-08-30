@@ -496,6 +496,12 @@
             </table>
             <div class="empty" id="dashClassFeeEmpty" style="display:none;">Abhi tak koi fee record nahi hai.</div>
           </div>
+          <div class="panel admin-only">
+            <h3>Month Wise Unpaid Fees</h3>
+            <p class="hint">Har box us mahine ke unpaid students ki tadaad dikhata hai — box par click karein, us mahine ki unpaid list khul jayegi.</p>
+            <div class="stat-grid" id="dashMonthFeeGrid"></div>
+            <div class="empty" id="dashMonthFeeEmpty" style="display:none;">Abhi tak koi unpaid fee record nahi hai.</div>
+          </div>
           <div class="panel" id="dashBirthdayPanel" style="display:none;">
             <h3>🎂 Aaj Ke Birthdays</h3>
             <div id="dashBirthdays"></div>
@@ -2002,6 +2008,7 @@ function doLogout(){
 }
 
 /* ===================== NAVIGATION ===================== */
+let currentViewName = 'dashboard';
 function showView(name){
   if(name==='fees' && (!session || session.role !== 'admin')){ alert('Sirf Admin Fees section dekh sakta hai.'); return; }
   if((name==='expenses' || name==='salary' || name==='staffattendance') && (!session || session.role !== 'admin')){
@@ -2011,6 +2018,7 @@ function showView(name){
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.querySelectorAll('.nav-list button').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+  currentViewName = name;
   const titles = {dashboard:'Dashboard', students:'Student Management', staff:'Teachers & Staff', fees:'Fees & Challan', expenses:'School Expenses', salary:'Staff Salary', attendance:'Attendance', staffattendance:'Staff Attendance', qrattendance:'QR Code Attendance', timetable:'Timetable', homework:'Homework / Assignments', notices:'Notice Board', events:'Events & Vacations', gallery:'Photo Gallery', results:'Results / Exam Reports', quotes:'WhatsApp Awareness', reports:'Reports', settings:'Settings & Backup', loginlog:'Login Activity'};
   document.getElementById('viewTitle').textContent = titles[name] || name;
   if(name==='dashboard') renderDashboard();
@@ -2162,6 +2170,7 @@ function renderStudents(){
     return (s.name||'').toLowerCase().includes(q) || (s.adm||'').toLowerCase().includes(q) || (s.roll||'').toLowerCase().includes(q);
   });
   document.getElementById('studentEmpty').style.display = filtered.length ? 'none' : 'block';
+  const rowsHtml = [];
   filtered.forEach(s => {
     const canDelete = session && session.role === 'admin';
     const isAdmin = session && session.role === 'admin';
@@ -2170,7 +2179,7 @@ function renderStudents(){
       ? (s.contact || '—')
       : (s.contact ? '<span style="color:var(--muted); letter-spacing:1px;" title="Contact saved (sirf Admin dekh sakta hai)">••••••••</span>' : '—');
     const pinBadge = s.parentPin ? '<span style="font-size:10px;color:var(--green);">PIN✓</span>' : '<span style="font-size:10px;color:var(--red);">No PIN</span>';
-    tbody.innerHTML += `<tr><td>${s.adm}<div>${pinBadge}</div></td><td>${s.name}</td><td>${s.father||'—'}</td><td>${s.cls||'—'}</td><td>${s.section||'—'}</td><td>${s.roll||'—'}</td><td>${contactCell}</td><td style="display:flex; gap:6px; flex-wrap:wrap;">
+    rowsHtml.push(`<tr><td>${s.adm}<div>${pinBadge}</div></td><td>${s.name}</td><td>${s.father||'—'}</td><td>${s.cls||'—'}</td><td>${s.section||'—'}</td><td>${s.roll||'—'}</td><td>${contactCell}</td><td style="display:flex; gap:6px; flex-wrap:wrap;">
       <button class="btn small" style="background:var(--navy);" onclick="editStudent(${s.id})">✏️ Edit</button>
       ${isAdmin?`<button class="btn small" style="background:#5b4636;color:#fff;" onclick="shareParentLink(${s.id})">📱 WhatsApp Portal</button>`:''}
       ${isAdmin?`<button class="btn small gold" onclick="setStudentParentPin(${s.id})">PIN</button>`:''}
@@ -2178,8 +2187,9 @@ function renderStudents(){
       <button class="btn small" style="background:#5b4636; color:#fff;" onclick="printIdCard(${s.id})">🪪 ID Card</button>
       <button class="btn small" style="background:#7a5230; color:#fff;" onclick="printTC(${s.id})">📜 TC</button>
       ${canDelete ? `<button class="btn small red" onclick="deleteStudent(${s.id})">Delete</button>` : ''}
-    </td></tr>`;
+    </td></tr>`);
   });
+  tbody.innerHTML = rowsHtml.join('');
   const promoteSel = document.getElementById('promoteFrom');
   if(promoteSel){
     const seen = {};
@@ -2266,6 +2276,7 @@ function renderStaff(){
   thead.innerHTML = isAdmin
     ? '<th>Staff ID</th><th>Name</th><th>Designation</th><th>Status</th><th>Contact</th><th>Salary</th><th>Login Email</th><th>Password</th><th></th>'
     : '<th>Staff ID</th><th>Name</th><th>Designation</th><th>Status</th>';
+  const rowsHtml = [];
   staff.forEach(s => {
     const lastSeen = presenceMap[String(s.id)];
     const isOnline = !!lastSeen && (Date.now() - lastSeen) < PRESENCE_ONLINE_THRESHOLD_MS;
@@ -2273,11 +2284,12 @@ function renderStaff(){
       ? '<span style="color:var(--green); font-weight:600;">🟢 Online</span>'
       : '<span style="color:#888;">⚪ Offline</span>';
     if(isAdmin){
-      tbody.innerHTML += `<tr><td>STF-${s.staffCode || s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td><td>${statusHtml}</td><td>${s.contact||'—'}</td><td>${s.salary ? 'Rs. '+s.salary : '—'}</td><td>${s.email||'—'}</td><td>${s.passHash ? '●●●●●●' : '<span style="color:var(--red);">Not set</span>'}</td><td style="display:flex; gap:6px;"><button class="btn small" style="background:var(--navy);" onclick="changeStaffPassword(${s.id})">Change Password</button><button class="btn small red" onclick="deleteStaff(${s.id})">Delete</button></td></tr>`;
+      rowsHtml.push(`<tr><td>STF-${s.staffCode || s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td><td>${statusHtml}</td><td>${s.contact||'—'}</td><td>${s.salary ? 'Rs. '+s.salary : '—'}</td><td>${s.email||'—'}</td><td>${s.passHash ? '●●●●●●' : '<span style="color:var(--red);">Not set</span>'}</td><td style="display:flex; gap:6px;"><button class="btn small" style="background:var(--navy);" onclick="changeStaffPassword(${s.id})">Change Password</button><button class="btn small red" onclick="deleteStaff(${s.id})">Delete</button></td></tr>`);
     } else {
-      tbody.innerHTML += `<tr><td>STF-${s.staffCode || s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td><td>${statusHtml}</td></tr>`;
+      rowsHtml.push(`<tr><td>STF-${s.staffCode || s.id}</td><td>${s.name}</td><td>${s.desg||'—'}</td><td>${statusHtml}</td></tr>`);
     }
   });
+  tbody.innerHTML = rowsHtml.join('');
 }
 
 /* ===================== FEES / CHALLAN ===================== */
@@ -2411,10 +2423,11 @@ function printAllUnpaidChallans(){
   const perPage = Number((document.getElementById('bulkPerPage')||{}).value)||4;
   const cls = (document.getElementById('bulkFeeClass').value||'').trim();
   const key = feeMonthKey(month);
+  const studentById = new Map(students.map(s => [s.id, s]));
   let list = (fees||[]).filter(f => f.status==='pending' && feeMonthKey(f.month)===key);
-  if(cls) list = list.filter(f => { const s=students.find(x=>x.id===f.studentId); return s && classKey(s.cls)===cls; });
+  if(cls) list = list.filter(f => { const s=studentById.get(f.studentId); return s && classKey(s.cls)===cls; });
   list.sort((a,b)=>{
-    const sa=students.find(s=>s.id===a.studentId), sb=students.find(s=>s.id===b.studentId);
+    const sa=studentById.get(a.studentId), sb=studentById.get(b.studentId);
     const ca=classKey(sa&&sa.cls)||'', cb=classKey(sb&&sb.cls)||'';
     if(ca!==cb) return ca.localeCompare(cb,undefined,{numeric:true});
     return ((sa&&sa.name)||'').localeCompare((sb&&sb.name)||'');
@@ -2435,7 +2448,7 @@ function printAllUnpaidChallans(){
   for(let i=0;i<list.length;i+=perPage){
     const chunk=list.slice(i,i+perPage);
     html+='<div class="bulk-challan-grid '+colsClass+'">';
-    chunk.forEach(f=>{ html+=compactChallan(f, students.find(s=>s.id===f.studentId)); });
+    chunk.forEach(f=>{ html+=compactChallan(f, studentById.get(f.studentId)); });
     for(let e=0;e<perPage-chunk.length;e++) html+='<div></div>';
     html+='</div>';
     if(i+perPage<list.length) html+='<div class="bulk-page-break"></div>';
@@ -2546,9 +2559,10 @@ function renderFees(){
   if(statusUI && feeFilterStatus !== null && statusUI.value !== feeFilterStatus){
     statusUI.value = feeFilterStatus || '';
   }
+  const studentById = new Map(students.map(s => [s.id, s]));
   let list = (fees || []).slice();
   list = list.filter(f => {
-    const student = students.find(s => s.id === f.studentId);
+    const student = studentById.get(f.studentId);
     const key = (student ? classKey(student.cls) : '') || 'unassigned';
     const classOk = feeFilterClass === null || key === feeFilterClass;
     const statusOk = feeFilterStatus === null || f.status === feeFilterStatus;
@@ -2578,9 +2592,10 @@ function renderFees(){
   }
   document.getElementById('feeEmpty').style.display = list.length ? 'none' : 'block';
   const isAdmin = session && session.role === 'admin';
+  const rowsHtml = [];
   list.forEach(f => {
-    const student = students.find(s => s.id === f.studentId);
-    tbody.innerHTML += `<tr>
+    const student = studentById.get(f.studentId);
+    rowsHtml.push(`<tr>
       <td>${student ? student.name : '—'}${student && student.adm ? ' <span style="color:var(--muted);font-size:11px;">('+student.adm+')</span>' : ''}</td>
       <td>${student ? (student.cls||'—') : '—'}</td>
       <td>${f.month}</td>
@@ -2594,8 +2609,9 @@ function renderFees(){
         ${isAdmin ? `<button class="btn small" style="background:var(--navy);" onclick="editFee(${f.id})">Edit</button>` : ''}
         ${isAdmin ? `<button class="btn small red" onclick="deleteFee(${f.id})">Delete</button>` : ''}
       </td>
-    </tr>`;
+    </tr>`);
   });
+  tbody.innerHTML = rowsHtml.join('');
 }
 function clearFeeFilter(){
   feeFilterClass = null;
@@ -2879,18 +2895,19 @@ function renderExpenses(){
   let list = expenses.slice().sort((a,b) => (b.date||'').localeCompare(a.date||''));
   if(monthFilter) list = list.filter(e => (e.date||'').startsWith(monthFilter));
   if(catFilter) list = list.filter(e => e.category === catFilter);
-  tbody.innerHTML = '';
   let total = 0;
+  const rowsHtml = [];
   list.forEach(e => {
     total += Number(e.amount) || 0;
-    tbody.innerHTML += `<tr>
+    rowsHtml.push(`<tr>
       <td>${e.date||'—'}</td>
       <td>${e.category||'—'}</td>
       <td>Rs. ${Number(e.amount)||0}</td>
       <td>${e.note||'—'}</td>
       <td>${session && session.role==='admin' ? '<button class="btn small red" onclick="deleteExpense('+e.id+')">Delete</button>' : ''}</td>
-    </tr>`;
+    </tr>`);
   });
+  tbody.innerHTML = rowsHtml.join('');
   if(empty) empty.style.display = list.length ? 'none' : 'block';
   if(hint) hint.textContent = 'Total (filter ke hisaab se): Rs. ' + total.toLocaleString();
 }
@@ -2948,9 +2965,10 @@ function renderStaffAttendanceForm(){
     return;
   }
   if(empty) empty.style.display = 'none';
+  const rowsHtml = [];
   staff.forEach(s => {
     const status = day[String(s.id)] || '';
-    tbody.innerHTML += `<tr>
+    rowsHtml.push(`<tr>
       <td>STF-${s.staffCode || s.id}</td>
       <td>${s.name}</td>
       <td>${s.desg||'—'}</td>
@@ -2961,8 +2979,9 @@ function renderStaffAttendanceForm(){
           <option value="absent" ${status==='absent'?'selected':''}>❌ Absent</option>
         </select>
       </td>
-    </tr>`;
+    </tr>`);
   });
+  tbody.innerHTML = rowsHtml.join('');
 }
 function saveStaffAttendanceDay(){
   if(!session || session.role !== 'admin'){ alert('Sirf Admin staff attendance mark kar sakta hai.'); return; }
@@ -3067,10 +3086,11 @@ function renderSalarySheet(){
   }
   if(empty) empty.style.display = 'none';
   let totalPayable = 0;
+  const rowsHtml = [];
   staff.forEach(s => {
     const row = getStaffSalaryRow(s, ym);
     totalPayable += row.payable;
-    tbody.innerHTML += `<tr>
+    rowsHtml.push(`<tr>
       <td>${s.name}<br><small>STF-${s.staffCode||s.id}</small></td>
       <td>${s.desg||'—'}</td>
       <td>Rs. ${row.monthly.toLocaleString()}</td>
@@ -3083,8 +3103,9 @@ function renderSalarySheet(){
         <button class="btn small" style="background:var(--navy);" onclick="printSalarySlip(${s.id}, '${ym}')">📄 Slip</button>
         <button class="btn small green" onclick="payStaffSalary(${s.id}, '${ym}', ${row.payable})">💰 Paid</button>
       </td>
-    </tr>`;
+    </tr>`);
   });
+  tbody.innerHTML = rowsHtml.join('');
   if(hint) hint.textContent = 'Is month ka total payable: Rs. ' + totalPayable.toLocaleString() + ' · Sunday leave (working days only)';
 }
 function payStaffSalary(staffId, yearMonth, amount){
@@ -3335,11 +3356,8 @@ function renderQrScanLog(){
   const tbody = document.getElementById('qrScanLogTable');
   if(!tbody) return;
   const todays = qrScanLog.filter(x => x.date === today).sort((a,b) => (b.time||'').localeCompare(a.time||''));
-  tbody.innerHTML = '';
   document.getElementById('qrScanLogEmpty').style.display = todays.length ? 'none' : 'block';
-  todays.forEach(x => {
-    tbody.innerHTML += `<tr><td>${x.time || '—'}</td><td>${x.adm || '—'}</td><td>${x.name || '—'}</td><td>${x.cls || '—'}</td></tr>`;
-  });
+  tbody.innerHTML = todays.map(x => `<tr><td>${x.time || '—'}</td><td>${x.adm || '—'}</td><td>${x.name || '—'}</td><td>${x.cls || '—'}</td></tr>`).join('');
 }
 function startQrScanner(){
   if(typeof Html5Qrcode === 'undefined'){ alert('QR scanner library load nahi ho saki. Internet connection check karein.'); return; }
@@ -3475,23 +3493,17 @@ function renderClassTimetable(){
   const tbody = document.getElementById('ttClassTable');
   if(!tbody) return;
   const rows = timetable.filter(t => t.cls === cls).sort((a,b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day) || (a.time||'').localeCompare(b.time||''));
-  tbody.innerHTML = '';
   document.getElementById('ttClassEmpty').style.display = rows.length ? 'none' : 'block';
   const canDelete = session && session.role === 'admin';
-  rows.forEach(t => {
-    tbody.innerHTML += `<tr><td>${t.day}</td><td>${t.time}</td><td>${t.subject}</td><td>${t.teacherName || '—'}</td><td>${canDelete ? `<button class="btn small red" onclick="deleteTimetableSlot(${t.id})">Delete</button>` : ''}</td></tr>`;
-  });
+  tbody.innerHTML = rows.map(t => `<tr><td>${t.day}</td><td>${t.time}</td><td>${t.subject}</td><td>${t.teacherName || '—'}</td><td>${canDelete ? `<button class="btn small red" onclick="deleteTimetableSlot(${t.id})">Delete</button>` : ''}</td></tr>`).join('');
 }
 function renderTeacherTimetable(){
   const teacherId = document.getElementById('ttViewTeacher') ? Number(document.getElementById('ttViewTeacher').value) : null;
   const tbody = document.getElementById('ttTeacherTable');
   if(!tbody) return;
   const rows = timetable.filter(t => t.teacherId === teacherId).sort((a,b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day) || (a.time||'').localeCompare(b.time||''));
-  tbody.innerHTML = '';
   document.getElementById('ttTeacherEmpty').style.display = rows.length ? 'none' : 'block';
-  rows.forEach(t => {
-    tbody.innerHTML += `<tr><td>${t.day}</td><td>${t.time}</td><td>Class ${t.cls}${t.section ? '-'+t.section : ''}</td><td>${t.subject}</td></tr>`;
-  });
+  tbody.innerHTML = rows.map(t => `<tr><td>${t.day}</td><td>${t.time}</td><td>Class ${t.cls}${t.section ? '-'+t.section : ''}</td><td>${t.subject}</td></tr>`).join('');
 }
 
 /* ===================== HOMEWORK / ASSIGNMENTS ===================== */
@@ -3806,8 +3818,9 @@ function renderResults(){
   if(!list) return;
   document.getElementById('resultEmpty').style.display = examResults.length ? 'none' : 'block';
   const canDelete = session && session.role === 'admin';
+  const studentById = new Map(students.map(s => [s.id, s]));
   list.innerHTML = examResults.map(r => {
-    const student = students.find(s => s.id === r.studentId);
+    const student = studentById.get(r.studentId);
     return `<div class="event-card">
       <h4>${student ? student.name : '—'} — ${r.exam}</h4>
       <div class="d">${r.date} · ${student ? (student.cls||'—')+'/'+(student.section||'—') : ''}</div>
@@ -3970,6 +3983,14 @@ function renderClassWiseCounts(){
   }).join('');
 }
 function renderDashboard(){
+  // Perf guard: background listeners (realtime sync, presence heartbeat, the
+  // 10s interval) used to call renderDashboard() on every update even when the
+  // user was on a completely different screen (Fees, Students, etc). That full
+  // recompute (stats + class-wise counts + class fees + month fees + birthdays)
+  // is the biggest source of "app feels slow" reports. Skip it when Dashboard
+  // isn't the visible screen — it will be freshly recomputed by showView()
+  // the moment the user actually opens Dashboard.
+  if(currentViewName !== 'dashboard') return;
   document.getElementById('statStudents').textContent = students.length;
   document.getElementById('statStaff').textContent = staff.length;
   const staffOnlineEl = document.getElementById('statStaffOnline');
@@ -4004,7 +4025,40 @@ function renderDashboard(){
   document.getElementById('statCollected').textContent = 'Rs. ' + collected;
   renderClassWiseCounts();
   renderDashboardClassFees();
+  renderDashboardMonthFees();
   renderDashboardBirthdays();
+}
+function renderDashboardMonthFees(){
+  const grid = document.getElementById('dashMonthFeeGrid');
+  if(!grid) return;
+  const byMonth = {};
+  fees.forEach(f => {
+    if(f.status !== 'pending') return;
+    const label = String(f.month || '').trim();
+    if(!label) return;
+    if(!byMonth[label]) byMonth[label] = new Set();
+    byMonth[label].add(f.studentId);
+  });
+  // Naye/reverse chronological order — jaisa month filter dropdown mein hota hai
+  const monthsList = Object.keys(byMonth).sort((a,b) => b.localeCompare(a, undefined, {numeric:true}));
+  const emptyEl = document.getElementById('dashMonthFeeEmpty');
+  if(emptyEl) emptyEl.style.display = monthsList.length ? 'none' : 'block';
+  grid.innerHTML = monthsList.map(label => {
+    const count = byMonth[label].size;
+    return `<div class="stat-card" style="cursor:pointer;" onclick="showUnpaidFeesForMonth('${label.replace(/'/g,"\\'")}')">
+      <div class="n">${count}</div>
+      <div class="l">${label} — Unpaid Students</div>
+    </div>`;
+  }).join('');
+}
+function showUnpaidFeesForMonth(month){
+  feeFilterClass = null;
+  feeFilterStatus = 'pending';
+  showView('fees');
+  populateFeeMonthFilter();
+  const sel = document.getElementById('feeMonthFilter');
+  if(sel) sel.value = month;
+  renderFees();
 }
 function renderDashboardBirthdays(){
   const panel = document.getElementById('dashBirthdayPanel');
@@ -4020,10 +4074,10 @@ function renderDashboardBirthdays(){
 function renderDashboardClassFees(){
   const tbody = document.getElementById('dashClassFeeTable');
   if(!tbody) return;
-  tbody.innerHTML = '';
+  const studentById = new Map(students.map(s => [s.id, s]));
   const byClass = {};
   fees.forEach(f => {
-    const student = students.find(s => s.id === f.studentId);
+    const student = studentById.get(f.studentId);
     const key = (student ? classKey(student.cls) : '') || 'unassigned';
     const label = key === 'unassigned' ? 'Unassigned' : classDisplay(student.cls);
     if(!byClass[key]) byClass[key] = { label, total:0, paid:0, pending:0 };
@@ -4034,16 +4088,16 @@ function renderDashboardClassFees(){
   const classKeys = Object.keys(byClass).sort((a,b) => byClass[a].label.localeCompare(byClass[b].label, undefined, {numeric:true}));
   const emptyEl = document.getElementById('dashClassFeeEmpty');
   if(emptyEl) emptyEl.style.display = classKeys.length ? 'none' : 'block';
-  classKeys.forEach(key => {
+  tbody.innerHTML = classKeys.map(key => {
     const c = byClass[key];
     const clickable = c.pending > 0;
-    tbody.innerHTML += `<tr>
+    return `<tr>
       <td>${c.label}</td>
       <td>Rs. ${c.total}</td>
       <td>Rs. ${c.paid}</td>
       <td>${clickable ? `<span style="cursor:pointer; text-decoration:underline; color:var(--navy); font-weight:600;" onclick="showUnpaidFeesForClass('${key.replace(/'/g,"\\'")}')">Rs. ${c.pending}</span>` : 'Rs. 0'}</td>
     </tr>`;
-  });
+  }).join('');
 }
 function renderReports(){
   document.getElementById('repTotalChallans').textContent = fees.length;
@@ -4069,10 +4123,10 @@ function renderReports(){
 
 function renderClassFeeSummary(){
   const tbody = document.getElementById('repClassFeeTable');
-  tbody.innerHTML = '';
+  const studentById = new Map(students.map(s => [s.id, s]));
   const byClass = {};
   fees.forEach(f => {
-    const student = students.find(s => s.id === f.studentId);
+    const student = studentById.get(f.studentId);
     const key = (student ? classKey(student.cls) : '') || 'unassigned';
     const label = key === 'unassigned' ? 'Unassigned' : classDisplay(student.cls);
     if(!byClass[key]) byClass[key] = { label, count:0, total:0, paid:0, pending:0 };
@@ -4083,16 +4137,16 @@ function renderClassFeeSummary(){
   });
   const classKeys = Object.keys(byClass).sort((a,b) => byClass[a].label.localeCompare(byClass[b].label, undefined, {numeric:true}));
   document.getElementById('repClassFeeEmpty').style.display = classKeys.length ? 'none' : 'block';
-  classKeys.forEach(key => {
+  tbody.innerHTML = classKeys.map(key => {
     const c = byClass[key];
-    tbody.innerHTML += `<tr>
+    return `<tr>
       <td>${c.label}</td>
       <td>${c.count}</td>
       <td>Rs. ${c.total}</td>
       <td>Rs. ${c.paid}</td>
       <td>Rs. ${c.pending}</td>
     </tr>`;
-  });
+  }).join('');
 }
 
 function renderOnly(){
@@ -4381,8 +4435,22 @@ const realtimeSaveStatus = () => {
   const s = document.getElementById('saveStatus');
   if(s) s.textContent = '☁️ Realtime update mila · ' + new Date().toLocaleTimeString();
 };
-studentsCol.listen(()=>students, v=>{ students=v; }, ()=>{ renderStudents(); renderDashboard(); renderFeeStudentOptions(); renderAttendanceForm(); realtimeSaveStatus(); });
-staffCol.listen(()=>staff, v=>{ staff=v; }, ()=>{ renderStaff(); renderDashboard(); realtimeSaveStatus(); });
+// Realtime listeners pehle sirf in-memory arrays + UI update karte the — localStorage
+// cache sirf agli local saveData() ya app reload par sync hota tha. Matlab agar net
+// chala jata to doosre device se aaya hua naya data (attendance/gallery ke alawa)
+// is device ke offline cache mein "miss" ho jata. Ab har realtime update ke baad
+// turant localStorage bhi patch ho jata hai — taake offline hote hi latest data
+// hamesha mehfooz rahe, bar bar dobara fetch/reload ki zaroorat na pade.
+function persistLocalCache(patch){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const existing = raw ? JSON.parse(raw) : {};
+    Object.assign(existing, patch, { savedAt: new Date().toISOString() });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+  }catch(e){}
+}
+studentsCol.listen(()=>students, v=>{ students=v; }, ()=>{ persistLocalCache({students}); renderStudents(); renderDashboard(); renderFeeStudentOptions(); renderAttendanceForm(); realtimeSaveStatus(); });
+staffCol.listen(()=>staff, v=>{ staff=v; }, ()=>{ persistLocalCache({staff}); renderStaff(); renderDashboard(); realtimeSaveStatus(); });
 if(presenceCol.colRef){
   presenceCol.colRef.onSnapshot(function(snap){
     const arr = [];
@@ -4394,19 +4462,18 @@ if(presenceCol.colRef){
     if(typeof renderDashboard === 'function') renderDashboard();
   }, function(err){ console.warn('Presence realtime sync error:', err); });
 }
-setInterval(()=>{ if(typeof renderStaff === 'function') renderStaff(); if(typeof renderDashboard === 'function') renderDashboard(); }, 10000);
-noticesCol.listen(()=>notices, v=>{ notices=v; }, ()=>{ renderNotices(); realtimeSaveStatus(); });
-eventsCol.listen(()=>events, v=>{ events=v; }, ()=>{ renderEvents(); realtimeSaveStatus(); });
-examResultsCol.listen(()=>examResults, v=>{ examResults=v; }, ()=>{ renderResults(); realtimeSaveStatus(); });
-timetableCol.listen(()=>timetable, v=>{ timetable=v; }, ()=>{ if(typeof renderTimetableView === 'function') renderTimetableView(); realtimeSaveStatus(); });
-homeworkCol.listen(()=>homework, v=>{ homework=v; }, ()=>{ if(typeof renderHomework === 'function') renderHomework(); realtimeSaveStatus(); });
+noticesCol.listen(()=>notices, v=>{ notices=v; }, ()=>{ persistLocalCache({notices}); renderNotices(); realtimeSaveStatus(); });
+eventsCol.listen(()=>events, v=>{ events=v; }, ()=>{ persistLocalCache({events}); renderEvents(); realtimeSaveStatus(); });
+examResultsCol.listen(()=>examResults, v=>{ examResults=v; }, ()=>{ persistLocalCache({examResults}); renderResults(); realtimeSaveStatus(); });
+timetableCol.listen(()=>timetable, v=>{ timetable=v; }, ()=>{ persistLocalCache({timetable}); if(typeof renderTimetableView === 'function') renderTimetableView(); realtimeSaveStatus(); });
+homeworkCol.listen(()=>homework, v=>{ homework=v; }, ()=>{ persistLocalCache({homework}); if(typeof renderHomework === 'function') renderHomework(); realtimeSaveStatus(); });
 galleryCol.listen(()=>galleryPhotos, v=>{ galleryPhotos=v; }, ()=>{ renderGallery(); saveGalleryData(); realtimeSaveStatus(); });
-feesCol.listen(()=>fees, v=>{ fees=v; }, ()=>{ renderFees(); renderDashboard(); realtimeSaveStatus(); });
-expensesCol.listen(()=>expenses, v=>{ expenses=v; }, ()=>{ if(typeof renderExpenses === 'function') renderExpenses(); realtimeSaveStatus(); });
-quoteLogCol.listen(()=>quoteLog, v=>{ quoteLog=v; }, ()=>{ if(typeof renderQuoteLog === 'function') renderQuoteLog(); });
+feesCol.listen(()=>fees, v=>{ fees=v; }, ()=>{ persistLocalCache({fees}); renderFees(); renderDashboard(); realtimeSaveStatus(); });
+expensesCol.listen(()=>expenses, v=>{ expenses=v; }, ()=>{ persistLocalCache({expenses}); if(typeof renderExpenses === 'function') renderExpenses(); realtimeSaveStatus(); });
+quoteLogCol.listen(()=>quoteLog, v=>{ quoteLog=v; }, ()=>{ persistLocalCache({quoteLog}); if(typeof renderQuoteLog === 'function') renderQuoteLog(); });
 
-loginLogCol.listen(()=>loginLog, v=>{ loginLog=v; }, ()=>{ if(typeof renderLoginLog === 'function') renderLoginLog(); });
-qrScanLogCol.listen(()=>qrScanLog, v=>{ qrScanLog=v; }, ()=>{ if(typeof renderQrScanLog === 'function') renderQrScanLog(); });
+loginLogCol.listen(()=>loginLog, v=>{ loginLog=v; }, ()=>{ persistLocalCache({loginLog}); if(typeof renderLoginLog === 'function') renderLoginLog(); });
+qrScanLogCol.listen(()=>qrScanLog, v=>{ qrScanLog=v; }, ()=>{ persistLocalCache({qrScanLog}); if(typeof renderQrScanLog === 'function') renderQrScanLog(); });
 
 // school/main ab sirf chhoti settings rakhti hai — realtime mein sirf wahi apply hoti hain.
 if(SCHOOL_DOC){
