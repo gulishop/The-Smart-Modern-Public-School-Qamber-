@@ -149,9 +149,9 @@
     position:relative; z-index:2; width:130px; height:130px; margin:0 auto 14px;
     border-radius:50%; background:linear-gradient(145deg,#fff 0%,#f0f7ff 100%);
     box-shadow:0 12px 32px rgba(18,90,180,0.18), 0 0 0 4px rgba(255,255,255,0.9), 0 0 0 6px rgba(199,154,62,0.35);
-    display:flex; align-items:center; justify-content:center; overflow:visible;
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
   }
-  .choice-logo{width:112px; height:112px; object-fit:contain; object-position:center;}
+  .choice-logo{width:100%; height:100%; object-fit:cover; object-position:center;}
   .choice-title{
     position:relative; z-index:2; font-size:15px; text-align:center; color:#22335A;
     font-family:'Lora',serif; line-height:1.35; margin-top:4px;
@@ -225,7 +225,6 @@
     .choice-card-wrap{flex-direction:column; align-items:stretch;}
     .choice-title b{font-size:19px;}
     .choice-logo-wrap{width:100px; height:100px;}
-    .choice-logo{width:86px; height:86px;}
   }
   .screen-back{display:block; margin:14px auto 0; background:none; border:none; font-size:12px; color:var(--muted); text-decoration:underline; cursor:pointer;}
   .parent-wrap{max-width:520px;margin:0 auto;}
@@ -721,6 +720,12 @@
             <p class="hint">Har box us mahine ke unpaid students ki tadaad dikhata hai — box par click karein, us mahine ki unpaid list khul jayegi.</p>
             <div class="stat-grid" id="dashMonthFeeGrid"></div>
             <div class="empty" id="dashMonthFeeEmpty" style="display:none;">Abhi tak koi unpaid fee record nahi hai.</div>
+          </div>
+          <div class="panel admin-only">
+            <h3>Fee Collection — Month Wise</h3>
+            <p class="hint">Har mahine ki collected (paid) fee amount — box par click karein, us mahine ki paid list khul jayegi.</p>
+            <div class="stat-grid" id="dashMonthCollectedGrid"></div>
+            <div class="empty" id="dashMonthCollectedEmpty" style="display:none;">Abhi tak koi paid fee record nahi hai.</div>
           </div>
           <div class="panel" id="dashBirthdayPanel" style="display:none;">
             <h3>🎂 Aaj Ke Birthdays</h3>
@@ -1588,6 +1593,25 @@ function ensureAttendanceDateLoaded(date){
       if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
     } else if(attendanceRecords[date] && Object.keys(attendanceRecords[date]).length){
       loadedAttendanceDates.add(date);
+    } else if(students.length){
+      // Naya din — is date ke liye pehle se koi record nahi (na cloud par, na local).
+      // Sabhi students ko automatically "Present" mark kar dete hain — teacher ko
+      // sirf jo bache ghair-hazir hain unke liye "Absent" par click karna hoga.
+      const autoRecord = {};
+      students.forEach(s => { autoRecord[attKey(s.id)] = 'present'; });
+      attendanceRecords[date] = autoRecord;
+      loadedAttendanceDates.add(date);
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const existing = raw ? JSON.parse(raw) : {};
+        existing.attendanceRecords = attendanceRecords;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+      }catch(e){}
+      saveAttendanceDateToCloud(date);
+      const attDateEl = document.getElementById('attDate');
+      const activeDate = (attDateEl && attDateEl.value) || localDateStr();
+      if(activeDate === date && typeof renderAttendanceForm === 'function') renderAttendanceForm();
+      if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
     }
   }).catch(err=>{
     console.warn('Attendance load failed for ' + date + ':', err);
@@ -3549,23 +3573,29 @@ function setAttStatus(studentId, status){
   if(!attendanceRecords[date]) attendanceRecords[date] = {};
   // Key hamesha string — miss na ho dashboard/summary mein
   const key = attKey(studentId);
+  const prevStatus = attendanceRecords[date][key];
   // Same button dobara dabane se unmark (toggle)
-  if(attendanceRecords[date][key] === status){
+  let justMarkedAbsent = false;
+  if(prevStatus === status){
     delete attendanceRecords[date][key];
   } else {
     attendanceRecords[date][key] = status;
+    if(status === 'absent' && prevStatus !== 'absent') justMarkedAbsent = true;
   }
   saveAttendanceDateToCloud(date);
   saveData();
   renderAttendanceForm();
   // Dashboard turant update — warna mark ke baad dashboard par purana count dikhta tha
   if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
+  // Absent mark hote hi WhatsApp chat automatically khul jati hai (parent ke number ke sath,
+  // message pehle se likha hua) — yeh isi click ke andar hota hai taake browser popup block na kare.
+  if(justMarkedAbsent) sendAbsentWhatsApp(studentId, true);
 }
-function sendAbsentWhatsApp(studentId){
+function sendAbsentWhatsApp(studentId, silent){
   const s = students.find(x => x.id === studentId);
   if(!s) return;
   const num = waNumberFor(s.contact);
-  if(!num){ alert('Is student ka WhatsApp/contact number darj nahi hai.'); return; }
+  if(!num){ if(!silent) alert('Is student ka WhatsApp/contact number darj nahi hai.'); return; }
   const date = document.getElementById('attDate').value || localDateStr();
   const msg = 'Assalam-o-Alaikum,\n' + schoolSettings.name + ' se ittila di jaa rahi hai ke aap ka bacha/bachi *' + s.name + '* (Class: ' + (s.cls||'—') + ', Adm#: ' + s.adm + ') tareekh ' + date + ' ko school mein ghair-hazir (absent) tha/thi.\nBaraye meherbani wajah se agah karein.\nShukriya.';
   window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
@@ -4340,6 +4370,7 @@ function renderDashboard(){
   renderClassWiseCounts();
   renderDashboardClassFees();
   renderDashboardMonthFees();
+  renderDashboardCollectedMonthFees();
   renderDashboardBirthdays();
 }
 function renderDashboardMonthFees(){
@@ -4368,6 +4399,37 @@ function renderDashboardMonthFees(){
 function showUnpaidFeesForMonth(month){
   feeFilterClass = null;
   feeFilterStatus = 'pending';
+  showView('fees');
+  populateFeeMonthFilter();
+  const sel = document.getElementById('feeMonthFilter');
+  if(sel) sel.value = month;
+  renderFees();
+}
+function renderDashboardCollectedMonthFees(){
+  const grid = document.getElementById('dashMonthCollectedGrid');
+  if(!grid) return;
+  const byMonth = {};
+  fees.forEach(f => {
+    if(f.status !== 'paid') return;
+    const label = String(f.month || '').trim();
+    if(!label) return;
+    if(!byMonth[label]) byMonth[label] = 0;
+    byMonth[label] += f.amount;
+  });
+  // Naye/reverse chronological order — jaisa month filter dropdown mein hota hai
+  const monthsList = Object.keys(byMonth).sort((a,b) => b.localeCompare(a, undefined, {numeric:true}));
+  const emptyEl = document.getElementById('dashMonthCollectedEmpty');
+  if(emptyEl) emptyEl.style.display = monthsList.length ? 'none' : 'block';
+  grid.innerHTML = monthsList.map(label => {
+    return `<div class="stat-card" style="cursor:pointer;" onclick="showPaidFeesForMonth('${label.replace(/'/g,"\\'")}')">
+      <div class="n">Rs. ${byMonth[label]}</div>
+      <div class="l">${label} — Collected</div>
+    </div>`;
+  }).join('');
+}
+function showPaidFeesForMonth(month){
+  feeFilterClass = null;
+  feeFilterStatus = 'paid';
   showView('fees');
   populateFeeMonthFilter();
   const sel = document.getElementById('feeMonthFilter');
