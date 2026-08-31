@@ -129,32 +129,22 @@
   #choiceScreen{
     position:relative; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
     background:
-      linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.93) 38%, rgba(255,255,255,0.97) 100%),
       radial-gradient(ellipse 120% 80% at 50% -10%, #cfe4f8 0%, transparent 55%),
-      linear-gradient(165deg, #dfeeFb 0%, #eef6fc 35%, #ffffff 70%, #e6f2fb 100%);
-    padding:36px 18px 0; text-align:center; overflow:hidden;
+      linear-gradient(165deg, #e8f3fc 0%, #f4f9fe 35%, #ffffff 70%, #eaf3fb 100%);
+    padding:36px 18px 28px; text-align:center; overflow:hidden;
   }
-  #choiceScreen > *:not(:last-child){position:relative;}
-  #choiceScreen .choice-back{margin-bottom:20px;}
   #choiceScreen::before{
-    content:''; position:absolute; left:0; right:0; bottom:0; height:34%; z-index:0; pointer-events:none;
-    background:
-      repeating-linear-gradient(90deg, rgba(30,70,120,0.10) 0 10px, transparent 10px 22px),
-      linear-gradient(180deg, rgba(180,205,230,0.55) 0%, rgba(150,180,215,0.65) 100%);
-    clip-path: polygon(0% 100%, 0% 35%, 14% 35%, 14% 15%, 30% 15%, 30% 40%, 46% 40%, 46% 5%, 64% 5%, 64% 45%, 80% 45%, 80% 20%, 100% 20%, 100% 100%);
-  }
-  #choiceScreen::after{
     content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
     background-image:
       radial-gradient(circle at 12% 18%, rgba(24,120,214,0.07) 0%, transparent 28%),
       radial-gradient(circle at 88% 22%, rgba(14,107,76,0.06) 0%, transparent 26%),
       radial-gradient(circle at 50% 100%, rgba(18,102,209,0.05) 0%, transparent 40%);
   }
-  .choice-deco{position:absolute; z-index:0; pointer-events:none; opacity:0.75; filter:drop-shadow(0 8px 16px rgba(20,60,120,0.12));}
-  .choice-deco.d1{top:2%; left:2%; font-size:44px; transform:rotate(-12deg); animation:welcomeBob 6s ease-in-out infinite;}
-  .choice-deco.d2{top:3%; right:3%; font-size:40px; animation:welcomeBob 5.5s ease-in-out infinite 0.5s;}
-  .choice-deco.d3{bottom:14%; left:3%; font-size:38px; opacity:0.6; animation:welcomeBob 7s ease-in-out infinite 1s;}
-  .choice-deco.d4{bottom:12%; right:4%; font-size:40px; opacity:0.6; animation:welcomeBob 6.5s ease-in-out infinite 1.4s;}
+  .choice-deco{position:absolute; z-index:0; pointer-events:none; opacity:0.55; filter:drop-shadow(0 8px 16px rgba(20,60,120,0.12));}
+  .choice-deco.d1{top:4%; left:3%; font-size:42px; animation:welcomeBob 6s ease-in-out infinite;}
+  .choice-deco.d2{top:5%; right:4%; font-size:48px; animation:welcomeBob 5.5s ease-in-out infinite 0.5s;}
+  .choice-deco.d3{bottom:8%; left:5%; font-size:36px; animation:welcomeBob 7s ease-in-out infinite 1s;}
+  .choice-deco.d4{bottom:10%; right:6%; font-size:40px; animation:welcomeBob 6.5s ease-in-out infinite 1.4s;}
   .choice-logo-wrap{
     position:relative; z-index:2; width:130px; height:130px; margin:0 auto 14px;
     border-radius:50%; background:linear-gradient(145deg,#fff 0%,#f0f7ff 100%);
@@ -211,28 +201,22 @@
   .choice-btn.parent{background:linear-gradient(135deg,#1878D6,#0B4FA8); box-shadow:0 8px 20px rgba(18,102,209,0.35);}
   .choice-btn.staff{background:linear-gradient(135deg,#14a85f,#0c7a48); box-shadow:0 8px 20px rgba(14,107,76,0.32);}
   .choice-footer{
-    position:relative; z-index:2; display:grid; grid-template-columns:repeat(4,1fr); gap:8px;
-    margin-top:20px; max-width:540px; width:100%;
+    position:relative; z-index:2; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;
+    margin-top:22px; max-width:480px;
   }
-  .choice-footer .feat{
-    display:flex; flex-direction:column; align-items:center; gap:4px;
-    background:rgba(255,255,255,0.8); border:1px solid #e4ecf6; border-radius:12px; padding:10px 6px;
+  .choice-footer span{
+    display:inline-flex; align-items:center; gap:5px; font-size:10.5px; color:#5B6B8C; font-weight:600;
+    background:rgba(255,255,255,0.75); border:1px solid #e4ecf6; border-radius:20px; padding:6px 11px;
   }
-  .choice-footer .feat .fic{font-size:17px;}
-  .choice-footer .feat .flabel{font-size:10px; font-weight:700; color:#22335A; line-height:1.2;}
-  .choice-footer .feat .fsub{font-size:8.5px; color:#8a97ad; line-height:1.2;}
   .choice-bottom{
-    position:relative; z-index:2; margin-top:20px; text-align:center; width:100%;
+    position:relative; z-index:2; margin-top:20px; text-align:center;
   }
   .choice-bottom .tagline-italic{
-    font-family:'Lora',serif; font-style:italic; font-size:13px; color:#3a5080; margin-bottom:14px;
+    font-family:'Lora',serif; font-style:italic; font-size:13px; color:#3a5080; margin-bottom:8px;
   }
   .choice-bottom .secure-note{
-    font-size:11.5px; color:#eaf1fc; display:flex; align-items:center; justify-content:center; gap:6px;
-    background:linear-gradient(135deg,#0d2b52,#123a6b); padding:12px 16px; font-weight:600;
-    margin:0 -18px; width:calc(100% + 36px);
+    font-size:11px; color:#7a8aa3; display:flex; align-items:center; justify-content:center; gap:5px;
   }
-  .choice-back{padding-bottom:20px;}
   .choice-back{
     margin-top:14px; background:none; border:none; font-size:12px; color:#7a8aa3; text-decoration:underline; cursor:pointer;
   }
@@ -241,7 +225,6 @@
     .choice-card-wrap{flex-direction:column; align-items:stretch;}
     .choice-title b{font-size:19px;}
     .choice-logo-wrap{width:100px; height:100px;}
-    .choice-footer{grid-template-columns:repeat(2,1fr);}
   }
   .screen-back{display:block; margin:14px auto 0; background:none; border:none; font-size:12px; color:var(--muted); text-decoration:underline; cursor:pointer;}
   .parent-wrap{max-width:520px;margin:0 auto;}
@@ -559,15 +542,13 @@
     </div>
   </div>
   <div class="choice-footer">
-    <div class="feat"><span class="fic">🛡️</span><span class="flabel">Secure</span><span class="fsub">Safe &amp; Protected</span></div>
-    <div class="feat"><span class="fic">⏱️</span><span class="flabel">Real-time</span><span class="fsub">Live Updates</span></div>
-    <div class="feat"><span class="fic">🔔</span><span class="flabel">Notifications</span><span class="fsub">Instant Alerts</span></div>
-    <div class="feat"><span class="fic">📈</span><span class="flabel">Easy Access</span><span class="fsub">Anytime, Anywhere</span></div>
+    <span>🛡️ Secure · Safe &amp; Protected</span>
+    <span>⏱️ Real-time · Live Updates</span>
+    <span>🔔 Notifications · Instant Alerts</span>
+    <span>📈 Easy Access · Anytime, Anywhere</span>
   </div>
   <div class="choice-bottom">
     <div class="tagline-italic">Quality Education, Bright Future</div>
-  </div>
-  <div class="choice-bottom" style="margin-top:0;">
     <div class="secure-note">🛡️ Your data is safe and secure with us.</div>
   </div>
   <button class="choice-back" onclick="goToWelcomeScreen()">← Back</button>
