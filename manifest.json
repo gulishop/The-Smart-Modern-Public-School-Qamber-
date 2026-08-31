@@ -1,11 +1,13 @@
 {
   "name": "The Smart Modern Public School Qamber",
   "short_name": "SMPS Qamber",
-  "description": "School Website",
+  "description": "School Management System — The Smart Modern Public School, Qamber",
   "start_url": "/The-Smart-Modern-Public-School-Qamber-/",
+  "scope": "/The-Smart-Modern-Public-School-Qamber-/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#e8f3fc",
   "theme_color": "#1a73e8",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "icon-192.png",
