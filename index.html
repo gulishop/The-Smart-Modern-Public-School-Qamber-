@@ -4941,6 +4941,32 @@ window.addEventListener('offline', ()=>{
   const s = document.getElementById('saveStatus');
   if(s) s.textContent = 'Offline — sirf is device par save ho raha hai';
 });
+
+// ===== PERIODIC FORCE-RESYNC (extra safety net, "hamesha fast sync") =====
+// onSnapshot listeners already push realtime updates INSTANTLY jab data
+// badalta hai. LEKIN mobile browsers/PWA background hone par (tab minimize,
+// app switch, weak network) ye realtime connection kabhi kabhi silently
+// disconnect/pause ho jaati hai — is se dashboard "purani" attendance dikha
+// sakta hai jab tak user manually refresh na kare. Ye safety-net har 20
+// second baad — aur jaise hi tab wapas visible ho ya net wapas aaye —
+// TODAY + is waqt khuli hui attendance date ko forcefully server se dobara
+// fetch kar ke local cache + UI turant patch kar deta hai.
+function forceResyncNow(){
+  try{
+    const today = localDateStr();
+    loadedAttendanceDates.delete(today);
+    ensureAttendanceDateLoaded(today);
+    const attDateEl = document.getElementById('attDate');
+    if(attDateEl && attDateEl.value && attDateEl.value !== today){
+      loadedAttendanceDates.delete(attDateEl.value);
+      ensureAttendanceDateLoaded(attDateEl.value);
+    }
+  }catch(e){ console.warn('Force resync failed:', e); }
+}
+let forceResyncTimer = setInterval(forceResyncNow, 20000); // har 20 second mein background resync
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'visible') forceResyncNow();
+});
 </script>
     <script>
   window.__APP_BUILD__ = '__BUILD_ID__'; // deploy.yml har push par is ko commit SHA se khud replace kar deta hai
