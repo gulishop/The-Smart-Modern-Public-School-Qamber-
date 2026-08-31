@@ -1249,6 +1249,7 @@
         <div class="view" id="view-reports">
           <div class="panel admin-only">
             <h3>Fee Collection Summary</h3>
+            <div class="field" style="max-width:260px;"><label>Filter Month</label><select id="repMonthFilter" onchange="renderReports()"><option value="">Sab Months</option></select></div>
             <div class="stat-grid">
               <div class="stat-card"><div class="n" id="repTotalChallans">0</div><div class="l">Total Challans</div></div>
               <div class="stat-card"><div class="n" id="repPaid">0</div><div class="l">Paid</div></div>
@@ -4412,12 +4413,24 @@ function renderDashboardClassFees(){
     </tr>`;
   }).join('');
 }
+function populateReportMonthFilter(){
+  const sel = document.getElementById('repMonthFilter');
+  if(!sel) return;
+  const prev = sel.value;
+  const months = Array.from(new Set((fees||[]).map(f => (f.month||'').trim()).filter(Boolean)))
+    .sort((a,b) => b.localeCompare(a, undefined, {numeric:true}));
+  sel.innerHTML = '<option value="">Sab Months</option>' + months.map(m => '<option value="'+m.replace(/"/g,'&quot;')+'">'+m+'</option>').join('');
+  if(prev && months.includes(prev)) sel.value = prev;
+}
 function renderReports(){
-  document.getElementById('repTotalChallans').textContent = fees.length;
-  document.getElementById('repPaid').textContent = fees.filter(f=>f.status==='paid').length;
-  document.getElementById('repPending').textContent = fees.filter(f=>f.status==='pending').length;
-  document.getElementById('repAmount').textContent = 'Rs. ' + fees.filter(f=>f.status==='paid').reduce((s,f)=>s+f.amount,0);
-  renderClassFeeSummary();
+  populateReportMonthFilter();
+  const monthFilter = ((document.getElementById('repMonthFilter')||{}).value || '').trim();
+  const feesInScope = monthFilter ? fees.filter(f => String(f.month||'').trim() === monthFilter) : fees;
+  document.getElementById('repTotalChallans').textContent = feesInScope.length;
+  document.getElementById('repPaid').textContent = feesInScope.filter(f=>f.status==='paid').length;
+  document.getElementById('repPending').textContent = feesInScope.filter(f=>f.status==='pending').length;
+  document.getElementById('repAmount').textContent = 'Rs. ' + feesInScope.filter(f=>f.status==='paid').reduce((s,f)=>s+f.amount,0);
+  renderClassFeeSummary(feesInScope);
   const today = localDateStr();
   const todayRec = attendanceRecords[today] || {};
   const present = students.filter(s => {
@@ -4434,11 +4447,11 @@ function renderReports(){
   if(repNotMarkedEl) repNotMarkedEl.textContent = students.length - present - absent;
 }
 
-function renderClassFeeSummary(){
+function renderClassFeeSummary(feesInScope){
   const tbody = document.getElementById('repClassFeeTable');
   const studentById = new Map(students.map(s => [s.id, s]));
   const byClass = {};
-  fees.forEach(f => {
+  (feesInScope || fees).forEach(f => {
     const student = studentById.get(f.studentId);
     const key = (student ? classKey(student.cls) : '') || 'unassigned';
     const label = key === 'unassigned' ? 'Unassigned' : classDisplay(student.cls);
