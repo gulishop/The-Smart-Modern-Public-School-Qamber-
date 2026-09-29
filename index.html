@@ -878,6 +878,23 @@
             </table>
             <div class="empty" id="feeEmpty">Koi fee record nahi hai. Pehle upar se challan generate karein.</div>
           </div>
+
+          <!-- DUPLICATE CHALLANS (alag panel) -->
+          <div class="panel admin-only" id="dupFeesPanel">
+            <h3>⚠️ Duplicate Challans</h3>
+            <p class="hint">Same student + same month ke 2 ya zyada challans yahan <b>alag</b> dikhte hain. <b>Paid</b> wala rakhna behtar hai — extra Pending delete karein. Month spelling same hona chahiye (e.g. September 2026).</p>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;align-items:center;">
+              <button class="btn gold" style="margin:0;" onclick="renderDuplicateFees()">🔍 Check Duplicates</button>
+              <button class="btn red" style="margin:0;" onclick="deleteAllExtraDuplicates()">🗑️ Delete All Extras (Paid rakho)</button>
+              <span id="dupFeesCount" style="font-size:13px;color:var(--muted);"></span>
+            </div>
+            <div id="dupFeesBanner" style="display:none;margin-bottom:10px;padding:8px 12px;background:#fde8e8;color:#7a1f1f;border-radius:6px;font-size:13px;border:1px solid #f5c2c2;"></div>
+            <table>
+              <thead><tr><th>Student</th><th>Class</th><th>Month</th><th>Amount</th><th>Status</th><th>Note</th><th></th></tr></thead>
+              <tbody id="dupFeeTable"></tbody>
+            </table>
+            <div class="empty" id="dupFeeEmpty">Koi duplicate nahi mila. Sab theek hai ✅</div>
+          </div>
         </div>
 
         <!-- SCHOOL EXPENSES -->
@@ -2777,6 +2794,106 @@ function deleteFee(id){
   saveData();
   renderAll();
 }
+
+/* ===== DUPLICATE FEE CHALLANS ===== */
+/** Groups fees by studentId + normalized month; returns only groups with 2+ records */
+function findDuplicateFeeGroups(){
+  const map = new Map();
+  (fees || []).forEach(f => {
+    const sid = Number(f.studentId);
+    const mk = (typeof feeMonthKey === 'function') ? feeMonthKey(f.month) : String(f.month||'').trim().toLowerCase().replace(/\s+/g,' ');
+    if(!sid || !mk) return;
+    const key = sid + '|' + mk;
+    if(!map.has(key)) map.set(key, []);
+    map.get(key).push(f);
+  });
+  const groups = [];
+  map.forEach((arr, key) => {
+    if(arr.length < 2) return;
+    // Prefer: paid first, then higher id (newer)
+    arr.sort((a,b) => {
+      if(a.status === 'paid' && b.status !== 'paid') return -1;
+      if(b.status === 'paid' && a.status !== 'paid') return 1;
+      return (b.id||0) - (a.id||0);
+    });
+    groups.push({ key, keep: arr[0], extras: arr.slice(1), all: arr });
+  });
+  groups.sort((a,b) => {
+    const sa = students.find(s => s.id === a.keep.studentId);
+    const sb = students.find(s => s.id === b.keep.studentId);
+    return ((sa&&sa.name)||'').localeCompare((sb&&sb.name)||'');
+  });
+  return groups;
+}
+
+function renderDuplicateFees(){
+  const tbody = document.getElementById('dupFeeTable');
+  const empty = document.getElementById('dupFeeEmpty');
+  const countEl = document.getElementById('dupFeesCount');
+  const banner = document.getElementById('dupFeesBanner');
+  if(!tbody) return;
+  const groups = findDuplicateFeeGroups();
+  const studentById = new Map((students||[]).map(s => [s.id, s]));
+  let extraCount = 0;
+  groups.forEach(g => { extraCount += g.extras.length; });
+  if(countEl){
+    countEl.textContent = groups.length
+      ? (groups.length + ' student(s) mein duplicate — ' + extraCount + ' extra challan(s)')
+      : 'Koi duplicate nahi';
+  }
+  if(banner){
+    if(groups.length){
+      banner.style.display = 'block';
+      banner.innerHTML = '⚠️ <b>' + groups.length + '</b> students ke duplicate challans mile. Neeche <b>KEEP</b> wali row rakhein, baaki <b>Delete</b> karein — ya upar se <b>Delete All Extras</b> dabayein (Paid prefer hota hai).';
+    } else {
+      banner.style.display = 'none';
+      banner.innerHTML = '';
+    }
+  }
+  if(empty) empty.style.display = groups.length ? 'none' : 'block';
+  const isAdmin = session && session.role === 'admin';
+  const rows = [];
+  groups.forEach(g => {
+    g.all.forEach((f, idx) => {
+      const student = studentById.get(f.studentId);
+      const isKeep = idx === 0;
+      const note = isKeep
+        ? '<span class="badge paid" style="background:#d4edda;color:#155724;">KEEP</span>'
+        : '<span class="badge pending" style="background:#f8d7da;color:#721c24;">EXTRA</span>';
+      rows.push(`<tr style="${isKeep ? '' : 'background:#fff5f5;'}">
+        <td>${student ? student.name : '—'}${student && student.adm ? ' <span style="color:var(--muted);font-size:11px;">('+student.adm+')</span>' : ''}</td>
+        <td>${student ? (student.cls||'—') : '—'}</td>
+        <td>${f.month||'—'}</td>
+        <td>Rs. ${f.amount}</td>
+        <td><span class="badge ${f.status}">${(f.status||'').toUpperCase()}</span></td>
+        <td>${note}</td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn small gold" onclick="openChallan(${f.id})">Print</button>
+          ${isAdmin && !isKeep ? `<button class="btn small red" onclick="deleteFee(${f.id})">Delete</button>` : ''}
+          ${isAdmin && isKeep ? `<button class="btn small" style="background:var(--muted);" onclick="toggleFeeStatus(${f.id})">${f.status==='paid'?'Mark Pending':'Mark Paid'}</button>` : ''}
+        </td>
+      </tr>`);
+    });
+  });
+  tbody.innerHTML = rows.join('');
+}
+
+/** Deletes every EXTRA in each duplicate group (keeps paid-first / newest). */
+function deleteAllExtraDuplicates(){
+  if(!session || session.role !== 'admin'){ alert('Sirf Admin'); return; }
+  const groups = findDuplicateFeeGroups();
+  let extraIds = [];
+  groups.forEach(g => g.extras.forEach(f => extraIds.push(f.id)));
+  if(!extraIds.length){ alert('Koi extra duplicate nahi mila.'); renderDuplicateFees(); return; }
+  if(!confirm(extraIds.length + ' extra duplicate challan(s) delete karein?\n\nHar student ke liye PAID (ya newest) wala KEEP hoga.')) return;
+  fees = fees.filter(f => !extraIds.includes(f.id));
+  extraIds.forEach(id => { try{ feesCol.remove(id); }catch(e){} });
+  saveData();
+  renderAll();
+  renderDuplicateFees();
+  alert(extraIds.length + ' extra challans delete ho gayi. KEEP wali reh gayi.');
+}
+
 function toggleFeeStatus(id){
   if(session.role !== 'admin'){ alert('Sirf Admin fee status change kar sakta hai.'); return; }
   const f = fees.find(x => x.id === id);
@@ -4549,6 +4666,7 @@ function renderOnly(){
   renderStudents();
   renderStaff();
   renderFees();
+  if(typeof renderDuplicateFees === 'function') renderDuplicateFees();
   renderExpenses();
   renderStaffAttendanceForm();
   renderSalarySheet();
@@ -4914,7 +5032,7 @@ examResultsCol.listen(()=>examResults, v=>{ examResults=v; }, ()=>{ persistLocal
 timetableCol.listen(()=>timetable, v=>{ timetable=v; }, ()=>{ persistLocalCache({timetable}); if(typeof renderTimetableView === 'function') renderTimetableView(); realtimeSaveStatus(); });
 homeworkCol.listen(()=>homework, v=>{ homework=v; }, ()=>{ persistLocalCache({homework}); if(typeof renderHomework === 'function') renderHomework(); realtimeSaveStatus(); });
 galleryCol.listen(()=>galleryPhotos, v=>{ galleryPhotos=v; }, ()=>{ renderGallery(); saveGalleryData(); realtimeSaveStatus(); });
-feesCol.listen(()=>fees, v=>{ fees=v; }, ()=>{ persistLocalCache({fees}); renderFees(); renderDashboard(); realtimeSaveStatus(); });
+feesCol.listen(()=>fees, v=>{ fees=v; }, ()=>{ persistLocalCache({fees}); renderFees(); if(typeof renderDuplicateFees==='function') renderDuplicateFees(); renderDashboard(); realtimeSaveStatus(); });
 expensesCol.listen(()=>expenses, v=>{ expenses=v; }, ()=>{ persistLocalCache({expenses}); if(typeof renderExpenses === 'function') renderExpenses(); realtimeSaveStatus(); });
 quoteLogCol.listen(()=>quoteLog, v=>{ quoteLog=v; }, ()=>{ persistLocalCache({quoteLog}); if(typeof renderQuoteLog === 'function') renderQuoteLog(); });
 
