@@ -241,9 +241,15 @@
   .parent-quote .q-label{font-size:11px;color:var(--gold);margin-bottom:6px;font-weight:600;}
   .parent-quote .q-text{font-size:14px;line-height:1.55;font-style:italic;}
   .parent-remind{background:#fff8e8;border:1px solid #e8d4a0;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px;line-height:1.5;color:#3a3020;}
-  .bulk-challan-grid{display:grid;gap:10px;width:100%;}
-  .bulk-challan-grid.cols-2,.bulk-challan-grid.cols-4,.bulk-challan-grid.cols-6{grid-template-columns:1fr 1fr;}
-  .bulk-challan-grid .challan-copy{margin-bottom:0;padding:12px 14px;page-break-inside:avoid;break-inside:avoid;}
+  .bulk-challan-grid{display:grid;gap:8px;width:100%;}
+  .bulk-challan-grid.cols-2{grid-template-columns:1fr 1fr;}
+  .bulk-challan-grid.cols-4{grid-template-columns:1fr 1fr;}
+  .bulk-challan-grid.cols-6{grid-template-columns:1fr 1fr 1fr;} /* 3x2 = 6 per A4 */
+  .bulk-challan-grid .challan-copy{margin-bottom:0;padding:8px 10px;page-break-inside:avoid;break-inside:avoid;font-size:11px;}
+  .bulk-challan-grid .challan-head h3{font-size:12px;}
+  .bulk-challan-grid .challan-head img{width:28px !important;height:28px !important;margin-bottom:2px !important;}
+  .bulk-challan-grid .challan-row{font-size:10.5px;padding:2px 0;}
+  .bulk-challan-grid .challan-total{font-size:12px;padding-top:6px;}
   .bulk-page-break{page-break-after:always;break-after:page;height:0;margin:0;padding:0;border:none;}
 
   .dev-credit{margin-top:14px; padding-top:12px; border-top:1px solid var(--rule); text-align:center; font-size:10px; color:var(--muted); font-family:'JetBrains Mono',monospace; letter-spacing:0.3px;}
@@ -446,8 +452,16 @@
   .checklist-summary{font-size:12px; margin-top:6px;}
 
   @media print{
-    @page{ size:A4; margin:10mm; }
-    html, body{background:#fff !important; height:auto !important; overflow:visible !important;}
+    /* ===== A4 — bari / desktop printer (default) ===== */
+    @page{ size:A4 portrait; margin:8mm; }
+    html, body{
+      background:#fff !important;
+      height:auto !important;
+      min-height:0 !important;
+      overflow:visible !important;
+      margin:0 !important;
+      padding:0 !important;
+    }
     body *{visibility:hidden !important;}
     #printModal, #printModal *{visibility:visible !important;}
     #printModal{
@@ -459,16 +473,116 @@
       align-items:unset !important; justify-content:unset !important;
     }
     #printModal .print-wrap{
-      max-width:100% !important; width:100% !important; padding:8px !important;
+      max-width:100% !important; width:100% !important; padding:0 !important;
       box-shadow:none !important; border-radius:0 !important; background:#fff !important;
-      margin:0 auto !important;
+      margin:0 !important;
+    }
+    #printPage{
+      visibility:visible !important;
+      margin:0 !important;
+      padding:0 !important;
+      height:auto !important;
+      min-height:0 !important;
+      width:100% !important;
     }
     #printPage, #printPage *{visibility:visible !important; color:#000 !important;}
-    .no-print{display:none !important; visibility:hidden !important;}
-    .checklist-print-block{page-break-after:always;}
-    .checklist-print-block:last-child{page-break-after:auto;}
+    .no-print{display:none !important; visibility:hidden !important; height:0 !important; margin:0 !important; padding:0 !important;}
+    .checklist-print-block{page-break-after:always; break-after:page;}
+    .checklist-print-block:last-child{page-break-after:auto; break-after:auto; margin-bottom:0 !important;}
     .checklist-print-table th, .checklist-print-table td{border:1px solid #000 !important; color:#000 !important;}
+
+    /* A4 challan: School + Student copy — bari printer pe full page, 2 copies 1 A4 pe */
     .challan-copy, .challan-copy *{visibility:visible !important; color:#000 !important;}
+    .challan-copy{
+      page-break-inside:avoid;
+      break-inside:avoid;
+      margin:0 0 8mm 0 !important;
+      padding:12px 14px !important;
+      border:2px solid #000 !important;
+      border-radius:0 !important;
+      width:100% !important;
+      box-sizing:border-box !important;
+      background:#fff !important;
+    }
+    .challan-copy:last-child{
+      page-break-after:avoid !important;
+      break-after:avoid !important;
+      margin-bottom:0 !important;
+    }
+    .challan-head h3{font-size:16px !important; color:#000 !important;}
+    .challan-head .s{color:#000 !important; font-weight:700 !important;}
+    .challan-total{border-top:2px solid #000 !important; color:#000 !important;}
+    /* A4 pe cut line dikhe (paper cut ke liye) — screen pe no-print hide, print pe show */
+    .cut-line-print{
+      display:block !important;
+      visibility:visible !important;
+      text-align:center;
+      font-size:10px;
+      color:#333 !important;
+      margin:4mm 0;
+      letter-spacing:1px;
+      border:none;
+      page-break-inside:avoid;
+    }
+
+    .bulk-page-break:last-child,
+    .bulk-challan-grid:last-child{
+      page-break-after:avoid !important;
+      break-after:auto !important;
+    }
+    /* Bulk: 6 challan per A4 (3 columns x 2 rows) */
+    .bulk-challan-grid{
+      display:grid !important;
+      gap:3mm !important;
+      width:100% !important;
+      page-break-inside:avoid;
+      break-inside:avoid;
+      margin:0 !important;
+    }
+    .bulk-challan-grid.cols-6{
+      grid-template-columns:1fr 1fr 1fr !important;
+    }
+    .bulk-challan-grid.cols-4,
+    .bulk-challan-grid.cols-2{
+      grid-template-columns:1fr 1fr !important;
+    }
+    .bulk-challan-grid .challan-copy{
+      margin:0 !important;
+      padding:3mm 3.5mm !important;
+      border:1.5px solid #000 !important;
+      border-radius:0 !important;
+      page-break-inside:avoid !important;
+      break-inside:avoid !important;
+      font-size:9.5px !important;
+      box-sizing:border-box !important;
+      width:auto !important;
+    }
+    .bulk-challan-grid .challan-head h3{font-size:11px !important;}
+    .bulk-challan-grid .challan-head .s{font-size:8px !important;}
+    .bulk-challan-grid .challan-head img{width:24px !important;height:24px !important;}
+    .bulk-challan-grid .challan-row{font-size:9px !important;padding:1px 0 !important;}
+    .bulk-challan-grid .challan-total{font-size:10.5px !important;padding-top:3px !important;}
+    .bulk-challan-grid .copy-tag{font-size:8px !important;}
+
+    .salary-slip:last-child{
+      page-break-after:avoid !important;
+      break-after:auto !important;
+      margin-bottom:0 !important;
+    }
+
+    /* ===== Thermal mode — sirf jab thermal-mode class ho (chhoti printer) ===== */
+    #printModal.thermal-mode .print-wrap{
+      max-width:80mm !important;
+      width:80mm !important;
+      margin:0 auto !important;
+      padding:0 !important;
+    }
+    #printModal.thermal-mode .challan-copy,
+    #printModal.thermal-mode .thermal-receipt{
+      page-break-after:avoid !important;
+      margin-bottom:0 !important;
+      width:100% !important;
+    }
   }
 
   /* ===================== RESPONSIVE / MOBILE MODE ===================== */
@@ -882,7 +996,7 @@
               <div class="field"><label>Amount (Rs.)</label><input id="bulkFeeAmount" type="number" placeholder="1000"></div>
               <div class="field"><label>Due Date</label><input id="bulkFeeDue" type="date"></div>
               <div class="field"><label>Class</label><select id="bulkFeeClass"><option value="">Sab Classes</option></select></div>
-              <div class="field"><label>Per A4 page</label><select id="bulkPerPage"><option value="2">2</option><option value="4" selected>4</option><option value="6">6</option></select></div>
+              <div class="field"><label>Per A4 page</label><select id="bulkPerPage"><option value="2">2</option><option value="4">4</option><option value="6" selected>6</option></select></div>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">
               <button class="btn green" style="margin-top:0;" onclick="generateAllUnpaidChallans()">⚡ Generate All Unpaid</button>
@@ -2843,7 +2957,7 @@ function printAllUnpaidChallans(){
   const monthFilterEl = document.getElementById('feeMonthFilter');
   const month = monthInput || (monthFilterEl ? monthFilterEl.value.trim() : '');
   if(!month){ alert('Month likhein'); return; }
-  const perPage = Number((document.getElementById('bulkPerPage')||{}).value)||4;
+  const perPage = Number((document.getElementById('bulkPerPage')||{}).value)||6;
   const cls = (document.getElementById('bulkFeeClass').value||'').trim();
   const key = feeMonthKey(month);
   const studentById = new Map(students.map(s => [s.id, s]));
@@ -2865,7 +2979,7 @@ function printAllUnpaidChallans(){
         + '<div class="challan-row"><span class="k">Previous Unpaid</span><span class="v">Rs. '+am.arrears+'</span></div>';
     }
     return '<div class="challan-copy"><div class="copy-tag">UNPAID</div><div class="challan-head">'
-      +'<img src="data:image/jpeg;base64,'+LOGO_B64+'" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-bottom:4px;">'
+      +'<img src="data:image/jpeg;base64,'+LOGO_B64+'" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-bottom:2px;">'
       +'<h3>'+(schoolSettings.name||'School')+'</h3><div class="s">FEE CHALLAN</div></div>'
       +'<div class="challan-row"><span class="k">Student</span><span class="v" style="font-weight:700;">'+(student?student.name:'—')+'</span></div>'
       +'<div class="challan-row"><span class="k">Class</span><span class="v">'+(student?((student.cls||'—')+' / '+(student.section||'—')):'—')+'</span></div>'
@@ -2873,7 +2987,7 @@ function printAllUnpaidChallans(){
       +'<div class="challan-row"><span class="k">Month</span><span class="v">'+(f.month||'—')+'</span></div>'
       + extra
       +'<div class="challan-total"><span>Total Due</span><span>Rs. '+am.grand+'</span></div>'
-      +'<div style="text-align:center;font-size:9px;margin-top:6px;color:#555;">'+PRINT_CREDIT+'</div></div>';
+      +'<div style="text-align:center;font-size:9px;margin-top:6px;color:#555;">Principal: Imran Khan Chandio · 03362506588</div></div>';
   }
   let html='';
   for(let i=0;i<list.length;i+=perPage){
@@ -3252,11 +3366,11 @@ function printFeeCheckList(printAllClasses){
     .no-print{margin:16px 0; text-align:center;}
     .no-print button{padding:10px 18px; margin:0 6px; font-size:14px; cursor:pointer;}
     @media print{
-      @page{ size:A4; margin:10mm; }
+      @page{ size:A4; margin:8mm; }
       body{margin:0;}
       .no-print{display:none !important;}
-      .checklist-print-block{page-break-after:always;}
-      .checklist-print-block:last-child{page-break-after:auto;}
+      .checklist-print-block{page-break-after:always;break-after:page;}
+      .checklist-print-block:last-child{page-break-after:auto !important;break-after:auto !important;margin-bottom:0 !important;}
     }
   `;
 
@@ -3460,7 +3574,7 @@ function challanBlockHTML(label, f, student){
         <img src="data:image/jpeg;base64,${LOGO_B64}" alt="Logo" style="width:44px;height:44px;border-radius:50%;object-fit:cover;margin-bottom:6px;">
         <h3>${schoolSettings.name}</h3>
         <div class="s">${f.status === 'paid' ? 'FEE RECEIPT' : 'FEE CHALLAN'} — QAMBER</div>
-        <div style="font-size:12px;color:#555;margin-top:2px;">${PRINT_PHONE}</div>
+        <div style="font-size:12px;color:#555;margin-top:2px;">03362506588</div>
       </div>
       <div class="challan-row"><span class="k">Student Name</span><span class="v" style="font-weight:700;">${student ? student.name : '—'}</span></div>
       <div class="challan-row"><span class="k">Class / Section</span><span class="v">${student ? (student.cls||'—')+' / '+(student.section||'—') : '—'}</span></div>
@@ -3469,7 +3583,7 @@ function challanBlockHTML(label, f, student){
       <div class="challan-row"><span class="k">Due Date</span><span class="v">${f.due || '—'}</span></div>
       <div class="challan-row"><span class="k">Status</span><span class="v">${f.status.toUpperCase()}</span></div>
       ${amountRows}
-      <div style="text-align:center;font-size:10px;margin-top:8px;color:#666;">${PRINT_CREDIT}</div>
+      <div style="text-align:center;font-size:10px;margin-top:8px;color:#666;">Principal: Imran Khan Chandio · 03362506588</div>
     </div>`;
 }
 let printModalFeeId = null;
@@ -3481,6 +3595,7 @@ function openChallan(feeId){
   document.getElementById('printPage').innerHTML =
     challanBlockHTML('SCHOOL COPY', f, student) +
     '<div class="cut-line no-print">✂ – – – – – – – – – – – – – – – – – – – – – – – – – – – – – – –</div>' +
+    '<div class="cut-line-print" style="display:none;">— — — — cut here / yahan kaatein — — — —</div>' +
     challanBlockHTML('STUDENT COPY', f, student);
   const btBtn = document.getElementById('thermalPrintBtn');
   btBtn.style.display = 'inline-block';
@@ -3645,7 +3760,7 @@ function thermalReceiptHTML(f, student){
         <img src="data:image/jpeg;base64,${LOGO_B64}" alt="Logo" style="width:48px;height:48px;border-radius:50%;object-fit:cover;margin-bottom:4px;">
         <h4>${schoolSettings.name || 'The Smart Modern Public School'}</h4>
         <div style="font-weight:700;letter-spacing:0.5px;color:#b8860b;">${f.status === 'paid' ? 'FEE RECEIPT' : 'FEE CHALLAN'} - QAMBER</div>
-        <div style="font-size:11px;margin-top:2px;">${PRINT_PHONE}</div>
+        <div style="font-size:11px;margin-top:2px;">03362506588</div>
       </div>
       <div class="t-line"></div>
       <div class="t-row"><span>Student Name</span><span style="font-weight:700;">${student ? student.name : '—'}</span></div>
@@ -3656,7 +3771,7 @@ function thermalReceiptHTML(f, student){
       <div class="t-row"><span>Status</span><span>${(f.status||'').toUpperCase()}</span></div>
       ${amtBlock}
       <div class="t-line"></div>
-      <div class="t-center" style="font-size:9px;color:#555;">${PRINT_CREDIT}</div>
+      <div class="t-center" style="font-size:9px;color:#555;">Principal: Imran Khan Chandio · 03362506588</div>
     </div>`;
 }
 function openChallanThermal(feeId){
@@ -3956,7 +4071,7 @@ function buildSalarySlipHtml(row, ym){
   const schoolAddr = (schoolSettings && schoolSettings.address) || 'Qamber, Sindh';
   const monthLabel = ym ? new Date(ym + '-01T12:00:00').toLocaleString('en', { month:'long', year:'numeric' }) : ym;
   return `
-  <div class="salary-slip" style="page-break-after:always; max-width:700px; margin:0 auto 24px; padding:20px; border:2px solid #1a3a5c; font-family:Arial,sans-serif; color:#111;">
+  <div class="salary-slip" style="max-width:700px; margin:0 auto 24px; padding:20px; border:2px solid #1a3a5c; font-family:Arial,sans-serif; color:#111;">
     <div style="text-align:center; border-bottom:2px solid #1a3a5c; padding-bottom:10px; margin-bottom:14px;">
       <div style="font-size:20px; font-weight:700;">${schoolName}</div>
       <div style="font-size:13px;">${schoolAddr}</div>
@@ -4015,7 +4130,15 @@ function printAllSalarySlips(){
     body += buildSalarySlipHtml(getStaffSalaryRow(s, ym), ym);
   });
   const html = `<!DOCTYPE html><html><head><title>All Salary Slips - ${ym}</title>
-    <style>@media print { body { margin:0; } .no-print { display:none; } .salary-slip { page-break-after: always; } }</style></head>
+    <style>
+@media print {
+  @page { size: A4; margin: 8mm; }
+  body { margin:0; padding:0; height:auto; }
+  .no-print { display:none !important; }
+  .salary-slip { page-break-after: always; break-after: page; margin-bottom: 0 !important; }
+  .salary-slip:last-child { page-break-after: auto !important; break-after: auto !important; }
+}
+</style></head>
     <body>${body}
     <div class="no-print" style="text-align:center; margin:16px;"><button onclick="window.print()">Print All</button></div>
     <script>window.onload=function(){ setTimeout(function(){ window.print(); }, 400); }<\/script>
