@@ -426,6 +426,25 @@
   .thermal-receipt .t-total{border-top:1px solid #000; margin-top:6px; padding-top:6px; font-weight:700; display:flex; justify-content:space-between;}
   #printModal.thermal-mode .print-wrap{max-width:300px;}
 
+  /* Fee check-list screen table */
+  .fee-check-table td, .fee-check-table th{vertical-align:middle;}
+  .fee-check-mark{font-size:16px; font-weight:700;}
+  .fee-check-paid{color:var(--green);}
+  .fee-check-unpaid{color:var(--muted);}
+  .checklist-print-block{page-break-after:always; margin-bottom:18px;}
+  .checklist-print-block:last-child{page-break-after:auto;}
+  .checklist-print-head{text-align:center; border-bottom:2px solid #16233f; padding-bottom:8px; margin-bottom:10px;}
+  .checklist-print-head h2{margin:0; font-size:16px; color:#16233f;}
+  .checklist-print-head .sub{font-size:12px; color:#5b4636; margin-top:4px;}
+  .checklist-print-meta{display:flex; justify-content:space-between; font-size:12px; margin-bottom:8px; font-weight:600;}
+  .checklist-print-table{width:100%; border-collapse:collapse; font-size:11px;}
+  .checklist-print-table th, .checklist-print-table td{border:1px solid #333; padding:5px 6px; text-align:left;}
+  .checklist-print-table th{background:#f0f0f0; font-size:10px; text-transform:uppercase;}
+  .checklist-print-table .center{text-align:center;}
+  .checklist-print-foot{margin-top:18px; display:flex; justify-content:space-between; font-size:11px;}
+  .checklist-print-sign{width:28%; text-align:center; border-top:1px solid #333; padding-top:4px; margin-top:40px;}
+  .checklist-summary{font-size:12px; margin-top:6px;}
+
   @media print{
     @page{ size:A4; margin:10mm; }
     body *{visibility:hidden;}
@@ -433,6 +452,8 @@
     #printModal{position:absolute; inset:auto; background:#fff; padding:0; display:block;}
     .print-wrap{max-width:100%; padding:0; box-shadow:none;}
     .no-print{display:none !important;}
+    .checklist-print-block{page-break-after:always;}
+    .checklist-print-block:last-child{page-break-after:auto;}
   }
 
   /* ===================== RESPONSIVE / MOBILE MODE ===================== */
@@ -637,6 +658,7 @@
         <li><button data-view="students" onclick="showView('students')">👨‍🎓 Student Management</button></li>
         <li><button data-view="staff" onclick="showView('staff')">👩‍🏫 Teachers &amp; Staff</button></li>
         <li class="admin-only"><button data-view="fees" onclick="showView('fees')">💰 Fees &amp; Challan</button></li>
+        <li class="admin-only"><button data-view="feechecklist" onclick="showView('feechecklist')">✅ Fee Check List</button></li>
         <li class="admin-only"><button data-view="expenses" onclick="showView('expenses')">🧾 School Expenses</button></li>
         <li class="admin-only"><button data-view="salary" onclick="showView('salary')">💵 Staff Salary</button></li>
         <li><button data-view="attendance" onclick="showView('attendance')">📅 Attendance</button></li>
@@ -894,6 +916,59 @@
               <tbody id="dupFeeTable"></tbody>
             </table>
             <div class="empty" id="dupFeeEmpty">Koi duplicate nahi mila. Sab theek hai ✅</div>
+          </div>
+        </div>
+
+        <!-- FEE CHECK LIST (class-wise hard copy verify) -->
+        <div class="view" id="view-feechecklist">
+          <div class="panel admin-only">
+            <h3>✅ Students Fee Check List (Class-wise)</h3>
+            <p class="hint">Class aur month select karein. Screen par Paid = ✓, Unpaid = ☐. Print karke hard copy par tick/verify kar sakte hain — student details ke sath class-wise list.</p>
+            <div class="form-grid" style="margin-bottom:12px;">
+              <div class="field"><label>Class</label>
+                <select id="checkListClass" onchange="renderFeeCheckList()">
+                  <option value="">Sab Classes</option>
+                </select>
+              </div>
+              <div class="field"><label>Fee Month</label>
+                <select id="checkListMonth" onchange="renderFeeCheckList()">
+                  <option value="">— Month select —</option>
+                </select>
+              </div>
+              <div class="field"><label>Show</label>
+                <select id="checkListFilter" onchange="renderFeeCheckList()">
+                  <option value="all">Sab Students</option>
+                  <option value="paid">Sirf Paid</option>
+                  <option value="unpaid">Sirf Unpaid / No Challan</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;align-items:center;">
+              <button class="btn gold" style="margin:0;" onclick="printFeeCheckList(false)">🖨️ Print Check List (A4)</button>
+              <button class="btn green" style="margin:0;" onclick="printFeeCheckList(true)">🖨️ Print Sab Classes (har class alag page)</button>
+              <span id="checkListSummary" style="font-size:13px;color:var(--muted);"></span>
+            </div>
+            <div id="checkListBanner" style="display:none;margin-bottom:10px;padding:8px 12px;background:#e8f3fc;color:#16233f;border-radius:6px;font-size:13px;"></div>
+            <div class="table-scroll">
+              <table class="fee-check-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Adm #</th>
+                    <th>Student Name</th>
+                    <th>Father Name</th>
+                    <th>Class</th>
+                    <th>Sec</th>
+                    <th>Roll</th>
+                    <th>Contact</th>
+                    <th>Fee Status</th>
+                    <th>Amount</th>
+                  </tr>
+                </thead>
+                <tbody id="checkListTable"></tbody>
+              </table>
+            </div>
+            <div class="empty" id="checkListEmpty">Pehle Class aur Month select karein — list yahan dikhegi.</div>
           </div>
         </div>
 
@@ -2297,7 +2372,7 @@ function doLogout(){
 /* ===================== NAVIGATION ===================== */
 let currentViewName = 'dashboard';
 function showView(name){
-  if(name==='fees' && (!session || session.role !== 'admin')){ alert('Sirf Admin Fees section dekh sakta hai.'); return; }
+  if((name==='fees' || name==='feechecklist') && (!session || session.role !== 'admin')){ alert('Sirf Admin Fees section dekh sakta hai.'); return; }
   if((name==='expenses' || name==='salary' || name==='staffattendance') && (!session || session.role !== 'admin')){
     alert('Sirf Admin is section ko dekh sakta hai.'); return;
   }
@@ -2306,7 +2381,7 @@ function showView(name){
   document.getElementById('view-' + name).classList.add('active');
   document.querySelectorAll('.nav-list button').forEach(b => b.classList.toggle('active', b.dataset.view === name));
   currentViewName = name;
-  const titles = {dashboard:'Dashboard', students:'Student Management', staff:'Teachers & Staff', fees:'Fees & Challan', expenses:'School Expenses', salary:'Staff Salary', attendance:'Attendance', staffattendance:'Staff Attendance', qrattendance:'QR Code Attendance', timetable:'Timetable', homework:'Homework / Assignments', notices:'Notice Board', events:'Events & Vacations', gallery:'Photo Gallery', results:'Results / Exam Reports', quotes:'WhatsApp Awareness', reports:'Reports', settings:'Settings & Backup', loginlog:'Login Activity'};
+  const titles = {dashboard:'Dashboard', students:'Student Management', staff:'Teachers & Staff', fees:'Fees & Challan', feechecklist:'Fee Check List', expenses:'School Expenses', salary:'Staff Salary', attendance:'Attendance', staffattendance:'Staff Attendance', qrattendance:'QR Code Attendance', timetable:'Timetable', homework:'Homework / Assignments', notices:'Notice Board', events:'Events & Vacations', gallery:'Photo Gallery', results:'Results / Exam Reports', quotes:'WhatsApp Awareness', reports:'Reports', settings:'Settings & Backup', loginlog:'Login Activity'};
   document.getElementById('viewTitle').textContent = titles[name] || name;
   if(name==='dashboard') renderDashboard();
   if(name==='attendance') renderAttendanceForm();
@@ -2318,6 +2393,7 @@ function showView(name){
     renderExpenses();
   }
   if(name==='fees'){ renderFeeStudentOptions(); if(typeof populateBulkFeeClass==='function') populateBulkFeeClass(); if(typeof populateFeeClassFilter==='function') populateFeeClassFilter(); }
+  if(name==='feechecklist'){ populateCheckListFilters(); renderFeeCheckList(); }
   if(name==='reports') renderReports();
   if(name==='settings') fillSettingsForm();
   if(name==='loginlog') renderLoginLog();
@@ -2680,6 +2756,32 @@ function studentHasFeeForMonth(studentId, month){
   if(!key) return false;
   return (fees||[]).some(f => Number(f.studentId)===Number(studentId) && feeMonthKey(f.month)===key);
 }
+
+/** Previous months ke pending/unpaid fees (current month exclude) */
+function getPreviousPendingFees(studentId, excludeMonth){
+  const ex = feeMonthKey(excludeMonth);
+  return (fees||[]).filter(f =>
+    Number(f.studentId) === Number(studentId) &&
+    f.status === 'pending' &&
+    feeMonthKey(f.month) !== ex
+  ).sort((a,b) => String(a.month||'').localeCompare(String(b.month||''), undefined, {numeric:true}));
+}
+function getArrearsForStudent(studentId, excludeMonth){
+  const prev = getPreviousPendingFees(studentId, excludeMonth);
+  const total = prev.reduce((t,f) => t + (Number(f.amount)||0), 0);
+  return {
+    list: prev,
+    total: total,
+    monthsLabel: prev.map(f => f.month + ' (Rs.' + f.amount + ')').join(', ')
+  };
+}
+/** Challan amounts: current month fee + live previous unpaid */
+function feeChallanAmounts(f){
+  const base = Number(f.baseAmount != null ? f.baseAmount : f.amount) || 0;
+  const live = getArrearsForStudent(f.studentId, f.month);
+  return { base: base, arrears: live.total, grand: base + live.total, monthsLabel: live.monthsLabel, list: live.list };
+}
+
 function generateAllUnpaidChallans(){
   if(session && session.role !== 'admin'){ alert('Sirf Admin'); return; }
   const month = (document.getElementById('bulkFeeMonth').value||'').trim();
@@ -2692,15 +2794,31 @@ function generateAllUnpaidChallans(){
   if(cls) list = list.filter(s => classKey(s.cls)===cls);
   const toCreate = list.filter(s => !studentHasFeeForMonth(s.id, month));
   if(!toCreate.length){ alert('Is month sab ki challan pehle se hai'); return; }
-  if(!confirm(toCreate.length+' unpaid generate? '+month+' Rs.'+amount)) return;
+  let withArrears = 0;
+  toCreate.forEach(s => { if(getArrearsForStudent(s.id, month).total > 0) withArrears++; });
+  const msg = toCreate.length + ' unpaid generate? ' + month + ' Rs.' + amount
+    + (withArrears ? ('\n\n⚠️ ' + withArrears + ' students ki previous months ki pending fee bhi challan par auto add hogi.') : '');
+  if(!confirm(msg)) return;
   toCreate.forEach(s => {
-    const nf = { id:newId(), studentId:s.id, month:month, amount:amount, due:due, status:'pending' };
+    const arr = getArrearsForStudent(s.id, month);
+    const nf = {
+      id: newId(),
+      studentId: s.id,
+      month: month,
+      baseAmount: amount,
+      amount: amount,
+      arrearsAtCreate: arr.total,
+      arrearsMonths: arr.monthsLabel || '',
+      due: due,
+      status: 'pending'
+    };
     fees.push(nf); feesCol.add(nf);
   });
   saveData(); renderAll();
   const result = document.getElementById('bulkFeeResult');
-  if(result) result.innerHTML = '✅ <b>'+toCreate.length+'</b> unpaid — '+month;
-  alert(toCreate.length+' challans ban gayi!');
+  if(result) result.innerHTML = '✅ <b>'+toCreate.length+'</b> unpaid — '+month
+    + (withArrears ? (' · <b>'+withArrears+'</b> mein previous pending bhi challan par dikhegi') : '');
+  alert(toCreate.length + ' challans ban gayi!' + (withArrears ? ('\n' + withArrears + ' students ke previous unpaid challan par add honge.') : ''));
 }
 function printAllUnpaidChallans(){
   const monthInput = (document.getElementById('bulkFeeMonth').value||'').trim();
@@ -2722,6 +2840,12 @@ function printAllUnpaidChallans(){
   if(!list.length){ alert('Unpaid nahi mili — pehle Generate All Unpaid'); return; }
   const colsClass = perPage<=2?'cols-2':(perPage<=4?'cols-4':'cols-6');
   function compactChallan(f, student){
+    const am = feeChallanAmounts(f);
+    let extra = '';
+    if(am.arrears > 0){
+      extra = '<div class="challan-row"><span class="k">Current ('+(f.month||'')+')</span><span class="v">Rs. '+am.base+'</span></div>'
+        + '<div class="challan-row"><span class="k">Previous Unpaid</span><span class="v">Rs. '+am.arrears+'</span></div>';
+    }
     return '<div class="challan-copy"><div class="copy-tag">UNPAID</div><div class="challan-head">'
       +'<img src="data:image/jpeg;base64,'+LOGO_B64+'" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-bottom:4px;">'
       +'<h3>'+(schoolSettings.name||'School')+'</h3><div class="s">FEE CHALLAN</div></div>'
@@ -2729,7 +2853,8 @@ function printAllUnpaidChallans(){
       +'<div class="challan-row"><span class="k">Class</span><span class="v">'+(student?((student.cls||'—')+' / '+(student.section||'—')):'—')+'</span></div>'
       +'<div class="challan-row"><span class="k">Adm</span><span class="v">'+(student?student.adm:'—')+'</span></div>'
       +'<div class="challan-row"><span class="k">Month</span><span class="v">'+(f.month||'—')+'</span></div>'
-      +'<div class="challan-total"><span>Amount</span><span>Rs. '+f.amount+'</span></div></div>';
+      + extra
+      +'<div class="challan-total"><span>Total Due</span><span>Rs. '+am.grand+'</span></div></div>';
   }
   let html='';
   for(let i=0;i<list.length;i+=perPage){
@@ -2752,11 +2877,27 @@ function addFee(){
   if(!student){ alert('Pehle Student Management se ek student add karein.'); return; }
   const amount = document.getElementById('feeAmount').value;
   if(!amount){ alert('Fee amount likhein.'); return; }
+  const month = document.getElementById('feeMonth').value.trim() || '—';
+  const base = Number(amount);
+  const arr = getArrearsForStudent(studentId, month);
+  if(arr.total > 0){
+    const ok = confirm(
+      student.name + ' ki previous unpaid fee: Rs. ' + arr.total + '\n'
+      + (arr.monthsLabel || '') + '\n\n'
+      + 'Current month: Rs. ' + base + '\n'
+      + 'Challan Total Due: Rs. ' + (base + arr.total) + '\n\n'
+      + 'Previous pending challan par auto add hogi. Continue?'
+    );
+    if(!ok) return;
+  }
   const newFee = {
     id: newId(),
     studentId,
-    month: document.getElementById('feeMonth').value.trim() || '—',
-    amount: Number(amount),
+    month: month,
+    baseAmount: base,
+    amount: base,
+    arrearsAtCreate: arr.total,
+    arrearsMonths: arr.monthsLabel || '',
     due: document.getElementById('feeDue').value,
     status: 'pending'
   };
@@ -2894,11 +3035,220 @@ function deleteAllExtraDuplicates(){
   alert(extraIds.length + ' extra challans delete ho gayi. KEEP wali reh gayi.');
 }
 
+/* ===== FEE CHECK LIST (class-wise print / hard verify) ===== */
+function populateCheckListFilters(){
+  const classSel = document.getElementById('checkListClass');
+  const monthSel = document.getElementById('checkListMonth');
+  if(classSel){
+    const prev = classSel.value;
+    const seen = {};
+    (students||[]).forEach(s => { const k = classKey(s.cls); if(k && !seen[k]) seen[k] = classDisplay(s.cls); });
+    const keys = Object.keys(seen).sort((a,b)=> seen[a].localeCompare(seen[b], undefined, {numeric:true}));
+    classSel.innerHTML = '<option value="">Sab Classes</option>' + keys.map(k => '<option value="'+k+'">'+seen[k]+'</option>').join('');
+    if(prev) classSel.value = prev;
+  }
+  if(monthSel){
+    const prev = monthSel.value;
+    const months = Array.from(new Set((fees||[]).map(f => (f.month||'').trim()).filter(Boolean)));
+    months.sort((a,b) => b.localeCompare(a, undefined, {numeric:true}));
+    // Also offer common current month text if empty
+    monthSel.innerHTML = '<option value="">— Month select —</option>' + months.map(m => '<option value="'+m.replace(/"/g,'&quot;')+'">'+m+'</option>').join('');
+    if(prev) monthSel.value = prev;
+  }
+}
+
+/** Best fee record for student+month: prefer paid, else any pending */
+function getStudentFeeForMonth(studentId, month){
+  const key = (typeof feeMonthKey === 'function') ? feeMonthKey(month) : String(month||'').trim().toLowerCase().replace(/\s+/g,' ');
+  if(!key) return null;
+  const matches = (fees||[]).filter(f => Number(f.studentId)===Number(studentId) && feeMonthKey(f.month)===key);
+  if(!matches.length) return null;
+  matches.sort((a,b) => {
+    if(a.status==='paid' && b.status!=='paid') return -1;
+    if(b.status==='paid' && a.status!=='paid') return 1;
+    return (b.id||0)-(a.id||0);
+  });
+  return matches[0];
+}
+
+function getCheckListRows(opts){
+  opts = opts || {};
+  const cls = opts.cls !== undefined ? opts.cls : ((document.getElementById('checkListClass')||{}).value || '');
+  const month = opts.month !== undefined ? opts.month : ((document.getElementById('checkListMonth')||{}).value || '').trim();
+  const filter = opts.filter !== undefined ? opts.filter : ((document.getElementById('checkListFilter')||{}).value || 'all');
+  let list = (students||[]).slice();
+  if(cls) list = list.filter(s => classKey(s.cls) === cls);
+  list.sort((a,b) => {
+    const ca = classKey(a.cls)||'', cb = classKey(b.cls)||'';
+    if(ca !== cb) return ca.localeCompare(cb, undefined, {numeric:true});
+    const ra = String(a.roll||''), rb = String(b.roll||'');
+    if(ra && rb && ra !== rb) return ra.localeCompare(rb, undefined, {numeric:true});
+    return (a.name||'').localeCompare(b.name||'');
+  });
+  const rows = list.map(s => {
+    const fee = month ? getStudentFeeForMonth(s.id, month) : null;
+    const paid = !!(fee && fee.status === 'paid');
+    const hasChallan = !!fee;
+    const amount = fee ? fee.amount : null;
+    return { student: s, fee, paid, hasChallan, amount };
+  });
+  if(filter === 'paid') return rows.filter(r => r.paid);
+  if(filter === 'unpaid') return rows.filter(r => !r.paid);
+  return rows;
+}
+
+function renderFeeCheckList(){
+  populateCheckListFilters();
+  const tbody = document.getElementById('checkListTable');
+  const empty = document.getElementById('checkListEmpty');
+  const summary = document.getElementById('checkListSummary');
+  const banner = document.getElementById('checkListBanner');
+  if(!tbody) return;
+  const month = ((document.getElementById('checkListMonth')||{}).value || '').trim();
+  const rows = getCheckListRows();
+  if(!month){
+    tbody.innerHTML = '';
+    if(empty){ empty.style.display = 'block'; empty.textContent = 'Pehle Fee Month select karein — list yahan dikhegi.'; }
+    if(summary) summary.textContent = '';
+    if(banner) banner.style.display = 'none';
+    return;
+  }
+  if(empty) empty.style.display = rows.length ? 'none' : 'block';
+  if(empty && !rows.length) empty.textContent = 'Is filter / class mein koi student nahi mila.';
+  let paidN = 0, unpaidN = 0;
+  rows.forEach(r => { if(r.paid) paidN++; else unpaidN++; });
+  if(summary) summary.textContent = rows.length + ' students — Paid: ' + paidN + ' · Unpaid: ' + unpaidN;
+  if(banner){
+    banner.style.display = 'block';
+    banner.innerHTML = '📋 Month: <b>' + month + '</b> — Paid ✓ = fee mil chuki · ☐ Unpaid = baqi / challan nahi. Print karke hard copy par verify karein.';
+  }
+  const html = rows.map((r, i) => {
+    const s = r.student;
+    const statusHtml = r.paid
+      ? '<span class="fee-check-mark fee-check-paid">✓ Paid</span>'
+      : '<span class="fee-check-mark fee-check-unpaid">☐ Unpaid</span>';
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${s.adm||'—'}</td>
+      <td>${s.name||'—'}</td>
+      <td>${s.father||'—'}</td>
+      <td>${s.cls||'—'}</td>
+      <td>${s.section||'—'}</td>
+      <td>${s.roll||'—'}</td>
+      <td>${s.contact||'—'}</td>
+      <td>${statusHtml}</td>
+      <td>${r.amount != null ? ('Rs. '+r.amount) : '—'}</td>
+    </tr>`;
+  }).join('');
+  tbody.innerHTML = html;
+}
+
+function buildCheckListPrintHTML(classKeyVal, month, rows){
+  const school = (schoolSettings && schoolSettings.name) || 'The Smart Modern Public School Qamber';
+  const contact = (schoolSettings && schoolSettings.contact) || '';
+  const classLabel = classKeyVal ? classDisplay(classKeyVal) : 'Sab Classes';
+  let paidN = 0, unpaidN = 0;
+  rows.forEach(r => { if(r.paid) paidN++; else unpaidN++; });
+  const bodyRows = rows.map((r, i) => {
+    const s = r.student;
+    const mark = r.paid ? '☑' : '☐';
+    const statusTxt = r.paid ? 'PAID' : 'UNPAID';
+    return '<tr>'
+      + '<td class="center">'+(i+1)+'</td>'
+      + '<td>'+(s.adm||'—')+'</td>'
+      + '<td>'+(s.name||'—')+'</td>'
+      + '<td>'+(s.father||'—')+'</td>'
+      + '<td class="center">'+(s.section||'—')+'</td>'
+      + '<td class="center">'+(s.roll||'—')+'</td>'
+      + '<td>'+(s.contact||'—')+'</td>'
+      + '<td class="center" style="font-size:14px;">'+mark+'</td>'
+      + '<td class="center">'+statusTxt+'</td>'
+      + '<td class="center">'+(r.amount != null ? r.amount : '—')+'</td>'
+      + '</tr>';
+  }).join('');
+  return '<div class="checklist-print-block">'
+    + '<div class="checklist-print-head">'
+    + '<h2>'+school+'</h2>'
+    + '<div class="sub">FEE CHECK LIST — Hard Copy Verification'+(contact ? ' · '+contact : '')+'</div>'
+    + '</div>'
+    + '<div class="checklist-print-meta">'
+    + '<span>Class: '+classLabel+'</span>'
+    + '<span>Month: '+month+'</span>'
+    + '<span>Date: '+localDateStr()+'</span>'
+    + '</div>'
+    + '<table class="checklist-print-table"><thead><tr>'
+    + '<th class="center">#</th><th>Adm #</th><th>Student Name</th><th>Father Name</th><th class="center">Sec</th><th class="center">Roll</th><th>Contact</th><th class="center">Tick</th><th class="center">Status</th><th class="center">Amount</th>'
+    + '</tr></thead><tbody>'+bodyRows+'</tbody></table>'
+    + '<div class="checklist-summary">Total: '+rows.length+' · Paid (☑): '+paidN+' · Unpaid (☐): '+unpaidN+'</div>'
+    + '<div class="checklist-print-foot">'
+    + '<div class="checklist-print-sign">Class Teacher</div>'
+    + '<div class="checklist-print-sign">Fee Clerk</div>'
+    + '<div class="checklist-print-sign">Principal</div>'
+    + '</div></div>';
+}
+
+/** printAllClasses=true → har class alag page; false → current filter (ek ya sab) */
+function printFeeCheckList(printAllClasses){
+  if(!session || session.role !== 'admin'){ alert('Sirf Admin'); return; }
+  const month = ((document.getElementById('checkListMonth')||{}).value || '').trim();
+  if(!month){ alert('Pehle Fee Month select karein'); return; }
+  const filter = ((document.getElementById('checkListFilter')||{}).value || 'all');
+  let html = '';
+  if(printAllClasses){
+    const seen = {};
+    (students||[]).forEach(s => { const k = classKey(s.cls); if(k && !seen[k]) seen[k] = true; });
+    const keys = Object.keys(seen).sort((a,b)=> classDisplay(a).localeCompare(classDisplay(b), undefined, {numeric:true}));
+    if(!keys.length){ alert('Koi student nahi'); return; }
+    keys.forEach(k => {
+      const rows = getCheckListRows({ cls: k, month: month, filter: filter });
+      if(rows.length) html += buildCheckListPrintHTML(k, month, rows);
+    });
+  } else {
+    const cls = ((document.getElementById('checkListClass')||{}).value || '');
+    const rows = getCheckListRows({ cls: cls, month: month, filter: filter });
+    if(!rows.length){ alert('List khali hai — class/month/filter check karein'); return; }
+    html = buildCheckListPrintHTML(cls, month, rows);
+  }
+  if(!html){ alert('Print ke liye data nahi mila'); return; }
+  printModalFeeId = null;
+  const modal = document.getElementById('printModal');
+  if(modal) modal.classList.remove('thermal-mode');
+  ['thermalPrintBtn','thermalModeBtn','printerSettingsBtn'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.style.display = 'none';
+  });
+  document.getElementById('printPage').innerHTML = html;
+  // widen for A4 checklist
+  const wrap = document.querySelector('#printModal .print-wrap');
+  if(wrap) wrap.style.maxWidth = '800px';
+  modal.style.display = 'flex';
+  setTimeout(() => { try{ window.print(); }catch(e){} }, 300);
+}
+
 function toggleFeeStatus(id){
   if(session.role !== 'admin'){ alert('Sirf Admin fee status change kar sakta hai.'); return; }
   const f = fees.find(x => x.id === id);
   if(!f) return;
   const becamePaid = f.status !== 'paid';
+  // Jab paid mark ho aur previous unpaid ho — unhe bhi paid karne ka option
+  if(becamePaid && typeof getPreviousPendingFees === 'function'){
+    const prev = getPreviousPendingFees(f.studentId, f.month);
+    if(prev.length){
+      const sum = prev.reduce((t,x) => t + (Number(x.amount)||0), 0);
+      const clearPrev = confirm(
+        'Is student ki ' + prev.length + ' previous unpaid challan(s) hain (Rs. ' + sum + ').\n\n'
+        + 'OK = current + previous sab PAID\n'
+        + 'Cancel = sirf is month ki PAID'
+      );
+      if(clearPrev){
+        const paidDate = new Date().toISOString().slice(0,10);
+        prev.forEach(pf => {
+          pf.status = 'paid';
+          pf.paidDate = paidDate;
+          try{ feesCol.update(Object.assign({}, pf)); }catch(e){}
+        });
+      }
+    }
+  }
   f.status = f.status === 'paid' ? 'pending' : 'paid';
   if(becamePaid) f.paidDate = new Date().toISOString().slice(0,10);
   feesCol.update(Object.assign({}, f));
@@ -3026,6 +3376,14 @@ function showAllPendingFees(){
   renderFees();
 }
 function challanBlockHTML(label, f, student){
+  const am = (typeof feeChallanAmounts === 'function') ? feeChallanAmounts(f) : { base: f.amount, arrears: 0, grand: f.amount, monthsLabel: '' };
+  const showArrears = f.status !== 'paid' && am.arrears > 0;
+  const amountRows = showArrears
+    ? `<div class="challan-row"><span class="k">Current Month (${f.month||''})</span><span class="v">Rs. ${am.base}</span></div>
+      <div class="challan-row"><span class="k">Previous Unpaid</span><span class="v">Rs. ${am.arrears}</span></div>
+      ${am.monthsLabel ? `<div class="challan-row"><span class="k">Arrears Detail</span><span class="v" style="font-size:11px;text-align:right;max-width:58%;">${am.monthsLabel}</span></div>` : ''}
+      <div class="challan-total"><span>Total Due</span><span>Rs. ${am.grand}</span></div>`
+    : `<div class="challan-total"><span>Total Amount</span><span>Rs. ${f.status === 'paid' ? f.amount : am.grand}</span></div>`;
   return `
     <div class="challan-copy">
       <div class="copy-tag">${label}</div>
@@ -3041,7 +3399,7 @@ function challanBlockHTML(label, f, student){
       <div class="challan-row"><span class="k">Fee Month</span><span class="v">${f.month}</span></div>
       <div class="challan-row"><span class="k">Due Date</span><span class="v">${f.due || '—'}</span></div>
       <div class="challan-row"><span class="k">Status</span><span class="v">${f.status.toUpperCase()}</span></div>
-      <div class="challan-total"><span>Total Amount</span><span>Rs. ${f.amount}</span></div>
+      ${amountRows}
       <div style="text-align:center;font-size:10px;margin-top:8px;color:#666;">Software by Fazul Khan Chandio</div>
     </div>`;
 }
@@ -3204,6 +3562,13 @@ printModalFeeId = null;
 
 /* ===================== THERMAL RECEIPT (58/80mm printer) ===================== */
 function thermalReceiptHTML(f, student){
+  const am = (typeof feeChallanAmounts === 'function') ? feeChallanAmounts(f) : { base: f.amount, arrears: 0, grand: f.amount, monthsLabel: '' };
+  const showArrears = f.status !== 'paid' && am.arrears > 0;
+  const amtBlock = showArrears
+    ? `<div class="t-row"><span>Current (${f.month||''})</span><span>Rs. ${am.base}</span></div>
+      <div class="t-row"><span>Prev. Unpaid</span><span>Rs. ${am.arrears}</span></div>
+      <div class="t-total"><span>Total Due</span><span>Rs. ${am.grand}</span></div>`
+    : `<div class="t-total"><span>Total Amount</span><span>Rs. ${f.status === 'paid' ? f.amount : am.grand}</span></div>`;
   return `
     <div class="thermal-receipt">
       <div class="t-center">
@@ -3220,7 +3585,7 @@ function thermalReceiptHTML(f, student){
       <div class="t-row"><span>Fee Month</span><span>${f.month || '—'}</span></div>
       <div class="t-row"><span>Due Date</span><span>${f.due || '—'}</span></div>
       <div class="t-row"><span>Status</span><span>${(f.status||'').toUpperCase()}</span></div>
-      <div class="t-total"><span>Total Amount</span><span>Rs. ${f.amount}</span></div>
+      ${amtBlock}
       <div class="t-line"></div>
       <div class="t-center" style="font-size:9px;color:#555;">Software by Fazul Khan Chandio</div>
     </div>`;
@@ -4667,6 +5032,7 @@ function renderOnly(){
   renderStaff();
   renderFees();
   if(typeof renderDuplicateFees === 'function') renderDuplicateFees();
+  if(typeof renderFeeCheckList === 'function') renderFeeCheckList();
   renderExpenses();
   renderStaffAttendanceForm();
   renderSalarySheet();
@@ -5032,7 +5398,7 @@ examResultsCol.listen(()=>examResults, v=>{ examResults=v; }, ()=>{ persistLocal
 timetableCol.listen(()=>timetable, v=>{ timetable=v; }, ()=>{ persistLocalCache({timetable}); if(typeof renderTimetableView === 'function') renderTimetableView(); realtimeSaveStatus(); });
 homeworkCol.listen(()=>homework, v=>{ homework=v; }, ()=>{ persistLocalCache({homework}); if(typeof renderHomework === 'function') renderHomework(); realtimeSaveStatus(); });
 galleryCol.listen(()=>galleryPhotos, v=>{ galleryPhotos=v; }, ()=>{ renderGallery(); saveGalleryData(); realtimeSaveStatus(); });
-feesCol.listen(()=>fees, v=>{ fees=v; }, ()=>{ persistLocalCache({fees}); renderFees(); if(typeof renderDuplicateFees==='function') renderDuplicateFees(); renderDashboard(); realtimeSaveStatus(); });
+feesCol.listen(()=>fees, v=>{ fees=v; }, ()=>{ persistLocalCache({fees}); renderFees(); if(typeof renderDuplicateFees==='function') renderDuplicateFees(); if(typeof renderFeeCheckList==='function') renderFeeCheckList(); renderDashboard(); realtimeSaveStatus(); });
 expensesCol.listen(()=>expenses, v=>{ expenses=v; }, ()=>{ persistLocalCache({expenses}); if(typeof renderExpenses === 'function') renderExpenses(); realtimeSaveStatus(); });
 quoteLogCol.listen(()=>quoteLog, v=>{ quoteLog=v; }, ()=>{ persistLocalCache({quoteLog}); if(typeof renderQuoteLog === 'function') renderQuoteLog(); });
 
