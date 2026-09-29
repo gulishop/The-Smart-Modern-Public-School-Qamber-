@@ -447,13 +447,28 @@
 
   @media print{
     @page{ size:A4; margin:10mm; }
-    body *{visibility:hidden;}
-    #printModal, #printModal *{visibility:visible;}
-    #printModal{position:absolute; inset:auto; background:#fff; padding:0; display:block;}
-    .print-wrap{max-width:100%; padding:0; box-shadow:none;}
-    .no-print{display:none !important;}
+    html, body{background:#fff !important; height:auto !important; overflow:visible !important;}
+    body *{visibility:hidden !important;}
+    #printModal, #printModal *{visibility:visible !important;}
+    #printModal{
+      position:absolute !important; left:0 !important; top:0 !important;
+      width:100% !important; height:auto !important; min-height:0 !important;
+      inset:auto !important; right:auto !important; bottom:auto !important;
+      background:#fff !important; padding:0 !important; margin:0 !important;
+      display:block !important; overflow:visible !important; z-index:99999 !important;
+      align-items:unset !important; justify-content:unset !important;
+    }
+    #printModal .print-wrap{
+      max-width:100% !important; width:100% !important; padding:8px !important;
+      box-shadow:none !important; border-radius:0 !important; background:#fff !important;
+      margin:0 auto !important;
+    }
+    #printPage, #printPage *{visibility:visible !important; color:#000 !important;}
+    .no-print{display:none !important; visibility:hidden !important;}
     .checklist-print-block{page-break-after:always;}
     .checklist-print-block:last-child{page-break-after:auto;}
+    .checklist-print-table th, .checklist-print-table td{border:1px solid #000 !important; color:#000 !important;}
+    .challan-copy, .challan-copy *{visibility:visible !important; color:#000 !important;}
   }
 
   /* ===================== RESPONSIVE / MOBILE MODE ===================== */
@@ -1743,7 +1758,10 @@ let notices = [];
 let loginLog = [];
 let idCounter = 1;
 
-let schoolSettings = { name:'The Smart Modern Public School', address:'Qamber, Sindh', principal:'', contact:'' };
+let schoolSettings = { name:'The Smart Modern Public School', address:'Qamber, Sindh', principal:'', contact:'03333909816' };
+/** Har print / challan / PDF footer — GitHub link nahi, yeh credit */
+const PRINT_CREDIT = 'Software by Fazul Khan Chandio · 03333909816';
+const PRINT_PHONE = '03333909816';
 let events = [];
 let galleryPhotos = [];
 let examResults = [];
@@ -2854,7 +2872,8 @@ function printAllUnpaidChallans(){
       +'<div class="challan-row"><span class="k">Adm</span><span class="v">'+(student?student.adm:'—')+'</span></div>'
       +'<div class="challan-row"><span class="k">Month</span><span class="v">'+(f.month||'—')+'</span></div>'
       + extra
-      +'<div class="challan-total"><span>Total Due</span><span>Rs. '+am.grand+'</span></div></div>';
+      +'<div class="challan-total"><span>Total Due</span><span>Rs. '+am.grand+'</span></div>'
+      +'<div style="text-align:center;font-size:9px;margin-top:6px;color:#555;">'+PRINT_CREDIT+'</div></div>';
   }
   let html='';
   for(let i=0;i<list.length;i+=perPage){
@@ -3184,16 +3203,19 @@ function buildCheckListPrintHTML(classKeyVal, month, rows){
     + '<div class="checklist-print-sign">Class Teacher</div>'
     + '<div class="checklist-print-sign">Fee Clerk</div>'
     + '<div class="checklist-print-sign">Principal</div>'
-    + '</div></div>';
+    + '</div>'
+    + '<div style="text-align:center;font-size:10px;margin-top:14px;color:#333;">'+PRINT_CREDIT+'</div>'
+    + '</div>';
 }
 
-/** printAllClasses=true → har class alag page; false → current filter (ek ya sab) */
+/** printAllClasses=true → har class alag page; false → current filter (ek ya sab)
+ *  Nayi window mein print — PDF/print blank na ho (popup allow karein). */
 function printFeeCheckList(printAllClasses){
   if(!session || session.role !== 'admin'){ alert('Sirf Admin'); return; }
   const month = ((document.getElementById('checkListMonth')||{}).value || '').trim();
   if(!month){ alert('Pehle Fee Month select karein'); return; }
   const filter = ((document.getElementById('checkListFilter')||{}).value || 'all');
-  let html = '';
+  let bodyHtml = '';
   if(printAllClasses){
     const seen = {};
     (students||[]).forEach(s => { const k = classKey(s.cls); if(k && !seen[k]) seen[k] = true; });
@@ -3201,27 +3223,74 @@ function printFeeCheckList(printAllClasses){
     if(!keys.length){ alert('Koi student nahi'); return; }
     keys.forEach(k => {
       const rows = getCheckListRows({ cls: k, month: month, filter: filter });
-      if(rows.length) html += buildCheckListPrintHTML(k, month, rows);
+      if(rows.length) bodyHtml += buildCheckListPrintHTML(k, month, rows);
     });
   } else {
     const cls = ((document.getElementById('checkListClass')||{}).value || '');
     const rows = getCheckListRows({ cls: cls, month: month, filter: filter });
     if(!rows.length){ alert('List khali hai — class/month/filter check karein'); return; }
-    html = buildCheckListPrintHTML(cls, month, rows);
+    bodyHtml = buildCheckListPrintHTML(cls, month, rows);
   }
-  if(!html){ alert('Print ke liye data nahi mila'); return; }
-  printModalFeeId = null;
-  const modal = document.getElementById('printModal');
-  if(modal) modal.classList.remove('thermal-mode');
-  ['thermalPrintBtn','thermalModeBtn','printerSettingsBtn'].forEach(id => {
-    const el = document.getElementById(id); if(el) el.style.display = 'none';
-  });
-  document.getElementById('printPage').innerHTML = html;
-  // widen for A4 checklist
-  const wrap = document.querySelector('#printModal .print-wrap');
-  if(wrap) wrap.style.maxWidth = '800px';
-  modal.style.display = 'flex';
-  setTimeout(() => { try{ window.print(); }catch(e){} }, 300);
+  if(!bodyHtml){ alert('Print ke liye data nahi mila'); return; }
+
+  const printCss = `
+    *{box-sizing:border-box;}
+    body{font-family:Arial,Helvetica,sans-serif; margin:12px; color:#000; background:#fff;}
+    .checklist-print-block{page-break-after:always; margin-bottom:18px;}
+    .checklist-print-block:last-child{page-break-after:auto;}
+    .checklist-print-head{text-align:center; border-bottom:2px solid #16233f; padding-bottom:8px; margin-bottom:10px;}
+    .checklist-print-head h2{margin:0; font-size:16px; color:#16233f;}
+    .checklist-print-head .sub{font-size:12px; color:#333; margin-top:4px;}
+    .checklist-print-meta{display:flex; justify-content:space-between; font-size:12px; margin-bottom:8px; font-weight:600;}
+    .checklist-print-table{width:100%; border-collapse:collapse; font-size:11px;}
+    .checklist-print-table th, .checklist-print-table td{border:1px solid #333; padding:5px 6px; text-align:left;}
+    .checklist-print-table th{background:#f0f0f0; font-size:10px; text-transform:uppercase;}
+    .checklist-print-table .center{text-align:center;}
+    .checklist-print-foot{margin-top:18px; display:flex; justify-content:space-between; font-size:11px;}
+    .checklist-print-sign{width:28%; text-align:center; border-top:1px solid #333; padding-top:4px; margin-top:40px;}
+    .checklist-summary{font-size:12px; margin-top:6px;}
+    .no-print{margin:16px 0; text-align:center;}
+    .no-print button{padding:10px 18px; margin:0 6px; font-size:14px; cursor:pointer;}
+    @media print{
+      @page{ size:A4; margin:10mm; }
+      body{margin:0;}
+      .no-print{display:none !important;}
+      .checklist-print-block{page-break-after:always;}
+      .checklist-print-block:last-child{page-break-after:auto;}
+    }
+  `;
+
+  const schoolTitle = ((schoolSettings && schoolSettings.name) || 'School') + ' — Fee Check List';
+  const full = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+schoolTitle+'</title>'
+    + '<style>'+printCss+'</style></head><body>'
+    + bodyHtml
+    + '<div class="no-print">'
+    + '<p style="font-size:13px;color:#555;max-width:520px;margin:0 auto 12px;">Print dialog mein <b>Headers and footers</b> / <b>Headers &amp; footers</b> <u>OFF</u> karein — warna GitHub URL page par aa sakti hai.</p>'
+    + '<button onclick="window.print()">🖨️ Print / Save as PDF</button>'
+    + '<button onclick="window.close()">Close</button>'
+    + '</div>'
+    + '<script>window.onload=function(){ setTimeout(function(){ try{window.print();}catch(e){} }, 400); }<\/script>'
+    + '</body></html>';
+
+  const w = window.open('', '_blank', 'noopener,noreferrer');
+  if(!w){
+    // Popup blocked — fallback: modal + print CSS
+    printModalFeeId = null;
+    const modal = document.getElementById('printModal');
+    if(modal) modal.classList.remove('thermal-mode');
+    ['thermalPrintBtn','thermalModeBtn','printerSettingsBtn'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.style.display = 'none';
+    });
+    document.getElementById('printPage').innerHTML = bodyHtml;
+    const wrap = document.querySelector('#printModal .print-wrap');
+    if(wrap) wrap.style.maxWidth = '900px';
+    modal.style.display = 'flex';
+    alert('Popup blocked. Modal se Print / Save as PDF dabayein. Behtar result ke liye site ke liye popups Allow karein.');
+    return;
+  }
+  w.document.open();
+  w.document.write(full);
+  w.document.close();
 }
 
 function toggleFeeStatus(id){
@@ -3391,7 +3460,7 @@ function challanBlockHTML(label, f, student){
         <img src="data:image/jpeg;base64,${LOGO_B64}" alt="Logo" style="width:44px;height:44px;border-radius:50%;object-fit:cover;margin-bottom:6px;">
         <h3>${schoolSettings.name}</h3>
         <div class="s">${f.status === 'paid' ? 'FEE RECEIPT' : 'FEE CHALLAN'} — QAMBER</div>
-        <div style="font-size:12px;color:#555;margin-top:2px;">03362506588</div>
+        <div style="font-size:12px;color:#555;margin-top:2px;">${PRINT_PHONE}</div>
       </div>
       <div class="challan-row"><span class="k">Student Name</span><span class="v" style="font-weight:700;">${student ? student.name : '—'}</span></div>
       <div class="challan-row"><span class="k">Class / Section</span><span class="v">${student ? (student.cls||'—')+' / '+(student.section||'—') : '—'}</span></div>
@@ -3400,7 +3469,7 @@ function challanBlockHTML(label, f, student){
       <div class="challan-row"><span class="k">Due Date</span><span class="v">${f.due || '—'}</span></div>
       <div class="challan-row"><span class="k">Status</span><span class="v">${f.status.toUpperCase()}</span></div>
       ${amountRows}
-      <div style="text-align:center;font-size:10px;margin-top:8px;color:#666;">Software by Fazul Khan Chandio</div>
+      <div style="text-align:center;font-size:10px;margin-top:8px;color:#666;">${PRINT_CREDIT}</div>
     </div>`;
 }
 let printModalFeeId = null;
@@ -3576,7 +3645,7 @@ function thermalReceiptHTML(f, student){
         <img src="data:image/jpeg;base64,${LOGO_B64}" alt="Logo" style="width:48px;height:48px;border-radius:50%;object-fit:cover;margin-bottom:4px;">
         <h4>${schoolSettings.name || 'The Smart Modern Public School'}</h4>
         <div style="font-weight:700;letter-spacing:0.5px;color:#b8860b;">${f.status === 'paid' ? 'FEE RECEIPT' : 'FEE CHALLAN'} - QAMBER</div>
-        <div style="font-size:11px;margin-top:2px;">03362506588</div>
+        <div style="font-size:11px;margin-top:2px;">${PRINT_PHONE}</div>
       </div>
       <div class="t-line"></div>
       <div class="t-row"><span>Student Name</span><span style="font-weight:700;">${student ? student.name : '—'}</span></div>
@@ -3587,7 +3656,7 @@ function thermalReceiptHTML(f, student){
       <div class="t-row"><span>Status</span><span>${(f.status||'').toUpperCase()}</span></div>
       ${amtBlock}
       <div class="t-line"></div>
-      <div class="t-center" style="font-size:9px;color:#555;">Software by Fazul Khan Chandio</div>
+      <div class="t-center" style="font-size:9px;color:#555;">${PRINT_CREDIT}</div>
     </div>`;
 }
 function openChallanThermal(feeId){
@@ -3916,7 +3985,7 @@ function buildSalarySlipHtml(row, ym){
       <div style="text-align:center; width:40%; border-top:1px solid #333; padding-top:4px;">Staff Signature</div>
       <div style="text-align:center; width:40%; border-top:1px solid #333; padding-top:4px;">Admin / Principal</div>
     </div>
-    <div style="margin-top:12px; font-size:11px; color:#666; text-align:center;">Generated: ${new Date().toLocaleString()} · Software by Fazul Khan Chandio</div>
+    <div style="margin-top:12px; font-size:11px; color:#666; text-align:center;">Generated: ${new Date().toLocaleString()} · ${PRINT_CREDIT}</div>
   </div>`;
 }
 function printSalarySlip(staffId, yearMonth){
