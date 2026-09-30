@@ -241,15 +241,16 @@
   .parent-quote .q-label{font-size:11px;color:var(--gold);margin-bottom:6px;font-weight:600;}
   .parent-quote .q-text{font-size:14px;line-height:1.55;font-style:italic;}
   .parent-remind{background:#fff8e8;border:1px solid #e8d4a0;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px;line-height:1.5;color:#3a3020;}
-  .bulk-challan-grid{display:grid;gap:8px;width:100%;}
+  .bulk-challan-grid{display:grid;gap:6px;width:100%;}
   .bulk-challan-grid.cols-2{grid-template-columns:1fr 1fr;}
   .bulk-challan-grid.cols-4{grid-template-columns:1fr 1fr;}
-  .bulk-challan-grid.cols-6{grid-template-columns:1fr 1fr;} /* 2 cols x 3 rows = 6 per A4 — compact like paper */
-  .bulk-challan-grid .challan-copy{margin-bottom:0;padding:8px 10px;page-break-inside:avoid;break-inside:avoid;font-size:11px;box-sizing:border-box;}
-  .bulk-challan-grid .challan-head h3{font-size:13px;}
-  .bulk-challan-grid .challan-head img{width:32px !important;height:32px !important;margin-bottom:3px !important;}
-  .bulk-challan-grid .challan-row{font-size:11px;padding:2px 0;}
-  .bulk-challan-grid .challan-total{font-size:12.5px;padding-top:6px;}
+  .bulk-challan-grid.cols-6{grid-template-columns:1fr 1fr;}
+  .bulk-challan-grid.cols-8{grid-template-columns:1fr 1fr;} /* 2x4 = 8 per A4 */
+  .bulk-challan-grid .challan-copy{margin-bottom:0;padding:6px 8px;page-break-inside:avoid;break-inside:avoid;font-size:10.5px;box-sizing:border-box;}
+  .bulk-challan-grid .challan-head h3{font-size:12px;}
+  .bulk-challan-grid .challan-head img{width:26px !important;height:26px !important;margin-bottom:2px !important;}
+  .bulk-challan-grid .challan-row{font-size:10px;padding:1px 0;}
+  .bulk-challan-grid .challan-total{font-size:11.5px;padding-top:4px;}
   .bulk-page-break{page-break-after:always;break-after:page;height:0;margin:0;padding:0;border:none;display:none;}
 
   .dev-credit{margin-top:14px; padding-top:12px; border-top:1px solid var(--rule); text-align:center; font-size:10px; color:var(--muted); font-family:'JetBrains Mono',monospace; letter-spacing:0.3px;}
@@ -525,7 +526,7 @@
       page-break-inside:avoid;
     }
 
-    /* Bulk: 6 compact challan per A4 (2 cols x 3 rows) — paper jaisa, no lambi boxes */
+    /* Bulk: 8 compact challan per A4 (2 cols x 4 rows) — no extra blank pages */
     .bulk-page-break{
       display:none !important;
       height:0 !important;
@@ -534,7 +535,7 @@
     }
     .bulk-challan-grid{
       display:grid !important;
-      gap:3.5mm !important;
+      gap:2.5mm !important;
       width:100% !important;
       margin:0 !important;
       padding:0 !important;
@@ -550,6 +551,7 @@
       page-break-after:auto !important;
       break-after:auto !important;
     }
+    .bulk-challan-grid.cols-8,
     .bulk-challan-grid.cols-6,
     .bulk-challan-grid.cols-4,
     .bulk-challan-grid.cols-2{
@@ -558,12 +560,12 @@
     }
     .bulk-challan-grid .challan-copy{
       margin:0 !important;
-      padding:3.5mm 4mm !important;
-      border:1.5px solid #000 !important;
+      padding:2.5mm 3mm !important;
+      border:1.2px solid #000 !important;
       border-radius:0 !important;
       page-break-inside:avoid !important;
       break-inside:avoid !important;
-      font-size:10.5px !important;
+      font-size:9.5px !important;
       box-sizing:border-box !important;
       width:100% !important;
       height:auto !important;
@@ -571,22 +573,22 @@
       overflow:hidden !important;
     }
     .bulk-challan-grid .challan-head{
-      margin-bottom:2mm !important;
-      padding-bottom:2mm !important;
+      margin-bottom:1.5mm !important;
+      padding-bottom:1.5mm !important;
       border-bottom:1px dashed #333 !important;
     }
-    .bulk-challan-grid .challan-head h3{font-size:13px !important;color:#000 !important;margin:0 0 1px 0 !important;}
-    .bulk-challan-grid .challan-head .s{font-size:9px !important;color:#000 !important;font-weight:700 !important;}
-    .bulk-challan-grid .challan-head img{width:30px !important;height:30px !important;margin-bottom:2px !important;}
-    .bulk-challan-grid .challan-row{font-size:10.5px !important;padding:1.5px 0 !important;}
+    .bulk-challan-grid .challan-head h3{font-size:11px !important;color:#000 !important;margin:0 0 1px 0 !important;}
+    .bulk-challan-grid .challan-head .s{font-size:8px !important;color:#000 !important;font-weight:700 !important;}
+    .bulk-challan-grid .challan-head img{width:24px !important;height:24px !important;margin-bottom:1px !important;}
+    .bulk-challan-grid .challan-row{font-size:9.5px !important;padding:1px 0 !important;}
     .bulk-challan-grid .challan-total{
-      font-size:12px !important;
-      padding-top:3px !important;
-      margin-top:2px !important;
-      border-top:1.5px solid #000 !important;
+      font-size:11px !important;
+      padding-top:2px !important;
+      margin-top:1px !important;
+      border-top:1.2px solid #000 !important;
       color:#000 !important;
     }
-    .bulk-challan-grid .copy-tag{font-size:8px !important;}
+    .bulk-challan-grid .copy-tag{font-size:7.5px !important;}
     .bulk-challan-grid > div:empty{display:none !important;}
 
     .salary-slip:last-child{
@@ -1021,7 +1023,7 @@
               <div class="field"><label>Amount (Rs.)</label><input id="bulkFeeAmount" type="number" placeholder="1000"></div>
               <div class="field"><label>Due Date</label><input id="bulkFeeDue" type="date"></div>
               <div class="field"><label>Class</label><select id="bulkFeeClass"><option value="">Sab Classes</option></select></div>
-              <div class="field"><label>Per A4 page</label><select id="bulkPerPage"><option value="2">2</option><option value="4">4</option><option value="6" selected>6</option></select></div>
+              <div class="field"><label>Per A4 page</label><select id="bulkPerPage"><option value="2">2</option><option value="4">4</option><option value="6">6</option><option value="8" selected>8</option></select></div>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">
               <button class="btn green" style="margin-top:0;" onclick="generateAllUnpaidChallans()">⚡ Generate All Unpaid</button>
@@ -1244,6 +1246,7 @@
               <tbody id="attTable"></tbody>
             </table>
             <div class="empty" id="attEmpty">Pehle Student Management mein students add karein.</div>
+            <p class="hint" style="margin:8px 0 4px;">✅ Roz sab students <b>Present</b> hain. Sirf jo ghair-hazir hain un pe <b>Absent</b> dabao. Dobara Absent = wapas Present.</p>
             <button class="btn green" onclick="saveAttendance()">Save Attendance</button>
           </div>
         </div>
@@ -1815,10 +1818,57 @@ function subscribeAttendanceDate(date){
     if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
   }, function(err){ console.warn('Attendance realtime sync error (' + date + '):', err); });
 }
+/** Roz sab students Present — teacher sirf Absent mark kare */
+function ensureAllStudentsPresent(date){
+  if(!date || !students.length) return false;
+  if(!attendanceRecords[date]) attendanceRecords[date] = {};
+  let changed = false;
+  students.forEach(s => {
+    const key = attKey(s.id);
+    const cur = attendanceRecords[date][key] || attendanceRecords[date][s.id];
+    if(!cur){
+      attendanceRecords[date][key] = 'present';
+      changed = true;
+    }
+  });
+  if(changed){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const existing = raw ? JSON.parse(raw) : {};
+      existing.attendanceRecords = attendanceRecords;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+    }catch(e){}
+    if(typeof saveAttendanceDateToCloud === 'function') saveAttendanceDateToCloud(date);
+  }
+  return changed;
+}
 function ensureAttendanceDateLoaded(date){
-  if(!db || !date) return Promise.resolve();
+  if(!date) return Promise.resolve();
+  // Offline / pehle se local: naye din pe auto Present
+  if(!attendanceRecords[date] || !Object.keys(attendanceRecords[date]).length){
+    if(students.length){
+      const autoRecord = {};
+      students.forEach(s => { autoRecord[attKey(s.id)] = 'present'; });
+      attendanceRecords[date] = autoRecord;
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const existing = raw ? JSON.parse(raw) : {};
+        existing.attendanceRecords = attendanceRecords;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+      }catch(e){}
+    }
+  } else {
+    ensureAllStudentsPresent(date); // naye students bhi Present
+  }
+  if(!db){
+    loadedAttendanceDates.add(date);
+    return Promise.resolve();
+  }
   subscribeAttendanceDate(date);
-  if(loadedAttendanceDates.has(date)) return Promise.resolve();
+  if(loadedAttendanceDates.has(date)){
+    ensureAllStudentsPresent(date);
+    return Promise.resolve();
+  }
   return attendanceDateRef(date).get().then(doc=>{
     if(doc.exists){
       const serverData = doc.data() || {};
@@ -1826,6 +1876,7 @@ function ensureAttendanceDateLoaded(date){
       const normalized = {};
       Object.keys(merged).forEach(k => { normalized[attKey(k)] = merged[k]; });
       attendanceRecords[date] = normalized;
+      ensureAllStudentsPresent(date);
       loadedAttendanceDates.add(date);
       try{
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -1838,11 +1889,11 @@ function ensureAttendanceDateLoaded(date){
       if(activeDate === date && typeof renderAttendanceForm === 'function') renderAttendanceForm();
       if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
     } else if(attendanceRecords[date] && Object.keys(attendanceRecords[date]).length){
+      ensureAllStudentsPresent(date);
       loadedAttendanceDates.add(date);
+      if(typeof saveAttendanceDateToCloud === 'function') saveAttendanceDateToCloud(date);
     } else if(students.length){
-      // Naya din — is date ke liye pehle se koi record nahi (na cloud par, na local).
-      // Sabhi students ko automatically "Present" mark kar dete hain — teacher ko
-      // sirf jo bache ghair-hazir hain unke liye "Absent" par click karna hoga.
+      // Naya din — sab Present
       const autoRecord = {};
       students.forEach(s => { autoRecord[attKey(s.id)] = 'present'; });
       attendanceRecords[date] = autoRecord;
@@ -1861,6 +1912,7 @@ function ensureAttendanceDateLoaded(date){
     }
   }).catch(err=>{
     console.warn('Attendance load failed for ' + date + ':', err);
+    ensureAllStudentsPresent(date);
   });
 }
 function saveAttendanceDateToCloud(date){
@@ -2982,7 +3034,7 @@ function printAllUnpaidChallans(){
   const monthFilterEl = document.getElementById('feeMonthFilter');
   const month = monthInput || (monthFilterEl ? monthFilterEl.value.trim() : '');
   if(!month){ alert('Month likhein'); return; }
-  const perPage = Number((document.getElementById('bulkPerPage')||{}).value)||6;
+  const perPage = Number((document.getElementById('bulkPerPage')||{}).value)||8;
   const cls = (document.getElementById('bulkFeeClass').value||'').trim();
   const key = feeMonthKey(month);
   const studentById = new Map(students.map(s => [s.id, s]));
@@ -2995,7 +3047,7 @@ function printAllUnpaidChallans(){
     return ((sa&&sa.name)||'').localeCompare((sb&&sb.name)||'');
   });
   if(!list.length){ alert('Unpaid nahi mili — pehle Generate All Unpaid'); return; }
-  const colsClass = perPage<=2?'cols-2':(perPage<=4?'cols-4':'cols-6');
+  const colsClass = perPage<=2?'cols-2':(perPage<=4?'cols-4':(perPage<=6?'cols-6':'cols-8'));
   function compactChallan(f, student){
     const am = feeChallanAmounts(f);
     let extra = '';
@@ -3004,7 +3056,7 @@ function printAllUnpaidChallans(){
         + '<div class="challan-row"><span class="k">Previous Unpaid</span><span class="v">Rs. '+am.arrears+'</span></div>';
     }
     return '<div class="challan-copy"><div class="copy-tag">UNPAID</div><div class="challan-head">'
-      +'<img src="data:image/jpeg;base64,'+LOGO_B64+'" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-bottom:2px;">'
+      +'<img src="data:image/jpeg;base64,'+LOGO_B64+'" alt="" style="width:22px;height:22px;border-radius:50%;object-fit:cover;margin-bottom:1px;">'
       +'<h3>'+(schoolSettings.name||'School')+'</h3><div class="s">FEE CHALLAN</div></div>'
       +'<div class="challan-row"><span class="k">Student</span><span class="v" style="font-weight:700;">'+(student?student.name:'—')+'</span></div>'
       +'<div class="challan-row"><span class="k">Class</span><span class="v">'+(student?((student.cls||'—')+' / '+(student.section||'—')):'—')+'</span></div>'
@@ -3012,7 +3064,7 @@ function printAllUnpaidChallans(){
       +'<div class="challan-row"><span class="k">Month</span><span class="v">'+(f.month||'—')+'</span></div>'
       + extra
       +'<div class="challan-total"><span>Total Due</span><span>Rs. '+am.grand+'</span></div>'
-      +'<div style="text-align:center;font-size:9px;margin-top:6px;color:#555;">Principal: Imran Khan Chandio · 03362506588</div></div>';
+      +'<div style="text-align:center;font-size:8px;margin-top:3px;color:#555;">Principal: Imran Khan Chandio · 03362506588</div></div>';
   }
   let html='';
   for(let i=0;i<list.length;i+=perPage){
@@ -4201,7 +4253,8 @@ function waNumberFor(contact){
 }
 function renderAttendanceForm(){
   const date = document.getElementById('attDate').value || localDateStr();
-  ensureAttendanceDateLoaded(date); // pehli baar is date par aane par cloud se load ho kar khud dobara render karega
+  ensureAttendanceDateLoaded(date);
+  ensureAllStudentsPresent(date); // har student default Present
   const tbody = document.getElementById('attTable');
   populateAttClassFilter();
   const clsFilter = (document.getElementById('attClassFilter')||{}).value || '';
@@ -4229,13 +4282,13 @@ function renderAttendanceForm(){
   document.getElementById('attEmpty').style.display = list.length ? 'none' : 'block';
   // Fast render: ek hi baar innerHTML set (loop mein += bohat slow hota hai 200+ students par)
   const rows = list.map(s => {
-    const status = dayRecord[attKey(s.id)] || dayRecord[s.id] || '';
+    const status = dayRecord[attKey(s.id)] || dayRecord[s.id] || 'present';
     const waBtn = status === 'absent'
       ? (waNumberFor(s.contact)
           ? `<button class="btn whatsapp small" onclick="sendAbsentWhatsApp(${s.id})">📱 Message</button>`
           : `<span class="hint">Contact # nahi hai</span>`)
       : '—';
-    const notMarkedTag = status ? '' : '<div style="font-size:11px; color:var(--red); margin-top:3px;">⚠ Not marked</div>';
+    const notMarkedTag = '';
     const pActive = status==='present';
     const aActive = status==='absent';
     return `<tr><td>${s.adm}</td><td>${s.name}</td><td>${s.cls||'—'}</td>
@@ -4275,24 +4328,25 @@ function renderAttClassSummary(date){
 function setAttStatus(studentId, status){
   const date = document.getElementById('attDate').value || localDateStr();
   if(!attendanceRecords[date]) attendanceRecords[date] = {};
-  // Key hamesha string — miss na ho dashboard/summary mein
   const key = attKey(studentId);
-  const prevStatus = attendanceRecords[date][key];
-  // Same button dobara dabane se unmark (toggle)
+  const prevStatus = attendanceRecords[date][key] || 'present';
   let justMarkedAbsent = false;
-  if(prevStatus === status){
-    delete attendanceRecords[date][key];
-  } else {
-    attendanceRecords[date][key] = status;
-    if(status === 'absent' && prevStatus !== 'absent') justMarkedAbsent = true;
+  // Default Present system: Present dabane se hamesha Present.
+  // Absent dabane se Absent; dobara Absent = wapas Present.
+  if(status === 'present'){
+    attendanceRecords[date][key] = 'present';
+  } else if(status === 'absent'){
+    if(prevStatus === 'absent'){
+      attendanceRecords[date][key] = 'present'; // wapas Present
+    } else {
+      attendanceRecords[date][key] = 'absent';
+      justMarkedAbsent = true;
+    }
   }
   saveAttendanceDateToCloud(date);
   saveData();
   renderAttendanceForm();
-  // Dashboard turant update — warna mark ke baad dashboard par purana count dikhta tha
   if(date === localDateStr() && typeof renderDashboard === 'function') renderDashboard();
-  // Absent mark hote hi WhatsApp chat automatically khul jati hai (parent ke number ke sath,
-  // message pehle se likha hua) — yeh isi click ke andar hota hai taake browser popup block na kare.
   if(justMarkedAbsent) sendAbsentWhatsApp(studentId, true);
 }
 function sendAbsentWhatsApp(studentId, silent){
