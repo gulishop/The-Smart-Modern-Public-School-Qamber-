@@ -244,12 +244,12 @@
   .bulk-challan-grid{display:grid;gap:8px;width:100%;}
   .bulk-challan-grid.cols-2{grid-template-columns:1fr 1fr;}
   .bulk-challan-grid.cols-4{grid-template-columns:1fr 1fr;}
-  .bulk-challan-grid.cols-6{grid-template-columns:1fr 1fr 1fr;} /* 3x2 = 6 per A4 */
-  .bulk-challan-grid .challan-copy{margin-bottom:0;padding:8px 10px;page-break-inside:avoid;break-inside:avoid;font-size:11px;height:100%;box-sizing:border-box;}
-  .bulk-challan-grid .challan-head h3{font-size:12px;}
-  .bulk-challan-grid .challan-head img{width:28px !important;height:28px !important;margin-bottom:2px !important;}
-  .bulk-challan-grid .challan-row{font-size:10.5px;padding:2px 0;}
-  .bulk-challan-grid .challan-total{font-size:12px;padding-top:6px;}
+  .bulk-challan-grid.cols-6{grid-template-columns:1fr 1fr;} /* 2 cols x 3 rows = 6 per A4 — compact like paper */
+  .bulk-challan-grid .challan-copy{margin-bottom:0;padding:8px 10px;page-break-inside:avoid;break-inside:avoid;font-size:11px;box-sizing:border-box;}
+  .bulk-challan-grid .challan-head h3{font-size:13px;}
+  .bulk-challan-grid .challan-head img{width:32px !important;height:32px !important;margin-bottom:3px !important;}
+  .bulk-challan-grid .challan-row{font-size:11px;padding:2px 0;}
+  .bulk-challan-grid .challan-total{font-size:12.5px;padding-top:6px;}
   .bulk-page-break{page-break-after:always;break-after:page;height:0;margin:0;padding:0;border:none;display:none;}
 
   .dev-credit{margin-top:14px; padding-top:12px; border-top:1px solid var(--rule); text-align:center; font-size:10px; color:var(--muted); font-family:'JetBrains Mono',monospace; letter-spacing:0.3px;}
@@ -525,17 +525,16 @@
       page-break-inside:avoid;
     }
 
-    /* Bulk: 6 challan = full A4, no blank page 2 */
+    /* Bulk: 6 compact challan per A4 (2 cols x 3 rows) — paper jaisa, no lambi boxes */
     .bulk-page-break{
       display:none !important;
       height:0 !important;
       margin:0 !important;
       padding:0 !important;
-      page-break-after:avoid !important;
     }
     .bulk-challan-grid{
       display:grid !important;
-      gap:4mm !important;
+      gap:3.5mm !important;
       width:100% !important;
       margin:0 !important;
       padding:0 !important;
@@ -543,54 +542,51 @@
       break-inside:avoid !important;
       page-break-after:always !important;
       break-after:page !important;
-      /* A4 content height (297mm - 8mm - 8mm) ≈ 281mm — fill page */
-      height: 281mm !important;
-      max-height: 281mm !important;
+      height:auto !important;
+      max-height:none !important;
       box-sizing:border-box !important;
-      align-content:stretch !important;
     }
     .bulk-challan-grid:last-child{
       page-break-after:auto !important;
       break-after:auto !important;
     }
-    .bulk-challan-grid.cols-6{
-      grid-template-columns:1fr 1fr 1fr !important;
-      grid-template-rows:1fr 1fr !important; /* 2 equal rows fill page */
-    }
-    .bulk-challan-grid.cols-4{
-      grid-template-columns:1fr 1fr !important;
-      grid-template-rows:1fr 1fr !important;
-    }
+    .bulk-challan-grid.cols-6,
+    .bulk-challan-grid.cols-4,
     .bulk-challan-grid.cols-2{
       grid-template-columns:1fr 1fr !important;
-      grid-template-rows:1fr !important;
-      height:auto !important;
-      max-height:none !important;
+      grid-template-rows:none !important;
     }
     .bulk-challan-grid .challan-copy{
       margin:0 !important;
-      padding:4mm 3.5mm !important;
+      padding:3.5mm 4mm !important;
       border:1.5px solid #000 !important;
       border-radius:0 !important;
       page-break-inside:avoid !important;
       break-inside:avoid !important;
-      font-size:10px !important;
+      font-size:10.5px !important;
       box-sizing:border-box !important;
       width:100% !important;
-      height:100% !important;
-      display:flex !important;
-      flex-direction:column !important;
-      justify-content:flex-start !important;
+      height:auto !important;
+      display:block !important;
       overflow:hidden !important;
     }
-    .bulk-challan-grid .challan-head{margin-bottom:2mm !important;padding-bottom:2mm !important;}
-    .bulk-challan-grid .challan-head h3{font-size:12px !important;color:#000 !important;}
-    .bulk-challan-grid .challan-head .s{font-size:9px !important;color:#000 !important;}
-    .bulk-challan-grid .challan-head img{width:28px !important;height:28px !important;}
-    .bulk-challan-grid .challan-row{font-size:10px !important;padding:1.5px 0 !important;}
-    .bulk-challan-grid .challan-total{font-size:11px !important;padding-top:3px !important;margin-top:auto !important;}
+    .bulk-challan-grid .challan-head{
+      margin-bottom:2mm !important;
+      padding-bottom:2mm !important;
+      border-bottom:1px dashed #333 !important;
+    }
+    .bulk-challan-grid .challan-head h3{font-size:13px !important;color:#000 !important;margin:0 0 1px 0 !important;}
+    .bulk-challan-grid .challan-head .s{font-size:9px !important;color:#000 !important;font-weight:700 !important;}
+    .bulk-challan-grid .challan-head img{width:30px !important;height:30px !important;margin-bottom:2px !important;}
+    .bulk-challan-grid .challan-row{font-size:10.5px !important;padding:1.5px 0 !important;}
+    .bulk-challan-grid .challan-total{
+      font-size:12px !important;
+      padding-top:3px !important;
+      margin-top:2px !important;
+      border-top:1.5px solid #000 !important;
+      color:#000 !important;
+    }
     .bulk-challan-grid .copy-tag{font-size:8px !important;}
-    /* empty filler cells — no height waste */
     .bulk-challan-grid > div:empty{display:none !important;}
 
     .salary-slip:last-child{
